@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(bunx nuxi@latest init:*)",
+      "Bash(npx nuxi@latest init . --force)",
+      "Bash(npx --yes nuxi@latest init:*)",
+      "Bash(npx --yes nuxi@latest init . --force --template nuxt)",
+      "Bash(npm install:*)",
+      "Bash(nvm ls)"
+    ]
+  }
+}
