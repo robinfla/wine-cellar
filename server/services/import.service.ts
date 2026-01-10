@@ -101,6 +101,58 @@ function normalizeColor(color: string): string | null {
 }
 
 /**
+ * Find or create a region
+ */
+async function findOrCreateRegion(name: string): Promise<number> {
+  const trimmedName = name.trim()
+
+  // Try to find existing (case-insensitive)
+  const existing = await db
+    .select()
+    .from(regions)
+    .where(like(regions.name, trimmedName))
+    .limit(1)
+
+  if (existing.length > 0) {
+    return existing[0].id
+  }
+
+  // Create new - default to FR country code, can be updated later
+  const [created] = await db
+    .insert(regions)
+    .values({ name: trimmedName, countryCode: 'FR' })
+    .returning()
+
+  return created.id
+}
+
+/**
+ * Find or create an appellation
+ */
+async function findOrCreateAppellation(name: string, regionId?: number): Promise<number> {
+  const trimmedName = name.trim()
+
+  // Try to find existing (case-insensitive)
+  const existing = await db
+    .select()
+    .from(appellations)
+    .where(like(appellations.name, trimmedName))
+    .limit(1)
+
+  if (existing.length > 0) {
+    return existing[0].id
+  }
+
+  // Create new
+  const [created] = await db
+    .insert(appellations)
+    .values({ name: trimmedName, regionId })
+    .returning()
+
+  return created.id
+}
+
+/**
  * Find or create a producer
  */
 async function findOrCreateProducer(
@@ -163,6 +215,7 @@ async function findOrCreateWine(
 
 /**
  * Validate and enrich import rows
+ * Flexible matching: tries to match existing data, but allows free text for unmatched items
  */
 export async function validateImportRows(
   rows: ImportRow[]
@@ -202,7 +255,7 @@ export async function validateImportRows(
     if (!row.color) errors.push('Color is required')
     if (!row.quantity || Number(row.quantity) < 1) errors.push('Quantity must be at least 1')
 
-    // Resolve cellar
+    // Resolve cellar (required - must exist)
     const cellar = allCellars.find(
       (c) => c.name.toLowerCase() === row.cellar?.toLowerCase().trim()
     )
@@ -216,30 +269,30 @@ export async function validateImportRows(
       errors.push(`Invalid color "${row.color}"`)
     }
 
-    // Resolve region (optional)
+    // Resolve region (optional - try to match, will create if not found)
     let regionId: number | undefined
     if (row.region) {
+      const regionName = row.region.trim()
       const region = allRegions.find(
-        (r) => r.name.toLowerCase() === row.region?.toLowerCase().trim()
+        (r) => r.name.toLowerCase() === regionName.toLowerCase()
       )
       if (region) {
         regionId = region.id
-      } else {
-        warnings.push(`Region "${row.region}" not found, will be ignored`)
       }
+      // No warning - will create new region during import if needed
     }
 
-    // Resolve appellation (optional)
+    // Resolve appellation (optional - try to match, will create if not found)
     let appellationId: number | undefined
     if (row.appellation) {
+      const appellationName = row.appellation.trim()
       const appellation = allAppellations.find(
-        (a) => a.name.toLowerCase() === row.appellation?.toLowerCase().trim()
+        (a) => a.name.toLowerCase() === appellationName.toLowerCase()
       )
       if (appellation) {
         appellationId = appellation.id
-      } else {
-        warnings.push(`Appellation "${row.appellation}" not found, will be ignored`)
       }
+      // No warning - will create new appellation during import if needed
     }
 
     // Resolve format
@@ -248,7 +301,9 @@ export async function validateImportRows(
     const format = allFormats.find(
       (f) => f.name.toLowerCase() === formatName ||
              (formatName === '75cl' && f.volumeMl === 750) ||
-             (formatName === '750ml' && f.volumeMl === 750)
+             (formatName === '750ml' && f.volumeMl === 750) ||
+             (formatName === '150cl' && f.volumeMl === 1500) ||
+             (formatName === '1500ml' && f.volumeMl === 1500)
     )
     if (format) {
       formatId = format.id
@@ -257,7 +312,7 @@ export async function validateImportRows(
       const standard = allFormats.find((f) => f.volumeMl === 750)
       if (standard) {
         formatId = standard.id
-        if (row.format) {
+        if (row.format && row.format.toLowerCase() !== 'standard') {
           warnings.push(`Format "${row.format}" not found, defaulting to Standard`)
         }
       } else {
@@ -265,26 +320,25 @@ export async function validateImportRows(
       }
     }
 
-    // Resolve grapes (optional)
+    // Resolve grapes (optional - try to match, skip unmatched)
     const grapeIds: number[] = []
     if (row.grapes) {
-      const grapeNames = row.grapes.split(';').map((g) => g.trim().toLowerCase())
+      const grapeNames = row.grapes.split(';').map((g) => g.trim()).filter(Boolean)
       for (const grapeName of grapeNames) {
-        const grape = allGrapes.find((g) => g.name.toLowerCase() === grapeName)
+        const grape = allGrapes.find((g) => g.name.toLowerCase() === grapeName.toLowerCase())
         if (grape) {
           grapeIds.push(grape.id)
-        } else {
-          warnings.push(`Grape "${grapeName}" not found`)
         }
+        // No warning - just skip unmatched grapes
       }
     }
 
     // Parse vintage
     let vintage: number | undefined
-    if (row.vintage && row.vintage !== 'NV' && row.vintage !== 'nv') {
+    if (row.vintage && row.vintage !== 'NV' && row.vintage !== 'nv' && row.vintage.toString().trim() !== '') {
       const v = Number(row.vintage)
       if (isNaN(v) || v < 1900 || v > 2100) {
-        errors.push(`Invalid vintage "${row.vintage}"`)
+        warnings.push(`Invalid vintage "${row.vintage}", will be treated as NV`)
       } else {
         vintage = v
       }
@@ -337,15 +391,27 @@ export async function executeImport(
     }
 
     try {
+      // Resolve region - use existing ID or create new from name
+      let regionId = row.regionId
+      if (!regionId && row.region && row.region.trim()) {
+        regionId = await findOrCreateRegion(row.region)
+      }
+
+      // Resolve appellation - use existing ID or create new from name
+      let appellationId = row.appellationId
+      if (!appellationId && row.appellation && row.appellation.trim()) {
+        appellationId = await findOrCreateAppellation(row.appellation, regionId)
+      }
+
       // Find or create producer
-      const producerId = await findOrCreateProducer(row.producer, row.regionId)
+      const producerId = await findOrCreateProducer(row.producer, regionId)
 
       // Find or create wine
       const wineId = await findOrCreateWine(
         row.wineName,
         producerId,
         row.color,
-        row.appellationId
+        appellationId
       )
 
       // Associate grapes if any

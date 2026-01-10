@@ -5,12 +5,37 @@ definePageMeta({
 
 const { user } = useAuth()
 
-// Placeholder stats - will be replaced with real data
-const stats = ref([
-  { name: 'Total Bottles', value: '0', change: '' },
-  { name: 'Ready to Drink', value: '0', change: '' },
-  { name: 'Estimated Value', value: '0', change: '' },
+// Fetch real stats
+const { data: statsData } = await useFetch('/api/reports/stats')
+
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('en-EU', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
+const stats = computed(() => [
+  {
+    name: 'Total Bottles',
+    value: statsData.value?.totals?.bottles?.toString() || '0',
+    change: `${statsData.value?.totals?.lots || 0} lots`,
+  },
+  {
+    name: 'Ready to Drink',
+    value: statsData.value?.readyToDrink?.toString() || '0',
+    change: 'bottles',
+  },
+  {
+    name: 'Purchase Value',
+    value: formatCurrency(statsData.value?.totals?.estimatedValue || 0),
+    change: '',
+  },
 ])
+
+const hasWines = computed(() => (statsData.value?.totals?.bottles || 0) > 0)
 </script>
 
 <template>
@@ -100,7 +125,7 @@ const stats = ref([
     </div>
 
     <!-- Empty state -->
-    <div class="card text-center py-12">
+    <div v-if="!hasWines" class="card text-center py-12">
       <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
       </svg>
@@ -116,6 +141,20 @@ const stats = ref([
           Import CSV
         </NuxtLink>
       </div>
+    </div>
+
+    <!-- Export button -->
+    <div v-else class="mt-8 text-center">
+      <a
+        href="/api/inventory/export"
+        download
+        class="btn-secondary inline-flex items-center"
+      >
+        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        Export Inventory (CSV)
+      </a>
     </div>
   </div>
 </template>
