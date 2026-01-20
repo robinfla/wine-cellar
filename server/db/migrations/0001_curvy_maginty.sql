@@ -1,0 +1,2 @@
+ALTER TABLE "wines" DROP CONSTRAINT "wines_name_producer_id_unique";--> statement-breakpoint
+ALTER TABLE "wines" ADD CONSTRAINT "wines_name_producer_id_color_unique" UNIQUE("name","producer_id","color");

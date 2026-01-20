@@ -6,7 +6,7 @@ const navigation = [
   { name: 'Home', path: '/', icon: 'home' },
   { name: 'Inventory', path: '/inventory', icon: 'wine' },
   { name: 'Cellars', path: '/cellars', icon: 'warehouse' },
-  { name: 'Reports', path: '/reports', icon: 'chart' },
+  { name: 'Allocations', path: '/allocations', icon: 'calendar' },
 ]
 
 const isActive = (path: string) => {
@@ -16,14 +16,14 @@ const isActive = (path: string) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-muted-50">
     <!-- Mobile header -->
-    <header class="sticky top-0 z-10 bg-white border-b border-gray-200 lg:hidden">
+    <header class="sticky top-0 z-10 bg-white border-b-2 border-muted-200 lg:hidden">
       <div class="flex items-center justify-between px-4 h-14">
-        <h1 class="text-lg font-semibold text-gray-900">Wine Cellar</h1>
+        <h1 class="text-lg font-bold text-primary">Wine Cellar</h1>
         <button
           type="button"
-          class="text-gray-500 hover:text-gray-700"
+          class="text-muted-500 hover:text-muted-700 hover:scale-110 transition-all duration-200"
           @click="logout"
         >
           <span class="sr-only">Sign out</span>
@@ -35,10 +35,10 @@ const isActive = (path: string) => {
     </header>
 
     <!-- Desktop sidebar -->
-    <aside class="fixed inset-y-0 left-0 z-20 hidden w-64 bg-white border-r border-gray-200 lg:block">
+    <aside class="fixed inset-y-0 left-0 z-20 hidden w-64 bg-white border-r-2 border-muted-200 lg:block">
       <div class="flex flex-col h-full">
-        <div class="flex items-center h-16 px-6 border-b border-gray-200">
-          <h1 class="text-xl font-bold text-wine-700">Wine Cellar</h1>
+        <div class="flex items-center h-16 px-6 border-b-2 border-muted-200">
+          <h1 class="text-xl font-bold text-primary">Wine Cellar</h1>
         </div>
 
         <nav class="flex-1 px-3 py-4 space-y-1">
@@ -46,23 +46,23 @@ const isActive = (path: string) => {
             v-for="item in navigation"
             :key="item.path"
             :to="item.path"
-            class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+            class="flex items-center px-3 py-2 text-sm font-semibold rounded-lg transition-all duration-200 hover:scale-102"
             :class="isActive(item.path)
-              ? 'bg-wine-50 text-wine-700'
-              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'"
+              ? 'bg-primary-100 text-primary-700'
+              : 'text-muted-600 hover:bg-muted-100 hover:text-muted-900'"
           >
             {{ item.name }}
           </NuxtLink>
         </nav>
 
-        <div class="p-4 border-t border-gray-200">
+        <div class="p-4 border-t-2 border-muted-200">
           <div class="flex items-center justify-between">
             <div class="text-sm">
-              <p class="font-medium text-gray-900">{{ user?.name || user?.email }}</p>
+              <p class="font-semibold text-muted-900">{{ user?.name || user?.email }}</p>
             </div>
             <button
               type="button"
-              class="text-gray-400 hover:text-gray-600"
+              class="text-muted-400 hover:text-muted-600 hover:scale-110 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
               @click="logout"
             >
               <span class="sr-only">Sign out</span>
@@ -83,16 +83,16 @@ const isActive = (path: string) => {
     </main>
 
     <!-- Mobile bottom navigation -->
-    <nav class="fixed bottom-0 left-0 right-0 z-10 bg-white border-t border-gray-200 lg:hidden">
+    <nav class="fixed bottom-0 left-0 right-0 z-10 bg-white border-t-2 border-muted-200 lg:hidden">
       <div class="grid h-16 grid-cols-4">
         <NuxtLink
           v-for="item in navigation"
           :key="item.path"
           :to="item.path"
-          class="flex flex-col items-center justify-center text-xs"
+          class="flex flex-col items-center justify-center text-xs font-semibold transition-all duration-200"
           :class="isActive(item.path)
-            ? 'text-wine-600'
-            : 'text-gray-500'"
+            ? 'text-primary'
+            : 'text-muted-500'"
         >
           <span class="mt-1">{{ item.name }}</span>
         </NuxtLink>

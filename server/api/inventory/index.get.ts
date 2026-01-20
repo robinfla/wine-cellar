@@ -9,15 +9,18 @@ import {
   cellars,
   formats,
 } from '~/server/db/schema'
+import { getDrinkingWindow, type MaturityStatus } from '~/server/utils/maturity'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const search = query.search as string | undefined
   const cellarId = query.cellarId ? Number(query.cellarId) : undefined
+  const producerId = query.producerId ? Number(query.producerId) : undefined
   const color = query.color as string | undefined
   const regionId = query.regionId ? Number(query.regionId) : undefined
   const vintage = query.vintage ? Number(query.vintage) : undefined
-  const inStock = query.inStock === 'true'
+  const maturity = query.maturity as string | undefined // 'ready' | 'past' | 'young'
+  const inStock = query.inStock !== 'false' // Default to true (only show in-stock)
   const limit = query.limit ? Number(query.limit) : 50
   const offset = query.offset ? Number(query.offset) : 0
 
@@ -29,6 +32,10 @@ export default defineEventHandler(async (event) => {
 
   if (cellarId) {
     conditions.push(eq(inventoryLots.cellarId, cellarId))
+  }
+
+  if (producerId) {
+    conditions.push(eq(wines.producerId, producerId))
   }
 
   if (color) {
@@ -57,8 +64,9 @@ export default defineEventHandler(async (event) => {
       producerName: producers.name,
       appellationId: wines.appellationId,
       appellationName: appellations.name,
-      regionId: producers.regionId,
-      regionName: regions.name,
+      regionId: sql<number | null>`COALESCE(${wines.regionId}, ${producers.regionId})`.as('region_id'),
+      wineRegionId: wines.regionId,
+      regionName: sql<string | null>`COALESCE(wr.name, ${regions.name})`.as('region_name'),
       cellarId: inventoryLots.cellarId,
       cellarName: cellars.name,
       formatId: inventoryLots.formatId,
@@ -81,12 +89,41 @@ export default defineEventHandler(async (event) => {
     .innerJoin(formats, eq(inventoryLots.formatId, formats.id))
     .leftJoin(appellations, eq(wines.appellationId, appellations.id))
     .leftJoin(regions, eq(producers.regionId, regions.id))
+    .leftJoin(sql`${regions} as wr`, sql`wr.id = ${wines.regionId}`)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(inventoryLots.createdAt))
     .limit(limit)
     .offset(offset)
 
+  // Add maturity info to each lot
+  const lotsWithMaturity = result.map((lot) => {
+    const maturityInfo = getDrinkingWindow({
+      vintage: lot.vintage,
+      color: lot.wineColor,
+    })
+    return {
+      ...lot,
+      maturity: maturityInfo,
+    }
+  })
+
+  // Filter by maturity status if specified
+  const maturityStatusMap: Record<string, MaturityStatus[]> = {
+    ready: ['ready', 'peak', 'approaching'],
+    past: ['declining', 'past'],
+    young: ['too_early'],
+  }
+
+  let filteredLots = lotsWithMaturity
+  if (maturity && maturityStatusMap[maturity]) {
+    const allowedStatuses = maturityStatusMap[maturity]
+    filteredLots = lotsWithMaturity.filter((lot) =>
+      allowedStatuses.includes(lot.maturity.status)
+    )
+  }
+
   // Get total count and total bottles for pagination and stats
+  // Note: When maturity filter is active, we need to count differently
   const countResult = await db
     .select({
       count: sql<number>`count(*)`,
@@ -97,10 +134,16 @@ export default defineEventHandler(async (event) => {
     .innerJoin(producers, eq(wines.producerId, producers.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
 
+  // If maturity filter is active, the total is the filtered count
+  const total = maturity ? filteredLots.length : Number(countResult[0].count)
+  const totalBottles = maturity
+    ? filteredLots.reduce((sum, lot) => sum + lot.quantity, 0)
+    : Number(countResult[0].totalBottles)
+
   return {
-    lots: result,
-    total: Number(countResult[0].count),
-    totalBottles: Number(countResult[0].totalBottles),
+    lots: filteredLots,
+    total,
+    totalBottles,
     limit,
     offset,
   }

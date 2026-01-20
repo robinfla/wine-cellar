@@ -38,6 +38,52 @@ const columnMapping = ref<Record<string, string>>({
   notes: '',
 })
 
+// Manual default values for unmapped fields
+const manualDefaults = ref<Record<string, any>>({
+  cellar: null,
+  producer: '',
+  wineName: '',
+  color: '',
+  region: null,
+  appellation: null,
+  grapes: '',
+  vintage: null,
+  format: null,
+  quantity: null,
+  purchaseDate: '',
+  purchasePricePerBottle: null,
+  purchaseCurrency: 'EUR',
+  purchaseSource: '',
+  notes: '',
+})
+
+// Reference data for dropdowns
+const { data: cellarsData } = await useFetch('/api/cellars')
+const { data: regionsData } = await useFetch('/api/regions')
+const { data: appellationsData } = await useFetch('/api/appellations')
+
+// Fields that support manual defaults with dropdowns
+const dropdownFields = ['cellar', 'region', 'appellation', 'color', 'format', 'purchaseCurrency']
+
+// Color options for dropdown
+const colorOptions = [
+  { value: 'red', label: 'Red' },
+  { value: 'white', label: 'White' },
+  { value: 'rose', label: 'Rosé' },
+  { value: 'sparkling', label: 'Sparkling' },
+  { value: 'dessert', label: 'Dessert' },
+  { value: 'fortified', label: 'Fortified' },
+]
+
+// Format options for dropdown
+const formatOptions = [
+  { id: 1, name: 'Bottle (750ml)' },
+  { id: 2, name: 'Magnum (1.5L)' },
+]
+
+// Currency options
+const currencyOptions = ['EUR', 'USD', 'GBP', 'ZAR', 'CHF']
+
 const requiredFields = ['cellar', 'producer', 'wineName', 'color', 'quantity']
 const optionalFields = [
   'region', 'appellation', 'grapes', 'vintage', 'format',
@@ -127,7 +173,12 @@ function autoMapColumns() {
 }
 
 const mappingValid = computed(() => {
-  return requiredFields.every(field => columnMapping.value[field])
+  // Required fields must either be mapped to a column OR have a manual default
+  return requiredFields.every(field => {
+    const hasMapping = !!columnMapping.value[field]
+    const hasManualDefault = manualDefaults.value[field] !== null && manualDefaults.value[field] !== ''
+    return hasMapping || hasManualDefault
+  })
 })
 
 // Convert raw data to mapped rows
@@ -138,9 +189,31 @@ function getMappedRows() {
       const mapped: any = {}
       for (const [field, header] of Object.entries(columnMapping.value)) {
         if (header) {
+          // Field is mapped to a CSV column
           const index = headers.value.indexOf(header)
           if (index !== -1) {
             mapped[field] = row[index]?.trim() || undefined
+          }
+        } else {
+          // Field is not mapped - use manual default if set
+          const defaultValue = manualDefaults.value[field]
+          if (defaultValue !== null && defaultValue !== '') {
+            // For ID-based fields (cellar, region, appellation, format), we need to resolve the name
+            if (field === 'cellar') {
+              const cellar = cellarsData.value?.find((c: any) => c.id === defaultValue)
+              mapped[field] = cellar?.name
+            } else if (field === 'region') {
+              const region = regionsData.value?.find((r: any) => r.id === defaultValue)
+              mapped[field] = region?.name
+            } else if (field === 'appellation') {
+              const appellation = appellationsData.value?.find((a: any) => a.id === defaultValue)
+              mapped[field] = appellation?.name
+            } else if (field === 'format') {
+              const format = formatOptions.find(f => f.id === defaultValue)
+              mapped[field] = format?.name?.split(' ')[0] // Just "Bottle" or "Magnum"
+            } else {
+              mapped[field] = defaultValue
+            }
           }
         }
       }
@@ -198,14 +271,32 @@ function reset() {
   for (const key of Object.keys(columnMapping.value)) {
     columnMapping.value[key] = ''
   }
+  // Reset manual defaults
+  manualDefaults.value = {
+    cellar: null,
+    producer: '',
+    wineName: '',
+    color: '',
+    region: null,
+    appellation: null,
+    grapes: '',
+    vintage: null,
+    format: null,
+    quantity: null,
+    purchaseDate: '',
+    purchasePricePerBottle: null,
+    purchaseCurrency: 'EUR',
+    purchaseSource: '',
+    notes: '',
+  }
 }
 </script>
 
 <template>
   <div>
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Import Wines</h1>
-      <p class="mt-1 text-sm text-gray-600">
+      <h1 class="text-2xl font-bold text-muted-900">Import Wines</h1>
+      <p class="mt-1 text-sm text-muted-600">
         Import your wine inventory from a CSV file
       </p>
     </div>
@@ -216,22 +307,22 @@ function reset() {
         <ol class="flex items-center space-x-2 sm:space-x-4">
           <li v-for="(step, index) in steps" :key="step.id" class="flex items-center">
             <span
-              class="flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium"
+              class="flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-all duration-200"
               :class="currentStep >= step.id
-                ? 'bg-wine-600 text-white'
-                : 'bg-gray-200 text-gray-600'"
+                ? 'bg-primary text-white'
+                : 'bg-muted-200 text-muted-600'"
             >
               {{ step.id }}
             </span>
             <span
-              class="ml-2 text-sm font-medium hidden sm:block"
-              :class="currentStep >= step.id ? 'text-wine-600' : 'text-gray-500'"
+              class="ml-2 text-sm font-semibold hidden sm:block"
+              :class="currentStep >= step.id ? 'text-primary' : 'text-muted-500'"
             >
               {{ step.name }}
             </span>
             <svg
               v-if="index < steps.length - 1"
-              class="w-5 h-5 mx-2 text-gray-300"
+              class="w-5 h-5 mx-2 text-muted-300"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -244,10 +335,10 @@ function reset() {
 
     <!-- Step 1: Upload -->
     <div v-if="currentStep === 1" class="card">
-      <h2 class="text-lg font-medium text-gray-900 mb-4">Upload CSV File</h2>
+      <h2 class="text-lg font-semibold text-muted-900 mb-4">Upload CSV File</h2>
 
-      <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div class="border-2 border-dashed border-muted-300 rounded-lg p-8 text-center">
+        <svg class="mx-auto h-12 w-12 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
         </svg>
         <div class="mt-4">
@@ -261,14 +352,14 @@ function reset() {
             />
           </label>
         </div>
-        <p class="mt-2 text-sm text-gray-500">
+        <p class="mt-2 text-sm text-muted-500">
           CSV file with headers in the first row
         </p>
       </div>
 
-      <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-        <h3 class="text-sm font-medium text-gray-900 mb-2">Expected columns:</h3>
-        <div class="text-sm text-gray-600">
+      <div class="mt-6 p-4 bg-muted-100 rounded-lg border-2 border-muted-200">
+        <h3 class="text-sm font-semibold text-muted-900 mb-2">Expected columns:</h3>
+        <div class="text-sm text-muted-600">
           <p><strong>Required:</strong> cellar, producer, wine name, color, quantity</p>
           <p><strong>Optional:</strong> region, appellation, grapes, vintage, format, purchase date, price, currency, source, notes</p>
         </div>
@@ -277,9 +368,10 @@ function reset() {
 
     <!-- Step 2: Column Mapping -->
     <div v-if="currentStep === 2" class="card">
-      <h2 class="text-lg font-medium text-gray-900 mb-4">Map Columns</h2>
-      <p class="text-sm text-gray-600 mb-6">
-        Match your CSV columns to the wine fields. File: <strong>{{ fileName }}</strong> ({{ rawData.length }} rows)
+      <h2 class="text-lg font-semibold text-muted-900 mb-4">Map Columns</h2>
+      <p class="text-sm text-muted-600 mb-6">
+        Match your CSV columns to the wine fields, or set a manual default value for all rows.
+        <br />File: <strong>{{ fileName }}</strong> ({{ rawData.length }} rows)
       </p>
 
       <div class="space-y-4">
@@ -288,28 +380,161 @@ function reset() {
             <label class="label">
               {{ fieldLabels[field] }} <span class="text-red-500">*</span>
             </label>
-            <select v-model="columnMapping[field]" class="input">
-              <option value="">-- Select column --</option>
-              <option v-for="header in headers" :key="header" :value="header">
-                {{ header }}
-              </option>
-            </select>
+            <div class="flex gap-2">
+              <select v-model="columnMapping[field]" class="input flex-1">
+                <option value="">-- Select column --</option>
+                <option v-for="header in headers" :key="header" :value="header">
+                  {{ header }}
+                </option>
+              </select>
+              <!-- Manual default when not mapped -->
+              <template v-if="!columnMapping[field]">
+                <!-- Cellar dropdown -->
+                <select
+                  v-if="field === 'cellar'"
+                  v-model="manualDefaults[field]"
+                  class="input flex-1"
+                >
+                  <option :value="null">-- Set default --</option>
+                  <option v-for="c in cellarsData" :key="c.id" :value="c.id">
+                    {{ c.name }}
+                  </option>
+                </select>
+                <!-- Color dropdown -->
+                <select
+                  v-else-if="field === 'color'"
+                  v-model="manualDefaults[field]"
+                  class="input flex-1"
+                >
+                  <option value="">-- Set default --</option>
+                  <option v-for="opt in colorOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+                <!-- Quantity input -->
+                <input
+                  v-else-if="field === 'quantity'"
+                  v-model.number="manualDefaults[field]"
+                  type="number"
+                  min="0"
+                  class="input flex-1"
+                  placeholder="Default qty"
+                />
+                <!-- Text input for other fields -->
+                <input
+                  v-else
+                  v-model="manualDefaults[field]"
+                  type="text"
+                  class="input flex-1"
+                  placeholder="Default value"
+                />
+              </template>
+            </div>
+            <p v-if="!columnMapping[field] && manualDefaults[field]" class="mt-1 text-xs text-secondary-600">
+              Using default for all rows
+            </p>
           </div>
         </div>
 
-        <details class="mt-6">
-          <summary class="cursor-pointer text-sm font-medium text-gray-700">
+        <details class="mt-6" open>
+          <summary class="cursor-pointer text-sm font-semibold text-muted-700">
             Optional fields
           </summary>
           <div class="mt-4 grid gap-4 sm:grid-cols-2">
             <div v-for="field in optionalFields" :key="field">
               <label class="label">{{ fieldLabels[field] }}</label>
-              <select v-model="columnMapping[field]" class="input">
-                <option value="">-- Not mapped --</option>
-                <option v-for="header in headers" :key="header" :value="header">
-                  {{ header }}
-                </option>
-              </select>
+              <div class="flex gap-2">
+                <select v-model="columnMapping[field]" class="input flex-1">
+                  <option value="">-- Not mapped --</option>
+                  <option v-for="header in headers" :key="header" :value="header">
+                    {{ header }}
+                  </option>
+                </select>
+                <!-- Manual default when not mapped -->
+                <template v-if="!columnMapping[field]">
+                  <!-- Region dropdown -->
+                  <select
+                    v-if="field === 'region'"
+                    v-model="manualDefaults[field]"
+                    class="input flex-1"
+                  >
+                    <option :value="null">-- Set default --</option>
+                    <option v-for="r in regionsData" :key="r.id" :value="r.id">
+                      {{ r.name }}
+                    </option>
+                  </select>
+                  <!-- Appellation dropdown -->
+                  <select
+                    v-else-if="field === 'appellation'"
+                    v-model="manualDefaults[field]"
+                    class="input flex-1"
+                  >
+                    <option :value="null">-- Set default --</option>
+                    <option v-for="a in appellationsData" :key="a.id" :value="a.id">
+                      {{ a.name }}
+                    </option>
+                  </select>
+                  <!-- Format dropdown -->
+                  <select
+                    v-else-if="field === 'format'"
+                    v-model="manualDefaults[field]"
+                    class="input flex-1"
+                  >
+                    <option :value="null">-- Set default --</option>
+                    <option v-for="f in formatOptions" :key="f.id" :value="f.id">
+                      {{ f.name }}
+                    </option>
+                  </select>
+                  <!-- Currency dropdown -->
+                  <select
+                    v-else-if="field === 'purchaseCurrency'"
+                    v-model="manualDefaults[field]"
+                    class="input flex-1"
+                  >
+                    <option v-for="curr in currencyOptions" :key="curr" :value="curr">
+                      {{ curr }}
+                    </option>
+                  </select>
+                  <!-- Vintage input -->
+                  <input
+                    v-else-if="field === 'vintage'"
+                    v-model.number="manualDefaults[field]"
+                    type="number"
+                    min="1900"
+                    max="2100"
+                    class="input flex-1"
+                    placeholder="Default vintage"
+                  />
+                  <!-- Price input -->
+                  <input
+                    v-else-if="field === 'purchasePricePerBottle'"
+                    v-model.number="manualDefaults[field]"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="input flex-1"
+                    placeholder="Default price"
+                  />
+                  <!-- Date input -->
+                  <input
+                    v-else-if="field === 'purchaseDate'"
+                    v-model="manualDefaults[field]"
+                    type="date"
+                    class="input flex-1"
+                  />
+                  <!-- Text input for other fields -->
+                  <input
+                    v-else
+                    v-model="manualDefaults[field]"
+                    type="text"
+                    class="input flex-1"
+                    placeholder="Default value"
+                  />
+                </template>
+              </div>
+              <p v-if="!columnMapping[field] && manualDefaults[field]" class="mt-1 text-xs text-secondary-600">
+                Using default for all rows
+              </p>
             </div>
           </div>
         </details>
@@ -332,25 +557,25 @@ function reset() {
 
     <!-- Step 3: Preview -->
     <div v-if="currentStep === 3" class="card">
-      <h2 class="text-lg font-medium text-gray-900 mb-4">Preview & Validate</h2>
+      <h2 class="text-lg font-semibold text-muted-900 mb-4">Preview & Validate</h2>
 
       <!-- Summary -->
       <div v-if="validationSummary" class="grid gap-4 sm:grid-cols-4 mb-6">
-        <div class="p-3 bg-gray-50 rounded-lg">
-          <p class="text-2xl font-bold text-gray-900">{{ validationSummary.total }}</p>
-          <p class="text-sm text-gray-600">Total rows</p>
+        <div class="p-3 bg-muted-100 rounded-lg border-2 border-muted-200">
+          <p class="text-2xl font-bold text-muted-900">{{ validationSummary.total }}</p>
+          <p class="text-sm font-semibold text-muted-600">Total rows</p>
         </div>
-        <div class="p-3 bg-green-50 rounded-lg">
-          <p class="text-2xl font-bold text-green-700">{{ validationSummary.valid }}</p>
-          <p class="text-sm text-green-600">Valid</p>
+        <div class="p-3 bg-secondary-50 rounded-lg border-2 border-secondary-200">
+          <p class="text-2xl font-bold text-secondary-700">{{ validationSummary.valid }}</p>
+          <p class="text-sm font-semibold text-secondary-600">Valid</p>
         </div>
-        <div class="p-3 bg-red-50 rounded-lg">
+        <div class="p-3 bg-red-50 rounded-lg border-2 border-red-200">
           <p class="text-2xl font-bold text-red-700">{{ validationSummary.invalid }}</p>
-          <p class="text-sm text-red-600">Invalid</p>
+          <p class="text-sm font-semibold text-red-600">Invalid</p>
         </div>
-        <div class="p-3 bg-amber-50 rounded-lg">
-          <p class="text-2xl font-bold text-amber-700">{{ validationSummary.duplicates }}</p>
-          <p class="text-sm text-amber-600">Duplicates</p>
+        <div class="p-3 bg-accent-50 rounded-lg border-2 border-accent-200">
+          <p class="text-2xl font-bold text-accent-700">{{ validationSummary.duplicates }}</p>
+          <p class="text-sm font-semibold text-accent-600">Duplicates</p>
         </div>
       </div>
 
@@ -360,49 +585,49 @@ function reset() {
           <input
             v-model="skipDuplicates"
             type="checkbox"
-            class="w-4 h-4 text-wine-600 border-gray-300 rounded focus:ring-wine-500"
+            class="w-4 h-4 text-primary border-2 border-muted-300 rounded focus:ring-primary focus:ring-offset-2"
           />
-          <span class="ml-2 text-sm text-gray-700">Skip duplicate entries</span>
+          <span class="ml-2 text-sm font-medium text-muted-700">Skip duplicate entries</span>
         </label>
       </div>
 
       <!-- Row preview -->
-      <div class="overflow-x-auto max-h-96">
-        <table class="min-w-full divide-y divide-gray-200 text-sm">
-          <thead class="bg-gray-50 sticky top-0">
+      <div class="overflow-x-auto max-h-96 border-2 border-muted-200 rounded-lg">
+        <table class="min-w-full divide-y divide-muted-200 text-sm">
+          <thead class="bg-muted-100 sticky top-0">
             <tr>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Row</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Wine</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producer</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Vintage</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
-              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Issues</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">Row</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">Status</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">Wine</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">Producer</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">Vintage</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">Qty</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">Issues</th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
+          <tbody class="bg-white divide-y divide-muted-200">
             <tr
               v-for="row in validatedRows"
               :key="row.rowIndex"
-              :class="{ 'bg-red-50': !row.isValid, 'bg-amber-50': row.isDuplicate && row.isValid }"
+              :class="{ 'bg-red-50': !row.isValid, 'bg-accent-50': row.isDuplicate && row.isValid }"
             >
-              <td class="px-3 py-2 whitespace-nowrap">{{ row.rowIndex }}</td>
+              <td class="px-3 py-2 whitespace-nowrap font-medium">{{ row.rowIndex }}</td>
               <td class="px-3 py-2 whitespace-nowrap">
                 <span
                   v-if="!row.isValid"
-                  class="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800"
+                  class="px-2 py-0.5 text-xs font-semibold rounded bg-red-100 text-red-700"
                 >
                   Invalid
                 </span>
                 <span
                   v-else-if="row.isDuplicate"
-                  class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800"
+                  class="px-2 py-0.5 text-xs font-semibold rounded bg-accent-100 text-accent-700"
                 >
                   Duplicate
                 </span>
                 <span
                   v-else
-                  class="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800"
+                  class="px-2 py-0.5 text-xs font-semibold rounded bg-secondary-100 text-secondary-700"
                 >
                   OK
                 </span>
@@ -412,8 +637,8 @@ function reset() {
               <td class="px-3 py-2">{{ row.vintage || 'NV' }}</td>
               <td class="px-3 py-2">{{ row.quantity }}</td>
               <td class="px-3 py-2 text-xs">
-                <span v-if="row.errors.length" class="text-red-600">{{ row.errors.join(', ') }}</span>
-                <span v-else-if="row.warnings.length" class="text-amber-600">{{ row.warnings.join(', ') }}</span>
+                <span v-if="row.errors.length" class="text-red-600 font-medium">{{ row.errors.join(', ') }}</span>
+                <span v-else-if="row.warnings.length" class="text-accent-600 font-medium">{{ row.warnings.join(', ') }}</span>
               </td>
             </tr>
           </tbody>
@@ -438,11 +663,11 @@ function reset() {
     <!-- Step 4: Result -->
     <div v-if="currentStep === 4" class="card text-center py-12">
       <div v-if="importResult?.success || importResult?.imported > 0">
-        <svg class="mx-auto h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg class="mx-auto h-16 w-16 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <h2 class="mt-4 text-xl font-bold text-gray-900">Import Complete!</h2>
-        <p class="mt-2 text-gray-600">
+        <h2 class="mt-4 text-xl font-bold text-muted-900">Import Complete!</h2>
+        <p class="mt-2 text-muted-600">
           Successfully imported <strong>{{ importResult.imported }}</strong> wines.
           <span v-if="importResult.skipped > 0">
             Skipped {{ importResult.skipped }} duplicates.
@@ -453,8 +678,8 @@ function reset() {
         <svg class="mx-auto h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <h2 class="mt-4 text-xl font-bold text-gray-900">Import Failed</h2>
-        <p class="mt-2 text-gray-600">
+        <h2 class="mt-4 text-xl font-bold text-muted-900">Import Failed</h2>
+        <p class="mt-2 text-muted-600">
           {{ importResult?.errors?.[0]?.message || 'An error occurred during import.' }}
         </p>
       </div>

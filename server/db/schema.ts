@@ -40,6 +40,14 @@ export const maturityStatusEnum = pgEnum('maturity_status', [
   'past',
 ])
 
+export const allocationStatusEnum = pgEnum('allocation_status', [
+  'upcoming',
+  'to_claim',
+  'on_the_way',
+  'received',
+  'cancelled',
+])
+
 // Cellars
 export const cellars = pgTable('cellars', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
@@ -107,6 +115,7 @@ export const wines = pgTable('wines', {
   name: text('name').notNull(),
   producerId: integer('producer_id').references(() => producers.id).notNull(),
   appellationId: integer('appellation_id').references(() => appellations.id),
+  regionId: integer('region_id').references(() => regions.id),
   color: wineColorEnum('color').notNull(),
 
   // Default drinking window (years after vintage)
@@ -117,7 +126,7 @@ export const wines = pgTable('wines', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
-  uniqueWineProducer: unique().on(table.name, table.producerId),
+  uniqueWineProducerColor: unique().on(table.name, table.producerId, table.color),
   nameIdx: index('wines_name_idx').on(table.name),
   producerIdx: index('wines_producer_idx').on(table.producerId),
 }))
@@ -197,6 +206,18 @@ export const maturityOverrides = pgTable('maturity_overrides', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 
+// Tasting notes (per lot)
+export const tastingNotes = pgTable('tasting_notes', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  lotId: integer('lot_id').references(() => inventoryLots.id, { onDelete: 'cascade' }).notNull(),
+  score: integer('score'),
+  comment: text('comment'),
+  tastedAt: timestamp('tasted_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  lotIdx: index('tasting_notes_lot_idx').on(table.lotId),
+}))
+
 // Valuations (manual only for v1)
 export const valuations = pgTable('valuations', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
@@ -250,6 +271,61 @@ export const sessions = pgTable('sessions', {
   expiresIdx: index('sessions_expires_idx').on(table.expiresAt),
 }))
 
+// Allocations (yearly deals with producers)
+export const allocations = pgTable('allocations', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  producerId: integer('producer_id').references(() => producers.id).notNull(),
+  year: integer('year').notNull(),
+
+  // Lifecycle linking to previous year
+  previousYearId: integer('previous_year_id').references((): any => allocations.id),
+
+  // Claim window
+  claimOpensAt: timestamp('claim_opens_at'),
+  claimClosesAt: timestamp('claim_closes_at'),
+
+  // Status
+  status: allocationStatusEnum('status').default('upcoming').notNull(),
+  notes: text('notes'),
+
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  uniqueProducerYear: unique().on(table.producerId, table.year),
+  producerIdx: index('allocations_producer_idx').on(table.producerId),
+  yearIdx: index('allocations_year_idx').on(table.year),
+  statusIdx: index('allocations_status_idx').on(table.status),
+}))
+
+// Allocation items (wines within an allocation)
+export const allocationItems = pgTable('allocation_items', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  allocationId: integer('allocation_id').references(() => allocations.id, { onDelete: 'cascade' }).notNull(),
+  wineId: integer('wine_id').references(() => wines.id).notNull(),
+  formatId: integer('format_id').references(() => formats.id).notNull(),
+
+  // Quantities
+  quantityAvailable: integer('quantity_available'),
+  quantityClaimed: integer('quantity_claimed').default(0).notNull(),
+
+  // Pricing
+  pricePerBottle: decimal('price_per_bottle', { precision: 10, scale: 2 }),
+  currency: currencyEnum('currency').default('EUR'),
+
+  // Fulfillment
+  quantityReceived: integer('quantity_received').default(0).notNull(),
+  receivedAt: timestamp('received_at'),
+  inventoryLotId: integer('inventory_lot_id').references(() => inventoryLots.id),
+
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  uniqueAllocationWine: unique().on(table.allocationId, table.wineId, table.formatId),
+  allocationIdx: index('allocation_items_allocation_idx').on(table.allocationId),
+  wineIdx: index('allocation_items_wine_idx').on(table.wineId),
+}))
+
 // Type exports for use throughout the app
 export type Cellar = typeof cellars.$inferSelect
 export type NewCellar = typeof cellars.$inferInsert
@@ -273,6 +349,8 @@ export type InventoryEvent = typeof inventoryEvents.$inferSelect
 export type NewInventoryEvent = typeof inventoryEvents.$inferInsert
 export type MaturityOverride = typeof maturityOverrides.$inferSelect
 export type NewMaturityOverride = typeof maturityOverrides.$inferInsert
+export type TastingNote = typeof tastingNotes.$inferSelect
+export type NewTastingNote = typeof tastingNotes.$inferInsert
 export type Valuation = typeof valuations.$inferSelect
 export type NewValuation = typeof valuations.$inferInsert
 export type FxRate = typeof fxRates.$inferSelect
@@ -281,3 +359,7 @@ export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type Session = typeof sessions.$inferSelect
 export type NewSession = typeof sessions.$inferInsert
+export type Allocation = typeof allocations.$inferSelect
+export type NewAllocation = typeof allocations.$inferInsert
+export type AllocationItem = typeof allocationItems.$inferSelect
+export type NewAllocationItem = typeof allocationItems.$inferInsert
