@@ -1,4 +1,8 @@
-import { beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
+import { beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest'
+
+vi.stubGlobal('useRuntimeConfig', () => ({
+  databaseUrl: 'postgresql://test:test@localhost:5432/test',
+}))
 
 beforeAll(async () => {
 })

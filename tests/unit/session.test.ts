@@ -1,11 +1,5 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { randomBytes } from 'crypto'
-
-beforeAll(() => {
-  vi.stubGlobal('useRuntimeConfig', () => ({
-    databaseUrl: 'postgresql://test:test@localhost:5432/test',
-  }))
-})
 
 const generateSessionToken = (): string => {
   return randomBytes(32).toString('hex')
