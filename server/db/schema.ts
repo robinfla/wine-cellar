@@ -218,25 +218,6 @@ export const tastingNotes = pgTable('tasting_notes', {
   lotIdx: index('tasting_notes_lot_idx').on(table.lotId),
 }))
 
-// Valuations (manual only for v1)
-export const valuations = pgTable('valuations', {
-  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-  wineId: integer('wine_id').references(() => wines.id).notNull(),
-  formatId: integer('format_id').references(() => formats.id).notNull(),
-  valuationDate: timestamp('valuation_date').notNull(),
-  pricePerBottle: decimal('price_per_bottle', { precision: 10, scale: 2 }).notNull(),
-  currency: currencyEnum('currency').default('EUR'),
-  source: text('source').default('manual'),
-  notes: text('notes'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (table) => ({
-  wineFormatDateIdx: index('valuations_wine_format_date_idx').on(
-    table.wineId,
-    table.formatId,
-    table.valuationDate,
-  ),
-}))
-
 // FX rates
 export const fxRates = pgTable('fx_rates', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
@@ -326,40 +307,21 @@ export const allocationItems = pgTable('allocation_items', {
   wineIdx: index('allocation_items_wine_idx').on(table.wineId),
 }))
 
-// Type exports for use throughout the app
+// Type exports for use throughout the app (only Select types - Insert types are inferred automatically)
 export type Cellar = typeof cellars.$inferSelect
-export type NewCellar = typeof cellars.$inferInsert
 export type Region = typeof regions.$inferSelect
-export type NewRegion = typeof regions.$inferInsert
 export type Appellation = typeof appellations.$inferSelect
-export type NewAppellation = typeof appellations.$inferInsert
 export type Grape = typeof grapes.$inferSelect
-export type NewGrape = typeof grapes.$inferInsert
 export type Producer = typeof producers.$inferSelect
-export type NewProducer = typeof producers.$inferInsert
 export type Format = typeof formats.$inferSelect
-export type NewFormat = typeof formats.$inferInsert
 export type Wine = typeof wines.$inferSelect
-export type NewWine = typeof wines.$inferInsert
 export type WineGrape = typeof wineGrapes.$inferSelect
-export type NewWineGrape = typeof wineGrapes.$inferInsert
 export type InventoryLot = typeof inventoryLots.$inferSelect
-export type NewInventoryLot = typeof inventoryLots.$inferInsert
 export type InventoryEvent = typeof inventoryEvents.$inferSelect
-export type NewInventoryEvent = typeof inventoryEvents.$inferInsert
 export type MaturityOverride = typeof maturityOverrides.$inferSelect
-export type NewMaturityOverride = typeof maturityOverrides.$inferInsert
 export type TastingNote = typeof tastingNotes.$inferSelect
-export type NewTastingNote = typeof tastingNotes.$inferInsert
-export type Valuation = typeof valuations.$inferSelect
-export type NewValuation = typeof valuations.$inferInsert
 export type FxRate = typeof fxRates.$inferSelect
-export type NewFxRate = typeof fxRates.$inferInsert
 export type User = typeof users.$inferSelect
-export type NewUser = typeof users.$inferInsert
 export type Session = typeof sessions.$inferSelect
-export type NewSession = typeof sessions.$inferInsert
 export type Allocation = typeof allocations.$inferSelect
-export type NewAllocation = typeof allocations.$inferInsert
 export type AllocationItem = typeof allocationItems.$inferSelect
-export type NewAllocationItem = typeof allocationItems.$inferInsert

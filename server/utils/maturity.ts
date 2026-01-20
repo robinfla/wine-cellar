@@ -120,18 +120,4 @@ export function getDrinkingWindow(input: MaturityInput): DrinkingWindow {
   }
 }
 
-/**
- * Get wines that are ready to drink this year
- */
-export function isReadyToDrink(input: MaturityInput): boolean {
-  const window = getDrinkingWindow(input)
-  return ['ready', 'peak', 'approaching'].includes(window.status)
-}
 
-/**
- * Get wines at peak
- */
-export function isAtPeak(input: MaturityInput): boolean {
-  const window = getDrinkingWindow(input)
-  return window.status === 'peak'
-}

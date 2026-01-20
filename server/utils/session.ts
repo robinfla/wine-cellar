@@ -69,18 +69,6 @@ export async function invalidateSession(token: string): Promise<void> {
 }
 
 /**
- * Clean up expired sessions (run periodically)
- */
-export async function cleanupExpiredSessions(): Promise<number> {
-  const result = await db
-    .delete(sessions)
-    .where(gt(new Date(), sessions.expiresAt))
-    .returning()
-
-  return result.length
-}
-
-/**
  * Get session token from request cookies
  */
 export function getSessionToken(event: H3Event): string | null {
