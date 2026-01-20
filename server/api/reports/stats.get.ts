@@ -1,4 +1,4 @@
-import { eq, sql, desc, isNotNull } from 'drizzle-orm'
+import { eq, sql, desc } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import {
   inventoryLots,
@@ -48,7 +48,7 @@ export default defineEventHandler(async () => {
         AND coalesce(
           ${maturityOverrides.drinkUntilYear},
           ${inventoryLots.vintage} + ${wines.defaultDrinkUntilYears}
-        ) >= ${currentYear}`
+        ) >= ${currentYear}`,
     )
 
   const readyToDrink = Number(readyToDrinkResult[0]?.bottles || 0)

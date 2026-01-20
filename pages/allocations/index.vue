@@ -58,11 +58,11 @@ const filteredProducers = computed(() => {
   if (!producerSearch.value.trim()) return producers.value
   const search = producerSearch.value.toLowerCase()
   return producers.value.filter((p: any) =>
-    p.name.toLowerCase().includes(search)
+    p.name.toLowerCase().includes(search),
   )
 })
 
-const selectedProducerName = computed(() => {
+const _selectedProducerName = computed(() => {
   if (!newAllocation.value.producerId || !producers.value) return ''
   const producer = producers.value.find((p: any) => p.id === newAllocation.value.producerId)
   return producer?.name || ''
@@ -117,7 +117,7 @@ watch(
         ...(page.value > 1 && { page: page.value }),
       },
     })
-  }
+  },
 )
 
 // Pagination
@@ -158,7 +158,7 @@ const formatCurrency = (value: string | number | null, currency = 'EUR') => {
   }).format(Number(value))
 }
 
-const formatDate = (date: string | Date | null) => {
+const _formatDate = (date: string | Date | null) => {
   if (!date) return '-'
   return new Date(date).toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -318,7 +318,7 @@ async function receiveAllocation() {
     const details = await $fetch(`/api/allocations/${selectedAllocation.value.id}`)
     selectedAllocation.value = details
     await refreshAllocations()
-    alert(`Received! Created ${result.createdLots} inventory lots.${result.nextYearAllocation ? ` Next year allocation created.` : ''}`)
+    alert(`Received! Created ${result.createdLots} inventory lots.${result.nextYearAllocation ? ' Next year allocation created.' : ''}`)
   } catch (e: any) {
     console.error('Failed to receive allocation', e)
     alert(e.data?.message || 'Failed to receive allocation')
@@ -354,7 +354,7 @@ async function fetchProducerWines(producerId: number) {
     producerWines.value = result.wines
     // Other wines = all wines not from this producer
     otherWines.value = (wines.value?.wines || wines.value || []).filter(
-      (w: any) => w.producerId !== producerId
+      (w: any) => w.producerId !== producerId,
     )
   } catch (e) {
     console.error('Failed to fetch producer wines', e)
@@ -767,7 +767,7 @@ onMounted(() => {
                     class="input w-full text-sm py-1.5 text-center"
                     :disabled="selectedAllocation.status === 'received'"
                     @change="updateItem(item)"
-                  />
+                  >
                 </div>
                 <div class="w-20">
                   <label class="block text-xs text-muted-500 mb-1">Price</label>
@@ -779,7 +779,7 @@ onMounted(() => {
                     class="input w-full text-sm py-1.5 text-center"
                     :disabled="selectedAllocation.status === 'received'"
                     @change="updateItem(item)"
-                  />
+                  >
                 </div>
                 <div class="flex-1">
                   <label class="block text-xs text-muted-500 mb-1">&nbsp;</label>
@@ -908,7 +908,7 @@ onMounted(() => {
                     class="input flex-1"
                     placeholder="New producer name"
                     @keydown.enter.prevent="createProducer"
-                  />
+                  >
                   <button
                     type="button"
                     class="px-2 text-green-600 hover:text-green-700 transition-transform hover:scale-105"
@@ -943,7 +943,7 @@ onMounted(() => {
                         @focus="showProducerDropdown = true"
                         @blur="setTimeout(() => showProducerDropdown = false, 150)"
                         @input="showProducerDropdown = true; newAllocation.producerId = null"
-                      />
+                      >
                       <button
                         v-if="producerSearch"
                         type="button"
@@ -996,7 +996,7 @@ onMounted(() => {
                   max="2100"
                   class="input"
                   @focus="showProducerDropdown = false"
-                />
+                >
               </div>
             </div>
 
@@ -1094,12 +1094,12 @@ onMounted(() => {
               <div class="grid grid-cols-2 gap-4">
                 <div>
                   <label class="block text-sm font-medium text-muted-700 mb-2">Quantity</label>
-                  <input v-model.number="newItem.quantityClaimed" type="number" min="0" class="input" />
+                  <input v-model.number="newItem.quantityClaimed" type="number" min="0" class="input" >
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-muted-700 mb-2">Price</label>
                   <div class="flex gap-2">
-                    <input v-model="newItem.pricePerBottle" type="number" step="0.01" min="0" class="input flex-1" placeholder="0.00" />
+                    <input v-model="newItem.pricePerBottle" type="number" step="0.01" min="0" class="input flex-1" placeholder="0.00" >
                     <select v-model="newItem.currency" class="input w-20">
                       <option value="EUR">EUR</option>
                       <option value="ZAR">ZAR</option>

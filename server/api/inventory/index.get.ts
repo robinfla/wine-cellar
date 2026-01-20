@@ -118,7 +118,7 @@ export default defineEventHandler(async (event) => {
   if (maturity && maturityStatusMap[maturity]) {
     const allowedStatuses = maturityStatusMap[maturity]
     filteredLots = lotsWithMaturity.filter((lot) =>
-      allowedStatuses.includes(lot.maturity.status)
+      allowedStatuses.includes(lot.maturity.status),
     )
   }
 

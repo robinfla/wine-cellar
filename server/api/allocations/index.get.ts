@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
   // Get items summary for each allocation
   const allocationIds = result.map((a) => a.id)
 
-  let itemsSummary: Record<number, { itemCount: number; totalBottles: number; totalsByCurrency: { currency: string; value: number }[] }> = {}
+  const itemsSummary: Record<number, { itemCount: number; totalBottles: number; totalsByCurrency: { currency: string; value: number }[] }> = {}
 
   if (allocationIds.length > 0) {
     // Get basic counts

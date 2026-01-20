@@ -1,6 +1,6 @@
 import { eq, like, and, sql } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
-import { wines, producers, appellations, regions, wineGrapes, grapes } from '~/server/db/schema'
+import { wines, producers, appellations, regions } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)

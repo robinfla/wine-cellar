@@ -102,8 +102,8 @@ onUnmounted(() => {
         {{ grape.name }}
         <button
           type="button"
-          @click.stop="removeGrape(grape.id)"
           class="hover:text-primary-900 hover:scale-110 transition-transform"
+          @click.stop="removeGrape(grape.id)"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -120,7 +120,7 @@ onUnmounted(() => {
         class="input w-full pr-8"
         placeholder="Search grapes..."
         @focus="showDropdown = true"
-      />
+      >
       <button
         type="button"
         class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-400 hover:text-muted-600 hover:scale-110 transition-all"
@@ -175,7 +175,7 @@ onUnmounted(() => {
             type="checkbox"
             :checked="isSelected(grape.id)"
             class="w-4 h-4 text-primary border-2 border-muted-300 rounded focus:ring-primary pointer-events-none"
-          />
+          >
           <span class="text-sm text-muted-700">{{ grape.name }}</span>
         </div>
       </div>

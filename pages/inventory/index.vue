@@ -108,7 +108,7 @@ watch(
         ...(page.value > 1 && { page: page.value }),
       },
     })
-  }
+  },
 )
 
 // Maturity tabs
@@ -142,7 +142,7 @@ const getColorDot = (c: string) => {
   return colors[c] || 'bg-muted-400'
 }
 
-const getColorLabel = (c: string) => {
+const _getColorLabel = (c: string) => {
   const labels: Record<string, string> = {
     red: 'Red',
     white: 'White',
@@ -213,7 +213,7 @@ function closePanel() {
 
 // Check if any filters are active
 const hasActiveFilters = computed(() =>
-  producerId.value || regionId.value || color.value || vintage.value || cellarId.value
+  producerId.value || regionId.value || color.value || vintage.value || cellarId.value,
 )
 
 // Clear all filters
@@ -234,7 +234,7 @@ function closeAddMenu() {
 async function fetchTastingNotes(lotId: number) {
   try {
     tastingNotes.value = await $fetch(`/api/inventory/${lotId}/tasting-notes`)
-  } catch (e) {
+  } catch {
     tastingNotes.value = []
   }
 }
@@ -296,7 +296,7 @@ const formatTastingDate = (date: string | Date) => {
 }
 
 // Quantity control functions
-async function updateQuantity(delta: number) {
+async function _updateQuantity(delta: number) {
   if (!selectedLot.value) return
   const newQty = selectedLot.value.quantity + delta
   if (newQty < 0) return
@@ -584,7 +584,7 @@ onMounted(() => {
               placeholder="Search wines..."
               class="pl-9 pr-4 py-2 w-64 text-sm border border-muted-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary-500"
               @input="handleSearchInput(($event.target as HTMLInputElement).value)"
-            />
+            >
           </div>
 
           <!-- Filters toggle -->
@@ -841,7 +841,7 @@ onMounted(() => {
                     class="input text-lg font-bold py-1 flex-1"
                     @keydown.enter="saveField('wineName')"
                     @keydown.escape="cancelEditing"
-                  />
+                  >
                   <button
                     type="button"
                     class="p-1.5 text-secondary-600 hover:text-secondary-700"
@@ -958,7 +958,7 @@ onMounted(() => {
                   placeholder="NV"
                   @keydown.enter="saveField('vintage')"
                   @keydown.escape="cancelEditing"
-                />
+                >
                 <button
                   type="button"
                   class="p-1.5 text-secondary-600 hover:text-secondary-700"
@@ -1079,7 +1079,7 @@ onMounted(() => {
                   placeholder="From"
                   :disabled="isSavingDrinkWindow"
                   @change="saveDrinkingWindow"
-                />
+                >
                 <span class="text-muted-400">-</span>
                 <input
                   v-model.number="drinkUntilYear"
@@ -1090,7 +1090,7 @@ onMounted(() => {
                   placeholder="Until"
                   :disabled="isSavingDrinkWindow"
                   @change="saveDrinkingWindow"
-                />
+                >
               </dd>
             </div>
           </dl>
@@ -1119,7 +1119,7 @@ onMounted(() => {
                   class="input w-20 text-sm text-center py-1.5"
                   :disabled="isUpdating"
                   @change="saveQuantity"
-                />
+                >
                 <select
                   class="input w-28 text-sm py-1.5"
                   :value="selectedLot.formatId"
@@ -1164,7 +1164,7 @@ onMounted(() => {
                   class="input text-sm py-1.5 w-36"
                   @keydown.enter="saveField('purchaseDate')"
                   @keydown.escape="cancelEditing"
-                />
+                >
                 <button
                   type="button"
                   class="p-1.5 text-secondary-600 hover:text-secondary-700 hover:scale-105 transition-transform"
@@ -1205,7 +1205,7 @@ onMounted(() => {
                   class="input text-sm py-1.5 w-24"
                   @keydown.enter="saveField('purchasePricePerBottle')"
                   @keydown.escape="cancelEditing"
-                />
+                >
                 <button
                   type="button"
                   class="p-1.5 text-secondary-600 hover:text-secondary-700 hover:scale-105 transition-transform"
@@ -1271,7 +1271,7 @@ onMounted(() => {
                     max="100"
                     class="input w-16 text-sm text-center"
                     placeholder="--"
-                  />
+                  >
                   <span class="text-sm text-muted-400">/100</span>
                 </div>
               </div>

@@ -38,8 +38,8 @@ export async function getLatestFxRates(toCurrency = 'EUR'): Promise<FxRateMap> {
       .where(
         and(
           eq(fxRates.fromCurrency, fromCurrency),
-          eq(fxRates.toCurrency, toCurrency as any)
-        )
+          eq(fxRates.toCurrency, toCurrency as any),
+        ),
       )
       .orderBy(desc(fxRates.effectiveDate))
       .limit(1)
@@ -68,7 +68,7 @@ export async function getLatestFxRates(toCurrency = 'EUR'): Promise<FxRateMap> {
 export function convertToBase(
   amount: number | string | null,
   fromCurrency: string | null,
-  rateMap: FxRateMap
+  rateMap: FxRateMap,
 ): number {
   if (amount === null || amount === undefined) return 0
 

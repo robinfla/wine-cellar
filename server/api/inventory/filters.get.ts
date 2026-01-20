@@ -1,4 +1,4 @@
-import { eq, sql, gt, isNotNull } from 'drizzle-orm'
+import { eq, sql, gt } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import {
   inventoryLots,

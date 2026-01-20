@@ -157,7 +157,7 @@ async function findOrCreateAppellation(name: string, regionId?: number): Promise
  */
 async function findOrCreateProducer(
   name: string,
-  regionId?: number
+  regionId?: number,
 ): Promise<number> {
   // Try to find existing
   const existing = await db
@@ -186,7 +186,7 @@ async function findOrCreateWine(
   name: string,
   producerId: number,
   color: string,
-  appellationId?: number
+  appellationId?: number,
 ): Promise<number> {
   // Try to find existing
   const existing = await db
@@ -218,7 +218,7 @@ async function findOrCreateWine(
  * Flexible matching: tries to match existing data, but allows free text for unmatched items
  */
 export async function validateImportRows(
-  rows: ImportRow[]
+  rows: ImportRow[],
 ): Promise<ValidatedRow[]> {
   // Load reference data
   const [allCellars, allRegions, allAppellations, allGrapes, allFormats, existingHashes] =
@@ -257,7 +257,7 @@ export async function validateImportRows(
 
     // Resolve cellar (required - must exist)
     const cellar = allCellars.find(
-      (c) => c.name.toLowerCase() === row.cellar?.toLowerCase().trim()
+      (c) => c.name.toLowerCase() === row.cellar?.toLowerCase().trim(),
     )
     if (!cellar && row.cellar) {
       errors.push(`Cellar "${row.cellar}" not found`)
@@ -274,7 +274,7 @@ export async function validateImportRows(
     if (row.region) {
       const regionName = row.region.trim()
       const region = allRegions.find(
-        (r) => r.name.toLowerCase() === regionName.toLowerCase()
+        (r) => r.name.toLowerCase() === regionName.toLowerCase(),
       )
       if (region) {
         regionId = region.id
@@ -287,7 +287,7 @@ export async function validateImportRows(
     if (row.appellation) {
       const appellationName = row.appellation.trim()
       const appellation = allAppellations.find(
-        (a) => a.name.toLowerCase() === appellationName.toLowerCase()
+        (a) => a.name.toLowerCase() === appellationName.toLowerCase(),
       )
       if (appellation) {
         appellationId = appellation.id
@@ -303,7 +303,7 @@ export async function validateImportRows(
              (formatName === '75cl' && f.volumeMl === 750) ||
              (formatName === '750ml' && f.volumeMl === 750) ||
              (formatName === '150cl' && f.volumeMl === 1500) ||
-             (formatName === '1500ml' && f.volumeMl === 1500)
+             (formatName === '1500ml' && f.volumeMl === 1500),
     )
     if (format) {
       formatId = format.id
@@ -371,7 +371,7 @@ export async function validateImportRows(
  */
 export async function executeImport(
   rows: ValidatedRow[],
-  skipDuplicates: boolean = true
+  skipDuplicates: boolean = true,
 ): Promise<ImportResult> {
   const errors: { row: number; message: string }[] = []
   let imported = 0
@@ -411,7 +411,7 @@ export async function executeImport(
         row.wineName,
         producerId,
         row.color,
-        appellationId
+        appellationId,
       )
 
       // Associate grapes if any

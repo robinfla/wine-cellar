@@ -40,7 +40,7 @@ const selectedYear = ref(new Date().getFullYear())
 const expandedMonths = ref<Set<number>>(new Set())
 
 // Fetch timeline data
-const { data: timelineData, pending, refresh } = await useFetch<TimelineData>('/api/allocations/timeline', {
+const { data: timelineData, pending } = await useFetch<TimelineData>('/api/allocations/timeline', {
   query: computed(() => ({
     year: selectedYear.value,
   })),
@@ -54,7 +54,7 @@ watch(
       selectedYear.value = years[0]
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 // Auto-expand months with allocations when data loads
@@ -68,7 +68,7 @@ watch(
       expandedMonths.value = new Set(monthsWithAllocations)
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 // Toggle month expanded state

@@ -63,7 +63,7 @@ const { data: regionsData } = await useFetch('/api/regions')
 const { data: appellationsData } = await useFetch('/api/appellations')
 
 // Fields that support manual defaults with dropdowns
-const dropdownFields = ['cellar', 'region', 'appellation', 'color', 'format', 'purchaseCurrency']
+const _dropdownFields = ['cellar', 'region', 'appellation', 'color', 'format', 'purchaseCurrency']
 
 // Color options for dropdown
 const colorOptions = [
@@ -87,7 +87,7 @@ const currencyOptions = ['EUR', 'USD', 'GBP', 'ZAR', 'CHF']
 const requiredFields = ['cellar', 'producer', 'wineName', 'color', 'quantity']
 const optionalFields = [
   'region', 'appellation', 'grapes', 'vintage', 'format',
-  'purchaseDate', 'purchasePricePerBottle', 'purchaseCurrency', 'purchaseSource', 'notes'
+  'purchaseDate', 'purchasePricePerBottle', 'purchaseCurrency', 'purchaseSource', 'notes',
 ]
 
 const fieldLabels: Record<string, string> = {
@@ -349,7 +349,7 @@ function reset() {
               accept=".csv"
               class="hidden"
               @change="handleFileUpload"
-            />
+            >
           </label>
         </div>
         <p class="mt-2 text-sm text-muted-500">
@@ -371,7 +371,7 @@ function reset() {
       <h2 class="text-lg font-semibold text-muted-900 mb-4">Map Columns</h2>
       <p class="text-sm text-muted-600 mb-6">
         Match your CSV columns to the wine fields, or set a manual default value for all rows.
-        <br />File: <strong>{{ fileName }}</strong> ({{ rawData.length }} rows)
+        <br >File: <strong>{{ fileName }}</strong> ({{ rawData.length }} rows)
       </p>
 
       <div class="space-y-4">
@@ -419,7 +419,7 @@ function reset() {
                   min="0"
                   class="input flex-1"
                   placeholder="Default qty"
-                />
+                >
                 <!-- Text input for other fields -->
                 <input
                   v-else
@@ -427,7 +427,7 @@ function reset() {
                   type="text"
                   class="input flex-1"
                   placeholder="Default value"
-                />
+                >
               </template>
             </div>
             <p v-if="!columnMapping[field] && manualDefaults[field]" class="mt-1 text-xs text-secondary-600">
@@ -504,7 +504,7 @@ function reset() {
                     max="2100"
                     class="input flex-1"
                     placeholder="Default vintage"
-                  />
+                  >
                   <!-- Price input -->
                   <input
                     v-else-if="field === 'purchasePricePerBottle'"
@@ -514,14 +514,14 @@ function reset() {
                     step="0.01"
                     class="input flex-1"
                     placeholder="Default price"
-                  />
+                  >
                   <!-- Date input -->
                   <input
                     v-else-if="field === 'purchaseDate'"
                     v-model="manualDefaults[field]"
                     type="date"
                     class="input flex-1"
-                  />
+                  >
                   <!-- Text input for other fields -->
                   <input
                     v-else
@@ -529,7 +529,7 @@ function reset() {
                     type="text"
                     class="input flex-1"
                     placeholder="Default value"
-                  />
+                  >
                 </template>
               </div>
               <p v-if="!columnMapping[field] && manualDefaults[field]" class="mt-1 text-xs text-secondary-600">
@@ -586,7 +586,7 @@ function reset() {
             v-model="skipDuplicates"
             type="checkbox"
             class="w-4 h-4 text-primary border-2 border-muted-300 rounded focus:ring-primary focus:ring-offset-2"
-          />
+          >
           <span class="ml-2 text-sm font-medium text-muted-700">Skip duplicate entries</span>
         </label>
       </div>

@@ -94,7 +94,7 @@ export default defineEventHandler(async (event) => {
   const totalBottles = items.reduce((sum, item) => sum + item.quantityClaimed, 0)
   const totalValue = items.reduce(
     (sum, item) => sum + item.quantityClaimed * Number(item.pricePerBottle || 0),
-    0
+    0,
   )
 
   return {

@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
         wineId: wine.id,
         grapeId: g.grapeId,
         percentage: g.percentage,
-      }))
+      })),
     )
   }
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Check session on app load
-const { checkSession, isLoading } = useAuth()
+const { checkSession } = useAuth()
 
 onMounted(async () => {
   await checkSession()

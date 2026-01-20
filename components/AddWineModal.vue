@@ -283,8 +283,8 @@ watch(() => props.modelValue, (isOpen) => {
                 <h2 class="text-xl font-semibold text-muted-900">Add Wine</h2>
                 <button
                   type="button"
-                  @click="closeModal"
                   class="text-muted-400 hover:text-muted-600 transition-transform hover:scale-105"
+                  @click="closeModal"
                 >
                   <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -293,7 +293,7 @@ watch(() => props.modelValue, (isOpen) => {
               </div>
 
               <!-- Form -->
-              <form @submit.prevent="handleSubmit" class="p-6 space-y-6">
+              <form class="p-6 space-y-6" @submit.prevent="handleSubmit">
                 <div v-if="error" class="p-3 text-sm text-red-700 bg-red-50 rounded-lg">
                   {{ error }}
                 </div>
@@ -310,7 +310,7 @@ watch(() => props.modelValue, (isOpen) => {
                         required
                         class="input focus:ring-primary"
                         placeholder="e.g., Chateau Margaux"
-                      />
+                      >
                     </div>
 
                     <div>
@@ -321,7 +321,7 @@ watch(() => props.modelValue, (isOpen) => {
                         required
                         class="input focus:ring-primary"
                         placeholder="e.g., Grand Vin"
-                      />
+                      >
                     </div>
 
                     <div>
@@ -342,7 +342,7 @@ watch(() => props.modelValue, (isOpen) => {
                           class="input flex-1 focus:ring-primary"
                           placeholder="New region name"
                           @keydown.enter.prevent="createRegion"
-                        />
+                        >
                         <button
                           type="button"
                           class="px-2 text-green-600 hover:text-green-700 transition-transform hover:scale-105"
@@ -392,7 +392,7 @@ watch(() => props.modelValue, (isOpen) => {
                           class="input flex-1 focus:ring-primary"
                           placeholder="New appellation name"
                           @keydown.enter.prevent="createAppellation"
-                        />
+                        >
                         <button
                           type="button"
                           class="px-2 text-green-600 hover:text-green-700 transition-transform hover:scale-105"
@@ -466,7 +466,7 @@ watch(() => props.modelValue, (isOpen) => {
                         max="2100"
                         class="input focus:ring-primary"
                         placeholder="NV"
-                      />
+                      >
                     </div>
 
                     <div>
@@ -486,7 +486,7 @@ watch(() => props.modelValue, (isOpen) => {
                         min="1"
                         required
                         class="input focus:ring-primary"
-                      />
+                      >
                     </div>
                   </div>
                 </div>
@@ -501,7 +501,7 @@ watch(() => props.modelValue, (isOpen) => {
                         v-model="form.purchaseDate"
                         type="date"
                         class="input focus:ring-primary"
-                      />
+                      >
                     </div>
 
                     <div>
@@ -514,7 +514,7 @@ watch(() => props.modelValue, (isOpen) => {
                           min="0"
                           class="input flex-1 focus:ring-primary"
                           placeholder="0.00"
-                        />
+                        >
                         <select v-model="form.purchaseCurrency" class="input w-20 focus:ring-primary">
                           <option v-for="opt in currencyOptions" :key="opt.value" :value="opt.value">
                             {{ opt.label }}
@@ -530,7 +530,7 @@ watch(() => props.modelValue, (isOpen) => {
                         type="text"
                         class="input focus:ring-primary"
                         placeholder="e.g., Wine merchant"
-                      />
+                      >
                     </div>
 
                     <div class="sm:col-span-2">
@@ -549,8 +549,8 @@ watch(() => props.modelValue, (isOpen) => {
                 <div class="flex justify-end gap-3 pt-4 border-t border-muted-200">
                   <button
                     type="button"
-                    @click="closeModal"
                     class="btn-secondary transition-transform hover:scale-105"
+                    @click="closeModal"
                   >
                     Cancel
                   </button>

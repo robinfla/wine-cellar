@@ -10,7 +10,7 @@ import {
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
+  'July', 'August', 'September', 'October', 'November', 'December',
 ]
 
 interface TimelineAllocation {
@@ -60,15 +60,15 @@ export default defineEventHandler(async (event) => {
       and(
         sql`${allocations.claimOpensAt} IS NOT NULL`,
         gte(allocations.claimOpensAt, yearStart),
-        lt(allocations.claimOpensAt, yearEnd)
-      )
+        lt(allocations.claimOpensAt, yearEnd),
+      ),
     )
 
   // Get allocation IDs for item queries
   const allocationIds = allocationsResult.map((a) => a.id)
 
   // Get items for all these allocations
-  let itemsByAllocation: Record<number, { totalBottles: number; totalValueEur: number }> = {}
+  const itemsByAllocation: Record<number, { totalBottles: number; totalValueEur: number }> = {}
 
   if (allocationIds.length > 0) {
     const itemsResult = await db
@@ -129,7 +129,7 @@ export default defineEventHandler(async (event) => {
         totalBottles: acc.totalBottles + a.totalBottles,
         totalValueEur: acc.totalValueEur + a.totalValueEur,
       }),
-      { totalBottles: 0, totalValueEur: 0 }
+      { totalBottles: 0, totalValueEur: 0 },
     )
 
     months.push({
@@ -150,7 +150,7 @@ export default defineEventHandler(async (event) => {
       totalValueEur: acc.totalValueEur + m.totals.totalValueEur,
       allocationCount: acc.allocationCount + m.allocations.length,
     }),
-    { totalBottles: 0, totalValueEur: 0, allocationCount: 0 }
+    { totalBottles: 0, totalValueEur: 0, allocationCount: 0 },
   )
 
   yearTotals.totalValueEur = Math.round(yearTotals.totalValueEur * 100) / 100

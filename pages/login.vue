@@ -35,7 +35,7 @@ async function handleSubmit() {
 
 <template>
   <div class="card">
-    <form @submit.prevent="handleSubmit" class="space-y-6">
+    <form class="space-y-6" @submit.prevent="handleSubmit">
       <div v-if="error" class="p-3 text-sm font-semibold text-red-700 bg-red-100 rounded-lg border-2 border-red-200">
         {{ error }}
       </div>
@@ -50,7 +50,7 @@ async function handleSubmit() {
           autocomplete="email"
           class="input"
           placeholder="you@example.com"
-        />
+        >
       </div>
 
       <div>
@@ -63,7 +63,7 @@ async function handleSubmit() {
           autocomplete="current-password"
           class="input"
           placeholder="Enter your password"
-        />
+        >
       </div>
 
       <button
