@@ -222,17 +222,48 @@ function getMappedRows() {
     })
 }
 
-// Validate
+// Validate with chunking
+const VALIDATE_CHUNK_SIZE = 50
+const validationProgress = ref({ current: 0, total: 0 })
+
 async function validateData() {
   isValidating.value = true
+  const allRows = getMappedRows()
+  
+  validationProgress.value = { current: 0, total: allRows.length }
+  validatedRows.value = []
+  
   try {
-    const rows = getMappedRows()
-    const response = await $fetch('/api/inventory/import/validate', {
-      method: 'POST',
-      body: { rows },
-    })
-    validatedRows.value = response.rows
-    validationSummary.value = response.summary
+    for (let i = 0; i < allRows.length; i += VALIDATE_CHUNK_SIZE) {
+      const chunk = allRows.slice(i, i + VALIDATE_CHUNK_SIZE)
+      
+      const response = await $fetch('/api/inventory/import/validate', {
+        method: 'POST',
+        body: { rows: chunk },
+      })
+      
+      const adjustedRows = response.rows.map((row: any) => ({
+        ...row,
+        rowIndex: row.rowIndex + i,
+      }))
+      
+      validatedRows.value.push(...adjustedRows)
+      validationProgress.value.current = Math.min(i + VALIDATE_CHUNK_SIZE, allRows.length)
+    }
+    
+    const validCount = validatedRows.value.filter((r: any) => r.isValid).length
+    const invalidCount = validatedRows.value.filter((r: any) => !r.isValid).length
+    const duplicateCount = validatedRows.value.filter((r: any) => r.isDuplicate).length
+    const warningCount = validatedRows.value.filter((r: any) => r.warnings?.length > 0).length
+    
+    validationSummary.value = {
+      total: validatedRows.value.length,
+      valid: validCount,
+      invalid: invalidCount,
+      duplicates: duplicateCount,
+      withWarnings: warningCount,
+    }
+    
     currentStep.value = 3
   } catch (error: any) {
     console.error('Validation error:', error)
@@ -585,8 +616,22 @@ function reset() {
         </details>
       </div>
 
+      <!-- Progress bar during validation -->
+      <div v-if="isValidating" class="mt-6 p-4 bg-primary-50 rounded-lg border-2 border-primary-200">
+        <div class="flex justify-between text-sm font-medium text-primary-700 mb-2">
+          <span>Validating rows...</span>
+          <span>{{ validationProgress.current }} / {{ validationProgress.total }}</span>
+        </div>
+        <div class="w-full bg-primary-200 rounded-full h-3">
+          <div
+            class="bg-primary-600 h-3 rounded-full transition-all duration-300"
+            :style="{ width: `${validationProgress.total > 0 ? (validationProgress.current / validationProgress.total) * 100 : 0}%` }"
+          />
+        </div>
+      </div>
+
       <div class="mt-6 flex justify-between">
-        <button type="button" class="btn-secondary" @click="currentStep = 1">
+        <button type="button" class="btn-secondary" :disabled="isValidating" @click="currentStep = 1">
           Back
         </button>
         <button
