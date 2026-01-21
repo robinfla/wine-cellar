@@ -5,6 +5,7 @@ const PUBLIC_ROUTES = [
   '/api/auth/register',
   '/api/auth/session',
   '/api/health',
+  '/api/formats',
 ]
 
 export default defineEventHandler(async (event) => {
