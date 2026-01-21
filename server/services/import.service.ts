@@ -364,121 +364,156 @@ export async function executeImport(
   let imported = 0
   let skipped = 0
 
-  const regionCache = new Map<string, number>()
-  const appellationCache = new Map<string, number>()
-  const producerCache = new Map<string, number>()
-  const wineCache = new Map<string, number>()
-
-  const cachedFindOrCreateRegion = async (name: string): Promise<number> => {
-    const key = name.toLowerCase().trim()
-    if (regionCache.has(key)) return regionCache.get(key)!
-    const id = await findOrCreateRegion(name)
-    regionCache.set(key, id)
-    return id
-  }
-
-  const cachedFindOrCreateAppellation = async (name: string, regionId?: number): Promise<number> => {
-    const key = `${name.toLowerCase().trim()}|${regionId || ''}`
-    if (appellationCache.has(key)) return appellationCache.get(key)!
-    const id = await findOrCreateAppellation(name, regionId)
-    appellationCache.set(key, id)
-    return id
-  }
-
-  const cachedFindOrCreateProducer = async (name: string, regionId?: number): Promise<number> => {
-    const key = `${name}|${userId}`
-    if (producerCache.has(key)) return producerCache.get(key)!
-    const id = await findOrCreateProducer(name, userId, regionId)
-    producerCache.set(key, id)
-    return id
-  }
-
-  const cachedFindOrCreateWine = async (
-    name: string,
-    producerId: number,
-    color: string,
-    appellationId?: number,
-  ): Promise<number> => {
-    const key = `${name}|${producerId}|${userId}`
-    if (wineCache.has(key)) return wineCache.get(key)!
-    const id = await findOrCreateWine(name, producerId, userId, color, appellationId)
-    wineCache.set(key, id)
-    return id
-  }
-
-  for (const row of rows) {
+  const validRows = rows.filter((row) => {
     if (!row.isValid) {
       errors.push({ row: row.rowIndex, message: row.errors.join(', ') })
-      continue
+      return false
     }
-
     if (row.isDuplicate && skipDuplicates) {
       skipped++
+      return false
+    }
+    return true
+  })
+
+  if (validRows.length === 0) {
+    return { success: true, imported: 0, skipped, errors }
+  }
+
+  const [existingRegions, existingAppellations, existingProducers, existingWines] = await Promise.all([
+    db.select().from(regions),
+    db.select().from(appellations),
+    db.select().from(producers).where(eq(producers.userId, userId)),
+    db.select().from(wines).where(eq(wines.userId, userId)),
+  ])
+
+  const regionMap = new Map(existingRegions.map(r => [r.name.toLowerCase(), r.id]))
+  const appellationMap = new Map(existingAppellations.map(a => [a.name.toLowerCase(), a.id]))
+  const producerMap = new Map(existingProducers.map(p => [p.name.toLowerCase(), p.id]))
+  const wineMap = new Map(existingWines.map(w => [`${w.name.toLowerCase()}|${w.producerId}`, w.id]))
+
+  const uniqueRegions = [...new Set(validRows.map(r => r.region?.trim()).filter(Boolean))]
+  const newRegions = uniqueRegions.filter(name => !regionMap.has(name!.toLowerCase()))
+  
+  if (newRegions.length > 0) {
+    const inserted = await db
+      .insert(regions)
+      .values(newRegions.map(name => ({ name: name!, countryCode: 'ZA' })))
+      .onConflictDoNothing()
+      .returning()
+    inserted.forEach(r => regionMap.set(r.name.toLowerCase(), r.id))
+  }
+
+  const uniqueAppellations = [...new Set(validRows.map(r => r.appellation?.trim()).filter(Boolean))]
+  const newAppellations = uniqueAppellations.filter(name => !appellationMap.has(name!.toLowerCase()))
+  
+  if (newAppellations.length > 0) {
+    const inserted = await db
+      .insert(appellations)
+      .values(newAppellations.map(name => ({ name: name! })))
+      .onConflictDoNothing()
+      .returning()
+    inserted.forEach(a => appellationMap.set(a.name.toLowerCase(), a.id))
+  }
+
+  const uniqueProducers = [...new Set(validRows.map(r => r.producer.trim()))]
+  const newProducers = uniqueProducers.filter(name => !producerMap.has(name.toLowerCase()))
+  
+  if (newProducers.length > 0) {
+    const inserted = await db
+      .insert(producers)
+      .values(newProducers.map(name => {
+        const row = validRows.find(r => r.producer.trim() === name)
+        const regionId = row?.region ? regionMap.get(row.region.toLowerCase().trim()) : undefined
+        return { name, userId, regionId }
+      }))
+      .onConflictDoNothing()
+      .returning()
+    inserted.forEach(p => producerMap.set(p.name.toLowerCase(), p.id))
+  }
+
+  const wineEntries: { name: string; producerId: number; color: string; appellationId?: number }[] = []
+  for (const row of validRows) {
+    const producerId = producerMap.get(row.producer.toLowerCase().trim())
+    if (!producerId) continue
+    const key = `${row.wineName.toLowerCase().trim()}|${producerId}`
+    if (!wineMap.has(key)) {
+      const appellationId = row.appellation ? appellationMap.get(row.appellation.toLowerCase().trim()) : undefined
+      wineEntries.push({ name: row.wineName.trim(), producerId, color: row.color, appellationId })
+      wineMap.set(key, -1)
+    }
+  }
+
+  const uniqueWineEntries = wineEntries.filter((w, i, arr) => 
+    arr.findIndex(x => `${x.name.toLowerCase()}|${x.producerId}` === `${w.name.toLowerCase()}|${w.producerId}`) === i
+  )
+
+  if (uniqueWineEntries.length > 0) {
+    const inserted = await db
+      .insert(wines)
+      .values(uniqueWineEntries.map(w => ({
+        name: w.name,
+        userId,
+        producerId: w.producerId,
+        color: w.color as any,
+        appellationId: w.appellationId,
+      })))
+      .onConflictDoNothing()
+      .returning()
+    inserted.forEach(w => wineMap.set(`${w.name.toLowerCase()}|${w.producerId}`, w.id))
+  }
+
+  const refreshedWines = await db.select().from(wines).where(eq(wines.userId, userId))
+  refreshedWines.forEach(w => wineMap.set(`${w.name.toLowerCase()}|${w.producerId}`, w.id))
+
+  const lotValues: any[] = []
+  const rowToLotIndex: Map<number, number> = new Map()
+
+  for (const row of validRows) {
+    const producerId = producerMap.get(row.producer.toLowerCase().trim())
+    if (!producerId) {
+      errors.push({ row: row.rowIndex, message: 'Producer not found' })
+      continue
+    }
+    const wineId = wineMap.get(`${row.wineName.toLowerCase().trim()}|${producerId}`)
+    if (!wineId || wineId === -1) {
+      errors.push({ row: row.rowIndex, message: 'Wine not found' })
       continue
     }
 
-    try {
-      let regionId = row.regionId
-      if (!regionId && row.region && row.region.trim()) {
-        regionId = await cachedFindOrCreateRegion(row.region)
-      }
+    rowToLotIndex.set(row.rowIndex, lotValues.length)
+    lotValues.push({
+      userId,
+      wineId,
+      cellarId: row.cellarId!,
+      formatId: row.formatId!,
+      vintage: row.vintage as number | undefined,
+      quantity: row.quantity as number,
+      purchaseDate: row.purchaseDate ? new Date(row.purchaseDate) : null,
+      purchasePricePerBottle: row.purchasePricePerBottle?.toString(),
+      purchaseCurrency: (row.purchaseCurrency as any) || 'EUR',
+      purchaseSource: row.purchaseSource,
+      importHash: row.importHash,
+      notes: row.notes,
+    })
+  }
 
-      let appellationId = row.appellationId
-      if (!appellationId && row.appellation && row.appellation.trim()) {
-        appellationId = await cachedFindOrCreateAppellation(row.appellation, regionId)
-      }
-
-      const producerId = await cachedFindOrCreateProducer(row.producer, regionId)
-
-      const wineId = await cachedFindOrCreateWine(
-        row.wineName,
-        producerId,
-        row.color,
-        appellationId,
-      )
-
-      if (row.grapeIds && row.grapeIds.length > 0) {
-        for (const grapeId of row.grapeIds) {
-          await db
-            .insert(wineGrapes)
-            .values({ wineId, grapeId })
-            .onConflictDoNothing()
-        }
-      }
-
-      const [lot] = await db
-        .insert(inventoryLots)
-        .values({
-          userId,
-          wineId,
-          cellarId: row.cellarId!,
-          formatId: row.formatId!,
-          vintage: row.vintage as number | undefined,
-          quantity: row.quantity as number,
-          purchaseDate: row.purchaseDate ? new Date(row.purchaseDate) : null,
-          purchasePricePerBottle: row.purchasePricePerBottle?.toString(),
-          purchaseCurrency: (row.purchaseCurrency as any) || 'EUR',
-          purchaseSource: row.purchaseSource,
-          importHash: row.importHash,
-          notes: row.notes,
-        })
-        .returning()
-
-      await db.insert(inventoryEvents).values({
+  if (lotValues.length > 0) {
+    const insertedLots = await db.insert(inventoryLots).values(lotValues).returning()
+    
+    const eventValues = insertedLots.map((lot, idx) => {
+      const row = validRows.find(r => rowToLotIndex.get(r.rowIndex) === idx)
+      return {
         lotId: lot.id,
-        eventType: 'purchase',
-        quantityChange: row.quantity as number,
-        eventDate: row.purchaseDate ? new Date(row.purchaseDate) : new Date(),
+        eventType: 'purchase' as const,
+        quantityChange: lot.quantity,
+        eventDate: row?.purchaseDate ? new Date(row.purchaseDate) : new Date(),
         notes: 'Imported from CSV',
-      })
+      }
+    })
 
-      imported++
-    } catch (error: any) {
-      errors.push({
-        row: row.rowIndex,
-        message: error.message || 'Unknown error',
-      })
-    }
+    await db.insert(inventoryEvents).values(eventValues)
+    imported = insertedLots.length
   }
 
   return {
