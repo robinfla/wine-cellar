@@ -410,9 +410,6 @@ async function validateData() {
   }
 }
 
-// Import with chunking
-const CHUNK_SIZE = 25
-
 async function executeImport() {
   isImporting.value = true
   
@@ -427,46 +424,29 @@ async function executeImport() {
   }
 
   try {
-    for (let i = 0; i < validRows.length; i += CHUNK_SIZE) {
-      const chunk = validRows.slice(i, i + CHUNK_SIZE)
-      
-      try {
-        const response = await $fetch('/api/inventory/import/execute', {
-          method: 'POST',
-          body: {
-            rows: chunk,
-            skipDuplicates: skipDuplicates.value,
-          },
-        })
-        
-        importProgress.value.imported += response.imported
-        importProgress.value.skipped += response.skipped
-        importProgress.value.errors.push(...(response.errors || []))
-      } catch (error: any) {
-        const chunkErrors = chunk.map((row: any) => ({
-          row: row.rowIndex,
-          message: error.data?.message || error.message || 'Chunk import failed',
-        }))
-        importProgress.value.errors.push(...chunkErrors)
-      }
-      
-      importProgress.value.current = Math.min(i + CHUNK_SIZE, validRows.length)
-    }
+    const response = await $fetch('/api/inventory/import/execute', {
+      method: 'POST',
+      body: {
+        rows: validRows,
+        skipDuplicates: skipDuplicates.value,
+      },
+    })
     
     importResult.value = {
-      success: importProgress.value.errors.length === 0,
-      imported: importProgress.value.imported,
-      skipped: importProgress.value.skipped,
-      errors: importProgress.value.errors,
+      success: response.errors.length === 0,
+      imported: response.imported,
+      skipped: response.skipped,
+      errors: response.errors || [],
     }
     currentStep.value = 4
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { data?: { message?: string }; message?: string }
     console.error('Import error:', error)
     importResult.value = {
       success: false,
-      imported: importProgress.value.imported,
-      skipped: importProgress.value.skipped,
-      errors: [{ row: 0, message: error.message || 'Import failed' }],
+      imported: 0,
+      skipped: 0,
+      errors: [{ row: 0, message: err.data?.message || err.message || 'Import failed' }],
     }
     currentStep.value = 4
   } finally {

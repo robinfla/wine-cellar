@@ -7,10 +7,9 @@ let _db: PostgresJsDatabase<typeof schema> | null = null
 export const getDb = () => {
   if (!_db) {
     const connectionString = process.env.DATABASE_URL || process.env.NUXT_DATABASE_URL || ''
-    const isProduction = process.env.NODE_ENV === 'production'
     
     const queryClient = postgres(connectionString, {
-      max: isProduction ? 1 : 10,
+      max: 10,
       idle_timeout: 20,
       connect_timeout: 30,
       prepare: false,
