@@ -1,4 +1,4 @@
-import { eq, gt } from 'drizzle-orm'
+import { eq, gt, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import {
   inventoryLots,
@@ -11,7 +11,11 @@ import {
 } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
-  // Get all inventory with details
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+
   const lots = await db
     .select({
       cellar: cellars.name,
@@ -36,7 +40,7 @@ export default defineEventHandler(async (event) => {
     .innerJoin(formats, eq(inventoryLots.formatId, formats.id))
     .leftJoin(appellations, eq(wines.appellationId, appellations.id))
     .leftJoin(regions, eq(producers.regionId, regions.id))
-    .where(gt(inventoryLots.quantity, 0))
+    .where(and(eq(inventoryLots.userId, userId), gt(inventoryLots.quantity, 0)))
 
   // Build CSV
   const headers = [

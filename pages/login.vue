@@ -84,6 +84,13 @@ async function handleSubmit() {
         <span v-if="isLoading">Signing in...</span>
         <span v-else>Sign in</span>
       </button>
+
+      <p class="text-center text-sm text-muted-foreground">
+        Have an invitation code?
+        <NuxtLink to="/register" class="text-primary font-semibold hover:underline">
+          Create account
+        </NuxtLink>
+      </p>
     </form>
   </div>
 </template>

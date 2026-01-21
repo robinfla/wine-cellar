@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import {
   allocations,
@@ -10,6 +10,11 @@ import {
 } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+
   const id = Number(getRouterParam(event, 'id'))
 
   if (isNaN(id)) {
@@ -19,7 +24,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Get allocation with producer info
+  // Get allocation with producer info (scoped to user)
   const [allocation] = await db
     .select({
       id: allocations.id,
@@ -38,7 +43,7 @@ export default defineEventHandler(async (event) => {
     .from(allocations)
     .innerJoin(producers, eq(allocations.producerId, producers.id))
     .leftJoin(regions, eq(producers.regionId, regions.id))
-    .where(eq(allocations.id, id))
+    .where(and(eq(allocations.id, id), eq(allocations.userId, userId)))
 
   if (!allocation) {
     throw createError({

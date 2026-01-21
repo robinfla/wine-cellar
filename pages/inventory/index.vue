@@ -568,13 +568,13 @@ onMounted(() => {
 <template>
   <div class="flex">
     <!-- Main content -->
-    <div class="flex-1 min-w-0" :class="{ 'mr-96': selectedLot }">
+    <div class="flex-1 min-w-0" :class="{ 'lg:mr-96': selectedLot }">
       <!-- Toolbar -->
-      <div class="flex items-center justify-between gap-4 mb-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
         <!-- Left: Search and Filters -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 w-full sm:w-auto">
           <!-- Search bar -->
-          <div class="relative">
+          <div class="relative flex-1 sm:flex-initial">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -582,26 +582,26 @@ onMounted(() => {
               :value="searchQuery"
               type="text"
               placeholder="Search wines..."
-              class="pl-9 pr-4 py-2 w-64 text-sm border border-muted-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary-500"
+              class="pl-9 pr-4 py-2 w-full sm:w-64 text-sm border border-muted-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary-500"
               @input="handleSearchInput(($event.target as HTMLInputElement).value)"
             >
           </div>
 
           <!-- Filters toggle -->
           <button
-            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-muted-700 bg-white border border-muted-300 rounded-lg hover:bg-muted-50 hover:scale-102 transition-transform"
+            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-muted-700 bg-white border border-muted-300 rounded-lg hover:bg-muted-50 hover:scale-102 transition-transform flex-shrink-0"
             @click="showFilters = !showFilters"
           >
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
-            Filters
+            <span class="hidden sm:inline">Filters</span>
             <span v-if="hasActiveFilters" class="w-2 h-2 bg-primary-500 rounded-full" />
           </button>
         </div>
 
         <!-- Right: Actions -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 justify-end">
           <a
             href="/api/inventory/export"
             download
@@ -610,7 +610,7 @@ onMounted(() => {
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Export
+            <span class="hidden sm:inline">Export</span>
           </a>
 
           <button
@@ -621,7 +621,7 @@ onMounted(() => {
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
-            Delete All
+            <span class="hidden sm:inline">Delete All</span>
           </button>
 
           <!-- Add Wine dropdown -->
@@ -630,7 +630,8 @@ onMounted(() => {
               class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 hover:scale-105 transition-transform"
               @click="showAddMenu = !showAddMenu"
             >
-              Add Wine
+              <span class="hidden sm:inline">Add Wine</span>
+              <span class="sm:hidden">Add</span>
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
@@ -658,11 +659,11 @@ onMounted(() => {
       </div>
 
       <!-- Quick filter tabs -->
-      <div class="flex gap-1 border-b border-muted-200 mb-4">
+      <div class="flex gap-1 border-b border-muted-200 mb-4 overflow-x-auto">
         <button
           v-for="tab in maturityTabs"
           :key="tab.value"
-          class="px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors"
+          class="px-3 sm:px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap"
           :class="maturityFilter === tab.value
             ? 'text-primary-600 border-primary-600'
             : 'text-muted-500 border-transparent hover:text-muted-700 hover:border-muted-300'"
@@ -675,7 +676,7 @@ onMounted(() => {
       <!-- Collapsible filters panel -->
       <div
         v-show="showFilters"
-        class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4 p-4 bg-muted-50 rounded-lg border border-muted-200"
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 p-3 sm:p-4 bg-muted-50 rounded-lg border border-muted-200"
       >
         <div>
           <label class="block text-xs font-semibold text-muted-500 mb-1">Producer</label>
@@ -753,16 +754,16 @@ onMounted(() => {
       </div>
 
       <!-- Table -->
-      <div v-else class="overflow-x-auto">
-        <table class="w-full">
+      <div v-else class="overflow-x-auto -mx-4 sm:mx-0">
+        <table class="w-full min-w-[400px]">
           <thead>
             <tr class="border-b border-muted-200">
-              <th class="px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Name</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Producer</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Region</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Vintage</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Color</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider">Qty</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Name</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider hidden sm:table-cell">Producer</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider hidden md:table-cell">Region</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Vintage</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider hidden sm:table-cell">Color</th>
+              <th class="px-3 sm:px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider">Qty</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-muted-100">
@@ -773,18 +774,21 @@ onMounted(() => {
               :class="selectedLot?.id === lot.id ? 'bg-primary-50' : 'hover:bg-muted-50'"
               @click="selectLot(lot)"
             >
-              <td class="px-4 py-3 text-sm font-semibold text-muted-900">{{ lot.wineName }}</td>
-              <td class="px-4 py-3 text-sm text-muted-600">{{ lot.producerName }}</td>
-              <td class="px-4 py-3 text-sm text-muted-600">{{ lot.regionName || lot.appellationName || '-' }}</td>
-              <td class="px-4 py-3 text-sm text-muted-600">{{ lot.vintage || 'NV' }}</td>
-              <td class="px-4 py-3">
+              <td class="px-3 sm:px-4 py-3 text-sm font-semibold text-muted-900">
+                {{ lot.wineName }}
+                <span class="sm:hidden text-xs font-normal text-muted-500 block">{{ lot.producerName }}</span>
+              </td>
+              <td class="px-3 sm:px-4 py-3 text-sm text-muted-600 hidden sm:table-cell">{{ lot.producerName }}</td>
+              <td class="px-3 sm:px-4 py-3 text-sm text-muted-600 hidden md:table-cell">{{ lot.regionName || lot.appellationName || '-' }}</td>
+              <td class="px-3 sm:px-4 py-3 text-sm text-muted-600">{{ lot.vintage || 'NV' }}</td>
+              <td class="px-3 sm:px-4 py-3 hidden sm:table-cell">
                 <span
                   class="inline-block w-3 h-3 rounded-full"
                   :class="getColorDot(lot.wineColor)"
                   :title="lot.wineColor"
                 />
               </td>
-              <td class="px-4 py-3 text-sm text-muted-900 text-right font-semibold">{{ lot.quantity }}</td>
+              <td class="px-3 sm:px-4 py-3 text-sm text-muted-900 text-right font-semibold">{{ lot.quantity }}</td>
             </tr>
           </tbody>
         </table>
@@ -825,7 +829,7 @@ onMounted(() => {
     >
       <div
         v-if="selectedLot"
-        class="fixed right-0 top-0 h-full w-96 bg-white border-l-2 border-muted-200 overflow-y-auto z-20"
+        class="fixed right-0 top-0 h-full w-full sm:w-80 lg:w-96 bg-white border-l-2 border-muted-200 overflow-y-auto z-20"
       >
         <!-- Panel Header -->
         <div class="sticky top-0 bg-white border-b border-muted-200 px-6 py-4 z-10">
@@ -954,7 +958,7 @@ onMounted(() => {
                   type="number"
                   min="1900"
                   max="2100"
-                  class="input w-20 text-sm text-center py-1"
+                  class="input w-16 sm:w-20 text-sm text-center py-1"
                   placeholder="NV"
                   @keydown.enter="saveField('vintage')"
                   @keydown.escape="cancelEditing"
@@ -992,7 +996,7 @@ onMounted(() => {
               <dd v-if="editingField === 'appellation'" class="flex items-center gap-1">
                 <select
                   v-model="editValues.appellationId"
-                  class="input text-sm py-1 w-40"
+                  class="input text-sm py-1 w-32 sm:w-40"
                 >
                   <option :value="null">None</option>
                   <option v-for="a in appellations" :key="a.id" :value="a.id">
@@ -1032,7 +1036,7 @@ onMounted(() => {
               <dd v-if="editingField === 'region'" class="flex items-center gap-1">
                 <select
                   v-model="editValues.regionId"
-                  class="input text-sm py-1 w-40"
+                  class="input text-sm py-1 w-32 sm:w-40"
                 >
                   <option :value="null">None</option>
                   <option v-for="r in regionsData" :key="r.id" :value="r.id">
@@ -1067,7 +1071,7 @@ onMounted(() => {
               </dd>
             </div>
             <!-- Drinking Window - Editable -->
-            <div class="flex justify-between items-center">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
               <dt class="text-sm text-muted-500">Drinking Window</dt>
               <dd class="flex items-center gap-2">
                 <input
@@ -1075,7 +1079,7 @@ onMounted(() => {
                   type="number"
                   min="1900"
                   max="2100"
-                  class="input w-20 text-sm text-center py-1.5"
+                  class="input w-16 sm:w-20 text-sm text-center py-1.5"
                   placeholder="From"
                   :disabled="isSavingDrinkWindow"
                   @change="saveDrinkingWindow"
@@ -1086,7 +1090,7 @@ onMounted(() => {
                   type="number"
                   min="1900"
                   max="2100"
-                  class="input w-20 text-sm text-center py-1.5"
+                  class="input w-16 sm:w-20 text-sm text-center py-1.5"
                   placeholder="Until"
                   :disabled="isSavingDrinkWindow"
                   @change="saveDrinkingWindow"
@@ -1109,19 +1113,19 @@ onMounted(() => {
 
           <dl class="space-y-3">
             <!-- Quantity with format selector -->
-            <div class="flex justify-between items-center">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
               <dt class="text-sm text-muted-500">Quantity</dt>
               <dd class="flex items-center gap-2">
                 <input
                   v-model.number="selectedLot.quantity"
                   type="number"
                   min="0"
-                  class="input w-20 text-sm text-center py-1.5"
+                  class="input w-16 sm:w-20 text-sm text-center py-1.5"
                   :disabled="isUpdating"
                   @change="saveQuantity"
                 >
                 <select
-                  class="input w-28 text-sm py-1.5"
+                  class="input w-24 sm:w-28 text-sm py-1.5"
                   :value="selectedLot.formatId"
                   :disabled="isUpdating"
                   @change="saveFormat"
@@ -1161,7 +1165,7 @@ onMounted(() => {
                 <input
                   v-model="editValues.purchaseDate"
                   type="date"
-                  class="input text-sm py-1.5 w-36"
+                  class="input text-sm py-1.5 w-32 sm:w-36"
                   @keydown.enter="saveField('purchaseDate')"
                   @keydown.escape="cancelEditing"
                 >
@@ -1202,7 +1206,7 @@ onMounted(() => {
                   type="number"
                   step="0.01"
                   min="0"
-                  class="input text-sm py-1.5 w-24"
+                  class="input text-sm py-1.5 w-20 sm:w-24"
                   @keydown.enter="saveField('purchasePricePerBottle')"
                   @keydown.escape="cancelEditing"
                 >
@@ -1259,8 +1263,8 @@ onMounted(() => {
           </div>
 
           <!-- Add new note form -->
-          <div class="p-4 bg-white rounded-xl border-2 border-muted-200 mb-4">
-            <div class="flex gap-3 mb-3">
+          <div class="p-3 sm:p-4 bg-white rounded-xl border-2 border-muted-200 mb-4">
+            <div class="flex flex-col sm:flex-row gap-3 mb-3">
               <div class="flex-shrink-0">
                 <label class="block text-xs font-medium text-muted-500 mb-1.5">Score</label>
                 <div class="flex items-center gap-1">
@@ -1269,7 +1273,7 @@ onMounted(() => {
                     type="number"
                     min="0"
                     max="100"
-                    class="input w-16 text-sm text-center"
+                    class="input w-14 sm:w-16 text-sm text-center"
                     placeholder="--"
                   >
                   <span class="text-sm text-muted-400">/100</span>

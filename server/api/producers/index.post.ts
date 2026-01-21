@@ -11,6 +11,11 @@ const createProducerSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+
   const body = await readBody(event)
 
   const parsed = createProducerSchema.safeParse(body)
@@ -22,8 +27,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Check if producer already exists with same name and region
-  const conditions = [eq(producers.name, parsed.data.name)]
+  const conditions = [eq(producers.name, parsed.data.name), eq(producers.userId, userId)]
   if (parsed.data.regionId) {
     conditions.push(eq(producers.regionId, parsed.data.regionId))
   } else {
@@ -39,10 +43,9 @@ export default defineEventHandler(async (event) => {
     return existing
   }
 
-  // Create new producer
   const result = await db
     .insert(producers)
-    .values(parsed.data)
+    .values({ ...parsed.data, userId })
     .returning()
 
   return result[0]

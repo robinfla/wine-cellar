@@ -1,8 +1,8 @@
 import { getSessionToken, validateSession } from '~/server/utils/session'
 
-// Routes that don't require authentication
 const PUBLIC_ROUTES = [
   '/api/auth/login',
+  '/api/auth/register',
   '/api/auth/session',
   '/api/health',
 ]

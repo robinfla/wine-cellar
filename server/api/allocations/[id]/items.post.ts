@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import { allocations, allocationItems } from '~/server/db/schema'
 
@@ -14,6 +14,14 @@ const createSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({
+      statusCode: 401,
+      message: 'Unauthorized',
+    })
+  }
+
   const allocationId = Number(getRouterParam(event, 'id'))
   const body = await readBody(event)
 
@@ -33,11 +41,11 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Verify allocation exists
+  // Verify allocation exists and belongs to user
   const [allocation] = await db
     .select()
     .from(allocations)
-    .where(eq(allocations.id, allocationId))
+    .where(and(eq(allocations.id, allocationId), eq(allocations.userId, userId)))
 
   if (!allocation) {
     throw createError({

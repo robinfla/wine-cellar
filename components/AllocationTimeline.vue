@@ -135,14 +135,14 @@ function selectAllocation(allocation: TimelineAllocation) {
 <template>
   <div>
     <!-- Header with year selector and totals -->
-    <div class="flex items-center justify-between gap-4 mb-6">
-      <div class="flex items-center gap-4">
-        <h2 class="text-xl font-display font-bold text-muted-900">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6">
+      <div class="flex items-center gap-3 sm:gap-4">
+        <h2 class="text-lg sm:text-xl font-display font-bold text-muted-900">
           {{ selectedYear }} Timeline
         </h2>
         <select
           v-model="selectedYear"
-          class="input text-sm py-1.5 w-28"
+          class="input text-sm py-1.5 w-24 sm:w-28"
         >
           <option
             v-for="year in timelineData?.availableYears || [selectedYear]"
@@ -155,33 +155,37 @@ function selectAllocation(allocation: TimelineAllocation) {
       </div>
 
       <!-- Year summary -->
-      <div v-if="timelineData?.yearTotals" class="flex items-center gap-4 text-sm text-muted-600">
+      <div v-if="timelineData?.yearTotals" class="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-muted-600">
         <span>
           <span class="font-semibold text-muted-900">{{ timelineData.yearTotals.allocationCount }}</span>
-          allocation{{ timelineData.yearTotals.allocationCount === 1 ? '' : 's' }}
+          <span class="hidden sm:inline"> allocation{{ timelineData.yearTotals.allocationCount === 1 ? '' : 's' }}</span>
+          <span class="sm:hidden"> alloc.</span>
         </span>
         <span class="text-muted-300">|</span>
         <span>
           <span class="font-semibold text-muted-900">{{ timelineData.yearTotals.totalBottles }}</span>
-          bottle{{ timelineData.yearTotals.totalBottles === 1 ? '' : 's' }}
+          <span class="hidden sm:inline"> bottle{{ timelineData.yearTotals.totalBottles === 1 ? '' : 's' }}</span>
+          <span class="sm:hidden"> btl</span>
         </span>
         <span class="text-muted-300">|</span>
         <span class="font-semibold text-muted-900">
           {{ formatCurrency(timelineData.yearTotals.totalValueEur) }}
         </span>
-        <span class="text-muted-300">|</span>
-        <button
-          class="text-primary-600 hover:text-primary-700 font-medium"
-          @click="expandAll"
-        >
-          Expand all
-        </button>
-        <button
-          class="text-primary-600 hover:text-primary-700 font-medium"
-          @click="collapseAll"
-        >
-          Collapse all
-        </button>
+        <span class="text-muted-300 hidden sm:inline">|</span>
+        <div class="flex gap-2 w-full sm:w-auto mt-1 sm:mt-0">
+          <button
+            class="text-primary-600 hover:text-primary-700 font-medium text-xs sm:text-sm"
+            @click="expandAll"
+          >
+            Expand all
+          </button>
+          <button
+            class="text-primary-600 hover:text-primary-700 font-medium text-xs sm:text-sm"
+            @click="collapseAll"
+          >
+            Collapse all
+          </button>
+        </div>
       </div>
     </div>
 
@@ -199,17 +203,17 @@ function selectAllocation(allocation: TimelineAllocation) {
       >
         <!-- Month header (clickable) -->
         <button
-          class="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
+          class="w-full flex items-center justify-between px-3 sm:px-4 py-3 text-left transition-colors"
           :class="[
             month.allocations.length > 0 ? 'hover:bg-muted-100' : 'hover:bg-muted-50',
             month.allocations.length > 0 && isExpanded(month.month) ? 'bg-muted-50 border-b border-muted-200' : 'bg-muted-50'
           ]"
           @click="toggleMonth(month.month)"
         >
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 sm:gap-3">
             <!-- Chevron icon -->
             <svg
-              class="w-4 h-4 text-muted-400 transition-transform duration-200"
+              class="w-4 h-4 text-muted-400 transition-transform duration-200 flex-shrink-0"
               :class="{ 'rotate-90': isExpanded(month.month) }"
               fill="none"
               viewBox="0 0 24 24"
@@ -217,24 +221,27 @@ function selectAllocation(allocation: TimelineAllocation) {
             >
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
-            <h3 class="font-display font-bold text-muted-900">
+            <h3 class="font-display font-bold text-muted-900 text-sm sm:text-base">
               {{ month.monthName }}
             </h3>
             <!-- Allocation count badge -->
             <span
               v-if="month.allocations.length > 0"
-              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary-100 text-primary-700"
+              class="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-xs font-semibold bg-primary-100 text-primary-700"
             >
               {{ month.allocations.length }}
             </span>
           </div>
-          <div v-if="month.allocations.length > 0" class="text-sm text-muted-600">
-            <span class="font-semibold text-muted-900">{{ month.totals.totalBottles }}</span> bottles
-            <span class="mx-2 text-muted-300">|</span>
+          <div v-if="month.allocations.length > 0" class="text-xs sm:text-sm text-muted-600">
+            <span class="font-semibold text-muted-900">{{ month.totals.totalBottles }}</span>
+            <span class="hidden sm:inline"> bottles</span>
+            <span class="sm:hidden"> btl</span>
+            <span class="mx-1 sm:mx-2 text-muted-300">|</span>
             <span class="font-semibold text-muted-900">{{ formatCurrency(month.totals.totalValueEur) }}</span>
           </div>
-          <div v-else class="text-sm text-muted-400">
-            No allocations
+          <div v-else class="text-xs sm:text-sm text-muted-400">
+            <span class="hidden sm:inline">No allocations</span>
+            <span class="sm:hidden">-</span>
           </div>
         </button>
 
@@ -251,26 +258,26 @@ function selectAllocation(allocation: TimelineAllocation) {
             <div
               v-for="allocation in month.allocations"
               :key="allocation.id"
-              class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted-50 transition-colors"
+              class="flex flex-col sm:flex-row sm:items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 gap-1 sm:gap-3 cursor-pointer hover:bg-muted-50 transition-colors"
               @click.stop="selectAllocation(allocation)"
             >
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2 sm:gap-3">
                 <span
-                  class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold"
+                  class="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md text-xs font-semibold flex-shrink-0"
                   :class="getStatusColor(allocation.status)"
                 >
                   {{ getStatusLabel(allocation.status) }}
                 </span>
-                <div>
-                  <span class="font-semibold text-muted-900">{{ allocation.producerName }}</span>
-                  <span v-if="allocation.regionName" class="text-sm text-muted-500 ml-2">
+                <div class="min-w-0">
+                  <span class="font-semibold text-muted-900 text-sm sm:text-base">{{ allocation.producerName }}</span>
+                  <span v-if="allocation.regionName" class="text-xs sm:text-sm text-muted-500 ml-1 sm:ml-2 hidden sm:inline">
                     {{ allocation.regionName }}
                   </span>
                 </div>
               </div>
-              <div class="text-right text-sm">
+              <div class="text-right text-xs sm:text-sm flex-shrink-0 ml-auto sm:ml-0">
                 <span class="text-muted-600">{{ allocation.totalBottles }} btl</span>
-                <span class="font-semibold text-muted-900 ml-3">
+                <span class="font-semibold text-muted-900 ml-2 sm:ml-3">
                   {{ formatCurrency(allocation.totalValueEur) }}
                 </span>
               </div>

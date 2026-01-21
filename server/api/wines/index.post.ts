@@ -17,6 +17,11 @@ const createWineSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+
   const body = await readBody(event)
 
   const parsed = createWineSchema.safeParse(body)
@@ -30,10 +35,9 @@ export default defineEventHandler(async (event) => {
 
   const { grapeIds, ...wineData } = parsed.data
 
-  // Insert wine
   const [wine] = await db
     .insert(wines)
-    .values(wineData)
+    .values({ ...wineData, userId })
     .returning()
 
   // Insert grape associations if provided

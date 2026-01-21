@@ -1,8 +1,16 @@
 import { eq, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
-import { allocationItems } from '~/server/db/schema'
+import { allocationItems, allocations } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({
+      statusCode: 401,
+      message: 'Unauthorized',
+    })
+  }
+
   const allocationId = Number(getRouterParam(event, 'id'))
   const itemId = Number(getRouterParam(event, 'itemId'))
 
@@ -10,6 +18,19 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 400,
       message: 'Invalid allocation or item ID',
+    })
+  }
+
+  // Verify allocation belongs to user
+  const [allocation] = await db
+    .select()
+    .from(allocations)
+    .where(and(eq(allocations.id, allocationId), eq(allocations.userId, userId)))
+
+  if (!allocation) {
+    throw createError({
+      statusCode: 404,
+      message: 'Allocation not found',
     })
   }
 

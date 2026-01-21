@@ -17,6 +17,11 @@ const createInventoryLotSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+
   const body = await readBody(event)
 
   const parsed = createInventoryLotSchema.safeParse(body)
@@ -30,11 +35,11 @@ export default defineEventHandler(async (event) => {
 
   const { purchaseDate, ...data } = parsed.data
 
-  // Insert lot
   const [lot] = await db
     .insert(inventoryLots)
     .values({
       ...data,
+      userId,
       purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
     })
     .returning()

@@ -9,10 +9,17 @@ import {
 } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({
+      statusCode: 401,
+      message: 'Unauthorized',
+    })
+  }
+
   const allocationId = Number(getRouterParam(event, 'id'))
   const body = await readBody(event)
 
-  // Optional: cellarId to store the bottles in (defaults to first cellar)
   const cellarId = body?.cellarId ? Number(body.cellarId) : undefined
 
   if (isNaN(allocationId)) {
@@ -22,7 +29,6 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Get allocation with producer
   const [allocation] = await db
     .select({
       id: allocations.id,
@@ -36,7 +42,7 @@ export default defineEventHandler(async (event) => {
     })
     .from(allocations)
     .innerJoin(producers, eq(allocations.producerId, producers.id))
-    .where(eq(allocations.id, allocationId))
+    .where(and(eq(allocations.id, allocationId), eq(allocations.userId, userId)))
 
   if (!allocation) {
     throw createError({
@@ -60,10 +66,13 @@ export default defineEventHandler(async (event) => {
 
   const claimedItems = items.filter((item) => item.quantityClaimed > 0)
 
-  // Get default cellar if not provided
   let targetCellarId = cellarId
   if (!targetCellarId) {
-    const [defaultCellar] = await db.select().from(cellars).limit(1)
+    const [defaultCellar] = await db
+      .select()
+      .from(cellars)
+      .where(eq(cellars.userId, userId))
+      .limit(1)
     if (!defaultCellar) {
       throw createError({
         statusCode: 400,
@@ -73,12 +82,12 @@ export default defineEventHandler(async (event) => {
     targetCellarId = defaultCellar.id
   }
 
-  // Create inventory lots for each claimed item
   const createdLots = []
   for (const item of claimedItems) {
     const [lot] = await db
       .insert(inventoryLots)
       .values({
+        userId,
         wineId: item.wineId,
         cellarId: targetCellarId,
         formatId: item.formatId,
@@ -114,22 +123,24 @@ export default defineEventHandler(async (event) => {
     })
     .where(eq(allocations.id, allocationId))
 
-  // Auto-create next year's allocation
   const nextYear = allocation.year + 1
 
-  // Check if next year allocation already exists
   const [existingNextYear] = await db
     .select()
     .from(allocations)
-    .where(and(eq(allocations.producerId, allocation.producerId), eq(allocations.year, nextYear)))
+    .where(and(
+      eq(allocations.producerId, allocation.producerId),
+      eq(allocations.year, nextYear),
+      eq(allocations.userId, userId),
+    ))
 
   let nextYearAllocation = null
 
   if (!existingNextYear) {
-    // Create next year allocation
     const [newAllocation] = await db
       .insert(allocations)
       .values({
+        userId,
         producerId: allocation.producerId,
         year: nextYear,
         previousYearId: allocationId,

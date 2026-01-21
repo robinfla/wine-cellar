@@ -2,11 +2,19 @@ import { z } from 'zod'
 import { executeImport, type ValidatedRow } from '~/server/services/import.service'
 
 const executeSchema = z.object({
-  rows: z.array(z.any()), // Already validated rows from the validate step
+  rows: z.array(z.any()),
   skipDuplicates: z.boolean().default(true),
 })
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({
+      statusCode: 401,
+      message: 'Unauthorized',
+    })
+  }
+
   const body = await readBody(event)
 
   const parsed = executeSchema.safeParse(body)
@@ -18,7 +26,6 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Filter to only valid rows
   const validRows = (parsed.data.rows as ValidatedRow[]).filter((r) => r.isValid)
 
   if (validRows.length === 0) {
@@ -28,7 +35,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const result = await executeImport(validRows, parsed.data.skipDuplicates)
+  const result = await executeImport(validRows, userId, parsed.data.skipDuplicates)
 
   return result
 })

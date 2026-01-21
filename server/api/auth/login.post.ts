@@ -55,6 +55,7 @@ export default defineEventHandler(async (event) => {
       id: user[0].id,
       email: user[0].email,
       name: user[0].name,
+      isAdmin: user[0].isAdmin,
       preferredCurrency: user[0].preferredCurrency,
     },
   }

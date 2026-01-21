@@ -1,8 +1,16 @@
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import { allocations } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({
+      statusCode: 401,
+      message: 'Unauthorized',
+    })
+  }
+
   const id = Number(getRouterParam(event, 'id'))
 
   if (isNaN(id)) {
@@ -12,11 +20,11 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Check if allocation exists
+  // Check if allocation exists and belongs to user
   const [existing] = await db
     .select()
     .from(allocations)
-    .where(eq(allocations.id, id))
+    .where(and(eq(allocations.id, id), eq(allocations.userId, userId)))
 
   if (!existing) {
     throw createError({
@@ -26,7 +34,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Delete allocation (items will cascade delete due to ON DELETE CASCADE)
-  await db.delete(allocations).where(eq(allocations.id, id))
+  await db.delete(allocations).where(and(eq(allocations.id, id), eq(allocations.userId, userId)))
 
   return { success: true }
 })

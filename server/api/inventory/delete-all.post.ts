@@ -1,10 +1,18 @@
+import { eq, inArray } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import { inventoryLots, tastingNotes, inventoryEvents, maturityOverrides } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({
+      statusCode: 401,
+      message: 'Unauthorized',
+    })
+  }
+
   const body = await readBody(event)
 
-  // Require explicit confirmation for safety
   if (!body?.confirm) {
     throw createError({
       statusCode: 400,
@@ -12,26 +20,27 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Count lots before deletion for response
-  const [{ count: lotCount }] = await db
-    .select({ count: db.$count(inventoryLots) })
+  const userLots = await db
+    .select({ id: inventoryLots.id })
     .from(inventoryLots)
+    .where(eq(inventoryLots.userId, userId))
 
-  // Delete in cascade order:
-  // 1. Tasting notes (references inventory lots)
-  await db.delete(tastingNotes)
+  const lotIds = userLots.map(({ id }) => id)
 
-  // 2. Inventory events (references inventory lots)
-  await db.delete(inventoryEvents)
+  if (lotIds.length === 0) {
+    return {
+      success: true,
+      deleted: 0,
+    }
+  }
 
-  // 3. Maturity overrides (references inventory lots)
-  await db.delete(maturityOverrides)
-
-  // 4. Inventory lots
-  await db.delete(inventoryLots)
+  await db.delete(tastingNotes).where(inArray(tastingNotes.lotId, lotIds))
+  await db.delete(inventoryEvents).where(inArray(inventoryEvents.lotId, lotIds))
+  await db.delete(maturityOverrides).where(inArray(maturityOverrides.lotId, lotIds))
+  await db.delete(inventoryLots).where(eq(inventoryLots.userId, userId))
 
   return {
     success: true,
-    deleted: Number(lotCount),
+    deleted: lotIds.length,
   }
 })

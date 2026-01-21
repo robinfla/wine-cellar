@@ -1,8 +1,13 @@
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import { inventoryLots, tastingNotes, inventoryEvents } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+
   const id = Number(getRouterParam(event, 'id'))
 
   if (isNaN(id)) {
@@ -12,11 +17,10 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Get current lot
   const [lot] = await db
     .select()
     .from(inventoryLots)
-    .where(eq(inventoryLots.id, id))
+    .where(and(eq(inventoryLots.id, id), eq(inventoryLots.userId, userId)))
 
   if (!lot) {
     throw createError({

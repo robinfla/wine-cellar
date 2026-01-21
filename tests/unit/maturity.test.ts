@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { getDrinkingWindow, type MaturityStatus } from '~/server/utils/maturity'
+import { describe, it, expect } from 'vitest'
+import { getDrinkingWindow } from '~/server/utils/maturity'
 
 describe('getDrinkingWindow', () => {
   const currentYear = new Date().getFullYear()

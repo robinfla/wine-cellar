@@ -1,4 +1,4 @@
-import { eq, like, and, sql, gt, desc } from 'drizzle-orm'
+import { eq, ilike, and, sql, gt, desc, or } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import {
   inventoryLots,
@@ -12,6 +12,11 @@ import {
 import { getDrinkingWindow, type MaturityStatus } from '~/server/utils/maturity'
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+
   const query = getQuery(event)
   const search = query.search as string | undefined
   const cellarId = query.cellarId ? Number(query.cellarId) : undefined
@@ -24,10 +29,16 @@ export default defineEventHandler(async (event) => {
   const limit = query.limit ? Number(query.limit) : 50
   const offset = query.offset ? Number(query.offset) : 0
 
-  const conditions = []
+  const conditions = [eq(inventoryLots.userId, userId)]
 
   if (search) {
-    conditions.push(like(wines.name, `%${search}%`))
+    const searchCondition = or(
+      ilike(wines.name, `%${search}%`),
+      ilike(producers.name, `%${search}%`),
+    )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (cellarId) {

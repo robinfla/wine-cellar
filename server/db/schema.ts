@@ -48,16 +48,32 @@ export const allocationStatusEnum = pgEnum('allocation_status', [
   'cancelled',
 ])
 
+// Users (must be defined before tables that reference it)
+export const users = pgTable('users', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  name: text('name'),
+  isAdmin: boolean('is_admin').default(false).notNull(),
+  preferredCurrency: currencyEnum('preferred_currency').default('EUR'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+
 // Cellars
 export const cellars = pgTable('cellars', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-  name: text('name').notNull().unique(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  name: text('name').notNull(),
   countryCode: text('country_code').notNull(),
   isVirtual: boolean('is_virtual').default(false).notNull(),
   notes: text('notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
+}, (table) => ({
+  uniqueNameUser: unique().on(table.name, table.userId),
+  userIdx: index('cellars_user_idx').on(table.userId),
+}))
 
 // Regions
 export const regions = pgTable('regions', {
@@ -91,6 +107,7 @@ export const grapes = pgTable('grapes', {
 // Producers
 export const producers = pgTable('producers', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer('user_id').references(() => users.id).notNull(),
   name: text('name').notNull(),
   regionId: integer('region_id').references(() => regions.id),
   website: text('website'),
@@ -98,8 +115,9 @@ export const producers = pgTable('producers', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
-  uniqueProducerRegion: unique().on(table.name, table.regionId),
+  uniqueProducerRegionUser: unique().on(table.name, table.regionId, table.userId),
   nameIdx: index('producers_name_idx').on(table.name),
+  userIdx: index('producers_user_idx').on(table.userId),
 }))
 
 // Bottle formats
@@ -112,6 +130,7 @@ export const formats = pgTable('formats', {
 // Wines (catalog)
 export const wines = pgTable('wines', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer('user_id').references(() => users.id).notNull(),
   name: text('name').notNull(),
   producerId: integer('producer_id').references(() => producers.id).notNull(),
   appellationId: integer('appellation_id').references(() => appellations.id),
@@ -126,9 +145,10 @@ export const wines = pgTable('wines', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
-  uniqueWineProducerColor: unique().on(table.name, table.producerId, table.color),
+  uniqueWineProducerColorUser: unique().on(table.name, table.producerId, table.color, table.userId),
   nameIdx: index('wines_name_idx').on(table.name),
   producerIdx: index('wines_producer_idx').on(table.producerId),
+  userIdx: index('wines_user_idx').on(table.userId),
 }))
 
 // Wine-grape junction
@@ -144,6 +164,7 @@ export const wineGrapes = pgTable('wine_grapes', {
 // Inventory lots (actual bottles)
 export const inventoryLots = pgTable('inventory_lots', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer('user_id').references(() => users.id).notNull(),
   wineId: integer('wine_id').references(() => wines.id).notNull(),
   cellarId: integer('cellar_id').references(() => cellars.id).notNull(),
   formatId: integer('format_id').references(() => formats.id).notNull(),
@@ -167,10 +188,11 @@ export const inventoryLots = pgTable('inventory_lots', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
-  uniqueLot: unique().on(table.wineId, table.cellarId, table.formatId, table.vintage, table.binLocation),
+  uniqueLotUser: unique().on(table.wineId, table.cellarId, table.formatId, table.vintage, table.binLocation, table.userId),
   wineIdx: index('inventory_wine_idx').on(table.wineId),
   cellarIdx: index('inventory_cellar_idx').on(table.cellarId),
   importHashIdx: index('inventory_import_hash_idx').on(table.importHash),
+  userIdx: index('inventory_user_idx').on(table.userId),
 }))
 
 // Inventory events (audit trail)
@@ -230,17 +252,6 @@ export const fxRates = pgTable('fx_rates', {
   uniqueFxRate: unique().on(table.fromCurrency, table.toCurrency, table.effectiveDate),
 }))
 
-// Users (single user for v1, but structured for potential expansion)
-export const users = pgTable('users', {
-  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-  email: text('email').notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
-  name: text('name'),
-  preferredCurrency: currencyEnum('preferred_currency').default('EUR'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-})
-
 // Sessions
 export const sessions = pgTable('sessions', {
   id: text('id').primaryKey(),
@@ -252,9 +263,23 @@ export const sessions = pgTable('sessions', {
   expiresIdx: index('sessions_expires_idx').on(table.expiresAt),
 }))
 
+// Invitations
+export const invitations = pgTable('invitations', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  code: text('code').notNull().unique(),
+  email: text('email'),
+  usedAt: timestamp('used_at'),
+  usedByUserId: integer('used_by_user_id').references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  expiresAt: timestamp('expires_at'),
+}, (table) => ({
+  codeIdx: index('invitations_code_idx').on(table.code),
+}))
+
 // Allocations (yearly deals with producers)
 export const allocations = pgTable('allocations', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer('user_id').references(() => users.id).notNull(),
   producerId: integer('producer_id').references(() => producers.id).notNull(),
   year: integer('year').notNull(),
 
@@ -272,10 +297,11 @@ export const allocations = pgTable('allocations', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
-  uniqueProducerYear: unique().on(table.producerId, table.year),
+  uniqueProducerYearUser: unique().on(table.producerId, table.year, table.userId),
   producerIdx: index('allocations_producer_idx').on(table.producerId),
   yearIdx: index('allocations_year_idx').on(table.year),
   statusIdx: index('allocations_status_idx').on(table.status),
+  userIdx: index('allocations_user_idx').on(table.userId),
 }))
 
 // Allocation items (wines within an allocation)
@@ -323,5 +349,6 @@ export type TastingNote = typeof tastingNotes.$inferSelect
 export type FxRate = typeof fxRates.$inferSelect
 export type User = typeof users.$inferSelect
 export type Session = typeof sessions.$inferSelect
+export type Invitation = typeof invitations.$inferSelect
 export type Allocation = typeof allocations.$inferSelect
 export type AllocationItem = typeof allocationItems.$inferSelect

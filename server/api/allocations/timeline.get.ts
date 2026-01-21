@@ -33,17 +33,19 @@ interface TimelineMonth {
 }
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+
   const query = getQuery(event)
   const year = query.year ? Number(query.year) : new Date().getFullYear()
 
-  // Define date range for the year
-  const yearStart = new Date(year, 0, 1) // Jan 1
-  const yearEnd = new Date(year + 1, 0, 1) // Jan 1 of next year
+  const yearStart = new Date(year, 0, 1)
+  const yearEnd = new Date(year + 1, 0, 1)
 
-  // Get FX rates for conversion to EUR
   const fxRates = await getLatestFxRates('EUR')
 
-  // Get allocations with claimOpensAt in the selected year
   const allocationsResult = await db
     .select({
       id: allocations.id,
@@ -58,6 +60,7 @@ export default defineEventHandler(async (event) => {
     .leftJoin(regions, eq(producers.regionId, regions.id))
     .where(
       and(
+        eq(allocations.userId, userId),
         sql`${allocations.claimOpensAt} IS NOT NULL`,
         gte(allocations.claimOpensAt, yearStart),
         lt(allocations.claimOpensAt, yearEnd),
@@ -155,13 +158,12 @@ export default defineEventHandler(async (event) => {
 
   yearTotals.totalValueEur = Math.round(yearTotals.totalValueEur * 100) / 100
 
-  // Get available years for year selector
   const yearsResult = await db
     .select({
       year: sql<number>`EXTRACT(YEAR FROM ${allocations.claimOpensAt})::int`.as('year'),
     })
     .from(allocations)
-    .where(sql`${allocations.claimOpensAt} IS NOT NULL`)
+    .where(and(eq(allocations.userId, userId), sql`${allocations.claimOpensAt} IS NOT NULL`))
     .groupBy(sql`EXTRACT(YEAR FROM ${allocations.claimOpensAt})`)
     .orderBy(sql`EXTRACT(YEAR FROM ${allocations.claimOpensAt}) DESC`)
 

@@ -21,12 +21,7 @@ async function seed() {
     { name: 'Imperial', volumeMl: 6000 },
   ]).onConflictDoNothing()
 
-  // Seed cellars
-  console.log('Seeding cellars...')
-  await db.insert(schema.cellars).values([
-    { name: 'France', countryCode: 'FR', isVirtual: false },
-    { name: 'South Africa', countryCode: 'ZA', isVirtual: true },
-  ]).onConflictDoNothing()
+
 
   // Seed French regions
   console.log('Seeding regions...')

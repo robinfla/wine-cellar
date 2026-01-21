@@ -24,6 +24,14 @@ const validateSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({
+      statusCode: 401,
+      message: 'Unauthorized',
+    })
+  }
+
   const body = await readBody(event)
 
   const parsed = validateSchema.safeParse(body)
@@ -35,7 +43,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const validated = await validateImportRows(parsed.data.rows as ImportRow[])
+  const validated = await validateImportRows(parsed.data.rows as ImportRow[], userId)
 
   const validCount = validated.filter((r) => r.isValid).length
   const invalidCount = validated.filter((r) => !r.isValid).length

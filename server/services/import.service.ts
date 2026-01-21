@@ -152,58 +152,51 @@ async function findOrCreateAppellation(name: string, regionId?: number): Promise
   return created.id
 }
 
-/**
- * Find or create a producer
- */
 async function findOrCreateProducer(
   name: string,
+  userId: number,
   regionId?: number,
 ): Promise<number> {
-  // Try to find existing
   const existing = await db
     .select()
     .from(producers)
-    .where(eq(producers.name, name))
+    .where(and(eq(producers.name, name), eq(producers.userId, userId)))
     .limit(1)
 
   if (existing.length > 0) {
     return existing[0].id
   }
 
-  // Create new
   const [created] = await db
     .insert(producers)
-    .values({ name, regionId })
+    .values({ name, userId, regionId })
     .returning()
 
   return created.id
 }
 
-/**
- * Find or create a wine
- */
 async function findOrCreateWine(
   name: string,
   producerId: number,
+  userId: number,
   color: string,
   appellationId?: number,
 ): Promise<number> {
-  // Try to find existing
   const existing = await db
     .select()
     .from(wines)
-    .where(and(eq(wines.name, name), eq(wines.producerId, producerId)))
+    .where(and(eq(wines.name, name), eq(wines.producerId, producerId), eq(wines.userId, userId)))
     .limit(1)
 
   if (existing.length > 0) {
     return existing[0].id
   }
 
-  // Create new
   const [created] = await db
     .insert(wines)
     .values({
       name,
+      userId,
       producerId,
       color: color as any,
       appellationId,
@@ -213,22 +206,18 @@ async function findOrCreateWine(
   return created.id
 }
 
-/**
- * Validate and enrich import rows
- * Flexible matching: tries to match existing data, but allows free text for unmatched items
- */
 export async function validateImportRows(
   rows: ImportRow[],
+  userId: number,
 ): Promise<ValidatedRow[]> {
-  // Load reference data
   const [allCellars, allRegions, allAppellations, allGrapes, allFormats, existingHashes] =
     await Promise.all([
-      db.select().from(cellars),
+      db.select().from(cellars).where(eq(cellars.userId, userId)),
       db.select().from(regions),
       db.select().from(appellations),
       db.select().from(grapes),
       db.select().from(formats),
-      db.select({ hash: inventoryLots.importHash }).from(inventoryLots),
+      db.select({ hash: inventoryLots.importHash }).from(inventoryLots).where(eq(inventoryLots.userId, userId)),
     ])
 
   const hashSet = new Set(existingHashes.map((h) => h.hash).filter(Boolean))
@@ -366,11 +355,9 @@ export async function validateImportRows(
   return validated
 }
 
-/**
- * Execute the import
- */
 export async function executeImport(
   rows: ValidatedRow[],
+  userId: number,
   skipDuplicates: boolean = true,
 ): Promise<ImportResult> {
   const errors: { row: number; message: string }[] = []
@@ -403,13 +390,12 @@ export async function executeImport(
         appellationId = await findOrCreateAppellation(row.appellation, regionId)
       }
 
-      // Find or create producer
-      const producerId = await findOrCreateProducer(row.producer, regionId)
+      const producerId = await findOrCreateProducer(row.producer, userId, regionId)
 
-      // Find or create wine
       const wineId = await findOrCreateWine(
         row.wineName,
         producerId,
+        userId,
         row.color,
         appellationId,
       )
@@ -424,10 +410,10 @@ export async function executeImport(
         }
       }
 
-      // Create inventory lot
       const [lot] = await db
         .insert(inventoryLots)
         .values({
+          userId,
           wineId,
           cellarId: row.cellarId!,
           formatId: row.formatId!,

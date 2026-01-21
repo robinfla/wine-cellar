@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import { wines } from '~/server/db/schema'
 
@@ -11,6 +11,11 @@ const updateWineSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+
   const id = Number(getRouterParam(event, 'id'))
   const body = await readBody(event)
 
@@ -30,11 +35,10 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Get current wine
   const [wine] = await db
     .select()
     .from(wines)
-    .where(eq(wines.id, id))
+    .where(and(eq(wines.id, id), eq(wines.userId, userId)))
 
   if (!wine) {
     throw createError({

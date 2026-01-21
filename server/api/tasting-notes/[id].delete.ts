@@ -1,8 +1,16 @@
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
-import { tastingNotes } from '~/server/db/schema'
+import { tastingNotes, inventoryLots } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({
+      statusCode: 401,
+      message: 'Unauthorized',
+    })
+  }
+
   const id = Number(getRouterParam(event, 'id'))
 
   if (isNaN(id)) {
@@ -12,9 +20,8 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Verify note exists
   const [note] = await db
-    .select({ id: tastingNotes.id })
+    .select({ id: tastingNotes.id, lotId: tastingNotes.lotId })
     .from(tastingNotes)
     .where(eq(tastingNotes.id, id))
 
@@ -25,7 +32,18 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Delete the tasting note
+  const [lot] = await db
+    .select({ id: inventoryLots.id })
+    .from(inventoryLots)
+    .where(and(eq(inventoryLots.id, note.lotId), eq(inventoryLots.userId, userId)))
+
+  if (!lot) {
+    throw createError({
+      statusCode: 404,
+      message: 'Tasting note not found',
+    })
+  }
+
   await db
     .delete(tastingNotes)
     .where(eq(tastingNotes.id, id))

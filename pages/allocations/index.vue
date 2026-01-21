@@ -439,12 +439,12 @@ onMounted(() => {
 <template>
   <div class="flex">
     <!-- Main content -->
-    <div class="flex-1 min-w-0" :class="{ 'mr-96': selectedAllocation }">
+    <div class="flex-1 min-w-0" :class="{ 'lg:mr-96': selectedAllocation }">
       <!-- View tabs -->
-      <div class="flex items-center justify-between mb-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div class="flex gap-1 bg-muted-100 p-1 rounded-lg">
           <button
-            class="px-4 py-2 text-sm font-semibold rounded-md transition-colors"
+            class="px-3 sm:px-4 py-2 text-sm font-semibold rounded-md transition-colors"
             :class="viewTab === 'list'
               ? 'bg-white text-muted-900 shadow-sm'
               : 'text-muted-600 hover:text-muted-900'"
@@ -453,7 +453,7 @@ onMounted(() => {
             List
           </button>
           <button
-            class="px-4 py-2 text-sm font-semibold rounded-md transition-colors"
+            class="px-3 sm:px-4 py-2 text-sm font-semibold rounded-md transition-colors"
             :class="viewTab === 'timeline'
               ? 'bg-white text-muted-900 shadow-sm'
               : 'text-muted-600 hover:text-muted-900'"
@@ -465,10 +465,11 @@ onMounted(() => {
 
         <!-- Add button (visible in both views) -->
         <button
-          class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 hover:scale-105 transition-transform"
+          class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 hover:scale-105 transition-transform"
           @click="showAddModal = true"
         >
-          Add Allocation
+          <span class="hidden sm:inline">Add Allocation</span>
+          <span class="sm:hidden">Add</span>
         </button>
       </div>
 
@@ -481,12 +482,12 @@ onMounted(() => {
       <!-- List View -->
       <div v-else>
       <!-- Toolbar -->
-      <div class="flex items-center gap-4 mb-4">
+      <div class="flex items-center gap-3 sm:gap-4 mb-4">
         <!-- Year filter -->
         <select
           v-if="availableYears.length > 0"
           v-model="yearFilter"
-          class="input text-sm w-32"
+          class="input text-sm w-28 sm:w-32"
           @change="page = 1"
         >
           <option :value="undefined">All years</option>
@@ -497,11 +498,11 @@ onMounted(() => {
       </div>
 
       <!-- Status filter tabs -->
-      <div class="flex gap-1 border-b border-muted-200 mb-4">
+      <div class="flex gap-1 border-b border-muted-200 mb-4 overflow-x-auto">
         <button
           v-for="tab in statusTabs"
           :key="tab.value"
-          class="px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors"
+          class="px-3 sm:px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap"
           :class="statusFilter === tab.value
             ? 'text-primary-600 border-primary-600'
             : 'text-muted-500 border-transparent hover:text-muted-700 hover:border-muted-300'"
@@ -528,17 +529,17 @@ onMounted(() => {
       </div>
 
       <!-- Table -->
-      <div v-else class="overflow-x-auto">
-        <table class="w-full">
+      <div v-else class="overflow-x-auto -mx-4 sm:mx-0">
+        <table class="w-full min-w-[500px]">
           <thead>
             <tr class="border-b border-muted-200">
-              <th class="px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Producer</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Year</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Claim Month</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Status</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider">Items</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider">Bottles</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider">Value</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Producer</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Year</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider hidden sm:table-cell">Claim Month</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Status</th>
+              <th class="px-3 sm:px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider hidden md:table-cell">Items</th>
+              <th class="px-3 sm:px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider">Bottles</th>
+              <th class="px-3 sm:px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider hidden sm:table-cell">Value</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-muted-100">
@@ -549,28 +550,28 @@ onMounted(() => {
               :class="selectedAllocation?.id === allocation.id ? 'bg-primary-50' : 'hover:bg-muted-50'"
               @click="selectAllocation(allocation)"
             >
-              <td class="px-4 py-3">
+              <td class="px-3 sm:px-4 py-3">
                 <div class="text-sm font-semibold text-muted-900">{{ allocation.producerName }}</div>
                 <div v-if="allocation.regionName" class="text-xs text-muted-500">{{ allocation.regionName }}</div>
               </td>
-              <td class="px-4 py-3 text-sm text-muted-600">{{ allocation.year }}</td>
-              <td class="px-4 py-3 text-sm text-muted-600">
+              <td class="px-3 sm:px-4 py-3 text-sm text-muted-600">{{ allocation.year }}</td>
+              <td class="px-3 sm:px-4 py-3 text-sm text-muted-600 hidden sm:table-cell">
                 <span v-if="allocation.claimOpensAt">
                   {{ formatMonth(allocation.claimOpensAt) }}
                 </span>
                 <span v-else class="text-muted-400">-</span>
               </td>
-              <td class="px-4 py-3">
+              <td class="px-3 sm:px-4 py-3">
                 <span
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                  class="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold"
                   :class="getStatusColor(allocation.status)"
                 >
                   {{ getStatusLabel(allocation.status) }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-sm text-muted-600 text-right">{{ allocation.itemCount }}</td>
-              <td class="px-4 py-3 text-sm text-muted-900 text-right font-semibold">{{ allocation.totalBottles }}</td>
-              <td class="px-4 py-3 text-sm text-muted-900 text-right font-semibold">
+              <td class="px-3 sm:px-4 py-3 text-sm text-muted-600 text-right hidden md:table-cell">{{ allocation.itemCount }}</td>
+              <td class="px-3 sm:px-4 py-3 text-sm text-muted-900 text-right font-semibold">{{ allocation.totalBottles }}</td>
+              <td class="px-3 sm:px-4 py-3 text-sm text-muted-900 text-right font-semibold hidden sm:table-cell">
                 <template v-if="allocation.totalsByCurrency?.length">
                   <div v-for="total in allocation.totalsByCurrency" :key="total.currency">
                     {{ formatCurrency(total.value, total.currency) }}
@@ -619,7 +620,7 @@ onMounted(() => {
     >
       <div
         v-if="selectedAllocation"
-        class="fixed right-0 top-0 h-full w-96 bg-white border-l-2 border-muted-200 overflow-y-auto z-20"
+        class="fixed right-0 top-0 h-full w-full sm:w-80 lg:w-96 bg-white border-l-2 border-muted-200 overflow-y-auto z-20"
       >
         <!-- Panel Header -->
         <div class="sticky top-0 bg-white border-b border-muted-200 px-6 py-4 z-10">
@@ -680,12 +681,12 @@ onMounted(() => {
           </div>
 
           <dl class="space-y-3">
-            <div class="flex justify-between items-center">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
               <dt class="text-sm text-muted-500">Claim Month</dt>
               <dd>
                 <select
                   v-model="selectedAllocation.claimOpensAt"
-                  class="input w-36 text-sm py-1.5"
+                  class="input w-full sm:w-36 text-sm py-1.5"
                   :disabled="isUpdating"
                   @change="updateClaimMonth(selectedAllocation.claimOpensAt)"
                 >
@@ -696,12 +697,12 @@ onMounted(() => {
                 </select>
               </dd>
             </div>
-            <div class="flex justify-between items-center">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
               <dt class="text-sm text-muted-500">Status</dt>
               <dd>
                 <select
                   v-model="selectedAllocation.status"
-                  class="input w-36 text-sm py-1.5"
+                  class="input w-full sm:w-36 text-sm py-1.5"
                   :disabled="isUpdating"
                   @change="updateAllocationStatus(selectedAllocation.status)"
                 >
@@ -758,7 +759,7 @@ onMounted(() => {
                 </button>
               </div>
               <div class="flex gap-2">
-                <div class="w-14">
+                <div class="w-12 sm:w-14">
                   <label class="block text-xs text-muted-500 mb-1">Qty</label>
                   <input
                     v-model.number="item.quantityClaimed"
@@ -769,7 +770,7 @@ onMounted(() => {
                     @change="updateItem(item)"
                   >
                 </div>
-                <div class="w-20">
+                <div class="w-16 sm:w-20">
                   <label class="block text-xs text-muted-500 mb-1">Price</label>
                   <input
                     v-model="item.pricePerBottle"
@@ -781,7 +782,7 @@ onMounted(() => {
                     @change="updateItem(item)"
                   >
                 </div>
-                <div class="flex-1">
+                <div class="flex-1 min-w-0">
                   <label class="block text-xs text-muted-500 mb-1">&nbsp;</label>
                   <select
                     v-model="item.currency"

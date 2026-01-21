@@ -43,6 +43,7 @@ export async function validateSession(token: string) {
         id: users.id,
         email: users.email,
         name: users.name,
+        isAdmin: users.isAdmin,
         preferredCurrency: users.preferredCurrency,
       },
     })

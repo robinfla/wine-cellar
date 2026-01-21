@@ -8,6 +8,11 @@ import {
 } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+
   const query = getQuery(event)
   const status = query.status as string | undefined
   const year = query.year ? Number(query.year) : undefined
@@ -15,7 +20,7 @@ export default defineEventHandler(async (event) => {
   const limit = query.limit ? Number(query.limit) : 50
   const offset = query.offset ? Number(query.offset) : 0
 
-  const conditions = []
+  const conditions = [eq(allocations.userId, userId)]
 
   if (status) {
     conditions.push(eq(allocations.status, status as any))

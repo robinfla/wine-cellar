@@ -5,7 +5,7 @@ export default defineConfig({
   out: './server/db/migrations',
   dialect: 'postgresql',
   dbCredentials: {
-    url: process.env.DATABASE_URL || 'postgresql://wine:password@localhost:5432/wine_cellar',
+    url: process.env.DATABASE_URL_DIRECT || process.env.DATABASE_URL || 'postgresql://wine:password@localhost:5432/wine_cellar',
   },
   verbose: true,
   strict: true,

@@ -1,4 +1,4 @@
-import { eq, sql, desc } from 'drizzle-orm'
+import { eq, sql, desc, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import {
   inventoryLots,
@@ -11,8 +11,30 @@ import {
   wineGrapes,
 } from '~/server/db/schema'
 
-export default defineEventHandler(async () => {
-  // Get total bottles and lots
+const DEFAULT_DRINK_FROM_YEARS: Record<string, number> = {
+  red: 3,
+  white: 1,
+  rose: 0,
+  sparkling: 0,
+  dessert: 2,
+  fortified: 0,
+}
+
+const DEFAULT_DRINK_UNTIL_YEARS: Record<string, number> = {
+  red: 15,
+  white: 8,
+  rose: 3,
+  sparkling: 10,
+  dessert: 30,
+  fortified: 50,
+}
+
+export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+
   const totalsResult = await db
     .select({
       bottles: sql<number>`coalesce(sum(${inventoryLots.quantity}), 0)`,
@@ -20,7 +42,7 @@ export default defineEventHandler(async () => {
       estimatedValue: sql<number>`coalesce(sum(${inventoryLots.quantity} * ${inventoryLots.purchasePricePerBottle}), 0)`,
     })
     .from(inventoryLots)
-    .where(sql`${inventoryLots.quantity} > 0`)
+    .where(and(eq(inventoryLots.userId, userId), sql`${inventoryLots.quantity} > 0`))
 
   const totals = {
     bottles: Number(totalsResult[0]?.bottles || 0),
@@ -28,8 +50,6 @@ export default defineEventHandler(async () => {
     estimatedValue: Number(totalsResult[0]?.estimatedValue || 0),
   }
 
-  // Get ready to drink count (bottles within drinking window)
-  // Uses maturity override if present, otherwise calculates from vintage + wine defaults
   const currentYear = new Date().getFullYear()
   const readyToDrinkResult = await db
     .select({
@@ -39,21 +59,45 @@ export default defineEventHandler(async () => {
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
     .leftJoin(maturityOverrides, eq(inventoryLots.id, maturityOverrides.lotId))
     .where(
-      sql`${inventoryLots.quantity} > 0
-        AND ${inventoryLots.vintage} IS NOT NULL
-        AND coalesce(
-          ${maturityOverrides.drinkFromYear},
-          ${inventoryLots.vintage} + ${wines.defaultDrinkFromYears}
-        ) <= ${currentYear}
-        AND coalesce(
-          ${maturityOverrides.drinkUntilYear},
-          ${inventoryLots.vintage} + ${wines.defaultDrinkUntilYears}
-        ) >= ${currentYear}`,
+      and(
+        eq(inventoryLots.userId, userId),
+        sql`${inventoryLots.quantity} > 0
+          AND ${inventoryLots.vintage} IS NOT NULL
+          AND coalesce(
+            ${maturityOverrides.drinkFromYear},
+            ${inventoryLots.vintage} + coalesce(
+              ${wines.defaultDrinkFromYears},
+              CASE ${wines.color}
+                WHEN 'red' THEN ${DEFAULT_DRINK_FROM_YEARS.red}
+                WHEN 'white' THEN ${DEFAULT_DRINK_FROM_YEARS.white}
+                WHEN 'rose' THEN ${DEFAULT_DRINK_FROM_YEARS.rose}
+                WHEN 'sparkling' THEN ${DEFAULT_DRINK_FROM_YEARS.sparkling}
+                WHEN 'dessert' THEN ${DEFAULT_DRINK_FROM_YEARS.dessert}
+                WHEN 'fortified' THEN ${DEFAULT_DRINK_FROM_YEARS.fortified}
+                ELSE ${DEFAULT_DRINK_FROM_YEARS.red}
+              END
+            )
+          ) <= ${currentYear}
+          AND coalesce(
+            ${maturityOverrides.drinkUntilYear},
+            ${inventoryLots.vintage} + coalesce(
+              ${wines.defaultDrinkUntilYears},
+              CASE ${wines.color}
+                WHEN 'red' THEN ${DEFAULT_DRINK_UNTIL_YEARS.red}
+                WHEN 'white' THEN ${DEFAULT_DRINK_UNTIL_YEARS.white}
+                WHEN 'rose' THEN ${DEFAULT_DRINK_UNTIL_YEARS.rose}
+                WHEN 'sparkling' THEN ${DEFAULT_DRINK_UNTIL_YEARS.sparkling}
+                WHEN 'dessert' THEN ${DEFAULT_DRINK_UNTIL_YEARS.dessert}
+                WHEN 'fortified' THEN ${DEFAULT_DRINK_UNTIL_YEARS.fortified}
+                ELSE ${DEFAULT_DRINK_UNTIL_YEARS.red}
+              END
+            )
+          ) >= ${currentYear}`,
+      ),
     )
 
   const readyToDrink = Number(readyToDrinkResult[0]?.bottles || 0)
 
-  // Get breakdown by wine color
   const byColorResult = await db
     .select({
       color: wines.color,
@@ -61,7 +105,7 @@ export default defineEventHandler(async () => {
     })
     .from(inventoryLots)
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
-    .where(sql`${inventoryLots.quantity} > 0`)
+    .where(and(eq(inventoryLots.userId, userId), sql`${inventoryLots.quantity} > 0`))
     .groupBy(wines.color)
     .orderBy(desc(sql`sum(${inventoryLots.quantity})`))
 
@@ -70,7 +114,6 @@ export default defineEventHandler(async () => {
     bottles: Number(row.bottles),
   }))
 
-  // Get breakdown by cellar
   const byCellarResult = await db
     .select({
       cellarName: cellars.name,
@@ -78,7 +121,7 @@ export default defineEventHandler(async () => {
     })
     .from(inventoryLots)
     .innerJoin(cellars, eq(inventoryLots.cellarId, cellars.id))
-    .where(sql`${inventoryLots.quantity} > 0`)
+    .where(and(eq(inventoryLots.userId, userId), sql`${inventoryLots.quantity} > 0`))
     .groupBy(cellars.name)
     .orderBy(desc(sql`sum(${inventoryLots.quantity})`))
 
@@ -87,7 +130,6 @@ export default defineEventHandler(async () => {
     bottles: Number(row.bottles),
   }))
 
-  // Get breakdown by region (through producers)
   const byRegionResult = await db
     .select({
       regionName: regions.name,
@@ -97,7 +139,7 @@ export default defineEventHandler(async () => {
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
     .innerJoin(producers, eq(wines.producerId, producers.id))
     .innerJoin(regions, eq(producers.regionId, regions.id))
-    .where(sql`${inventoryLots.quantity} > 0`)
+    .where(and(eq(inventoryLots.userId, userId), sql`${inventoryLots.quantity} > 0`))
     .groupBy(regions.name)
     .orderBy(desc(sql`sum(${inventoryLots.quantity})`))
 
@@ -106,14 +148,13 @@ export default defineEventHandler(async () => {
     bottles: Number(row.bottles),
   }))
 
-  // Get breakdown by vintage (top 5, excluding NV)
   const byVintageResult = await db
     .select({
       vintage: inventoryLots.vintage,
       bottles: sql<number>`coalesce(sum(${inventoryLots.quantity}), 0)`,
     })
     .from(inventoryLots)
-    .where(sql`${inventoryLots.quantity} > 0 AND ${inventoryLots.vintage} IS NOT NULL`)
+    .where(and(eq(inventoryLots.userId, userId), sql`${inventoryLots.quantity} > 0 AND ${inventoryLots.vintage} IS NOT NULL`))
     .groupBy(inventoryLots.vintage)
     .orderBy(desc(sql`sum(${inventoryLots.quantity})`))
     .limit(5)
@@ -123,7 +164,6 @@ export default defineEventHandler(async () => {
     bottles: Number(row.bottles),
   }))
 
-  // Get breakdown by grape variety (top 5)
   const byGrapeResult = await db
     .select({
       grapeName: grapes.name,
@@ -133,7 +173,7 @@ export default defineEventHandler(async () => {
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
     .innerJoin(wineGrapes, eq(wines.id, wineGrapes.wineId))
     .innerJoin(grapes, eq(wineGrapes.grapeId, grapes.id))
-    .where(sql`${inventoryLots.quantity} > 0`)
+    .where(and(eq(inventoryLots.userId, userId), sql`${inventoryLots.quantity} > 0`))
     .groupBy(grapes.name)
     .orderBy(desc(sql`sum(${inventoryLots.quantity})`))
     .limit(5)

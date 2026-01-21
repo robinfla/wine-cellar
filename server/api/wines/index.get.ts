@@ -3,6 +3,11 @@ import { db } from '~/server/utils/db'
 import { wines, producers, appellations, regions } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  }
+
   const query = getQuery(event)
   const search = query.search as string | undefined
   const producerId = query.producerId ? Number(query.producerId) : undefined
@@ -11,7 +16,7 @@ export default defineEventHandler(async (event) => {
   const limit = query.limit ? Number(query.limit) : 50
   const offset = query.offset ? Number(query.offset) : 0
 
-  const conditions = []
+  const conditions = [eq(wines.userId, userId)]
 
   if (search) {
     conditions.push(like(wines.name, `%${search}%`))

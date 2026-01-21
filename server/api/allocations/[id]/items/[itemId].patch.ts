@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { eq, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
-import { allocationItems } from '~/server/db/schema'
+import { allocationItems, allocations } from '~/server/db/schema'
 
 const updateSchema = z.object({
   quantityAvailable: z.number().int().min(0).nullable().optional(),
@@ -12,6 +12,14 @@ const updateSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
+  const userId = event.context.user?.id
+  if (!userId) {
+    throw createError({
+      statusCode: 401,
+      message: 'Unauthorized',
+    })
+  }
+
   const allocationId = Number(getRouterParam(event, 'id'))
   const itemId = Number(getRouterParam(event, 'itemId'))
   const body = await readBody(event)
@@ -29,6 +37,19 @@ export default defineEventHandler(async (event) => {
       statusCode: 400,
       message: 'Invalid update data',
       data: parsed.error.flatten(),
+    })
+  }
+
+  // Verify allocation belongs to user
+  const [allocation] = await db
+    .select()
+    .from(allocations)
+    .where(and(eq(allocations.id, allocationId), eq(allocations.userId, userId)))
+
+  if (!allocation) {
+    throw createError({
+      statusCode: 404,
+      message: 'Allocation not found',
     })
   }
 

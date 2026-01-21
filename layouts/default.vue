@@ -5,6 +5,7 @@ const route = useRoute()
 const navigation = [
   { name: 'Home', path: '/', icon: 'home' },
   { name: 'Inventory', path: '/inventory', icon: 'wine' },
+  { name: 'Producers', path: '/producers', icon: 'building' },
   { name: 'Cellars', path: '/cellars', icon: 'warehouse' },
   { name: 'Allocations', path: '/allocations', icon: 'calendar' },
 ]
@@ -21,16 +22,27 @@ const isActive = (path: string) => {
     <header class="sticky top-0 z-10 bg-white border-b-2 border-muted-200 lg:hidden">
       <div class="flex items-center justify-between px-4 h-14">
         <h1 class="text-lg font-bold text-primary">Wine Cellar</h1>
-        <button
-          type="button"
-          class="text-muted-500 hover:text-muted-700 hover:scale-110 transition-all duration-200"
-          @click="logout"
-        >
-          <span class="sr-only">Sign out</span>
-          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-        </button>
+        <div class="flex items-center gap-3">
+          <NuxtLink
+            to="/profile"
+            class="text-muted-500 hover:text-muted-700 hover:scale-110 transition-all duration-200"
+          >
+            <span class="sr-only">Profile</span>
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </NuxtLink>
+          <button
+            type="button"
+            class="text-muted-500 hover:text-muted-700 hover:scale-110 transition-all duration-200"
+            @click="logout"
+          >
+            <span class="sr-only">Sign out</span>
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -57,9 +69,9 @@ const isActive = (path: string) => {
 
         <div class="p-4 border-t-2 border-muted-200">
           <div class="flex items-center justify-between">
-            <div class="text-sm">
-              <p class="font-semibold text-muted-900">{{ user?.name || user?.email }}</p>
-            </div>
+            <NuxtLink to="/profile" class="text-sm hover:text-primary transition-colors">
+              <p class="font-semibold text-muted-900 hover:text-primary">{{ user?.name || user?.email }}</p>
+            </NuxtLink>
             <button
               type="button"
               class="text-muted-400 hover:text-muted-600 hover:scale-110 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
@@ -84,7 +96,7 @@ const isActive = (path: string) => {
 
     <!-- Mobile bottom navigation -->
     <nav class="fixed bottom-0 left-0 right-0 z-10 bg-white border-t-2 border-muted-200 lg:hidden">
-      <div class="grid h-16 grid-cols-4">
+      <div class="grid h-16 grid-cols-5">
         <NuxtLink
           v-for="item in navigation"
           :key="item.path"

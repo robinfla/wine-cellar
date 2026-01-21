@@ -2,12 +2,14 @@ interface User {
   id: number
   email: string
   name: string | null
+  isAdmin: boolean
   preferredCurrency: string | null
 }
 
 export function useAuth() {
   const user = useState<User | null>('auth-user', () => null)
   const isAuthenticated = computed(() => !!user.value)
+  const isAdmin = computed(() => !!user.value?.isAdmin)
   const isLoading = useState('auth-loading', () => true)
 
   async function checkSession() {
@@ -38,11 +40,22 @@ export function useAuth() {
     navigateTo('/login')
   }
 
+  async function fetchUser() {
+    try {
+      const response = await $fetch<{ user: User | null }>('/api/auth/session')
+      user.value = response?.user ?? null
+    } catch {
+      user.value = null
+    }
+  }
+
   return {
     user,
     isAuthenticated,
+    isAdmin,
     isLoading,
     checkSession,
+    fetchUser,
     login,
     logout,
   }
