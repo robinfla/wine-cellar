@@ -7,7 +7,13 @@
       "Bash(npx --yes nuxi@latest init:*)",
       "Bash(npx --yes nuxi@latest init . --force --template nuxt)",
       "Bash(npm install:*)",
-      "Bash(nvm ls)"
+      "Bash(nvm ls)",
+      "Bash(command -v:*)",
+      "Bash(npm run db:generate:*)",
+      "Bash(npm run db:push:*)",
+      "Bash(curl -s http://localhost:3001/api/allocations)",
+      "Bash(node --version)",
+      "Bash(timeout 10 npm run dev)"
     ]
   }
 }
