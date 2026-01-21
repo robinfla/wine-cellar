@@ -89,11 +89,8 @@ const colorOptions = [
   { value: 'fortified', label: 'Fortified' },
 ]
 
-// Format options for dropdown
-const formatOptions = [
-  { id: 1, name: 'Bottle (750ml)' },
-  { id: 2, name: 'Magnum (1.5L)' },
-]
+// Format options - fetched from API
+const { data: formatsData } = await useFetch('/api/formats')
 
 // Currency options
 const currencyOptions = ['EUR', 'USD', 'GBP', 'ZAR', 'CHF']
@@ -229,8 +226,8 @@ function getMappedRows() {
               const appellation = appellationsData.value?.find((a: any) => a.id === defaultValue)
               mapped[field] = appellation?.name
             } else if (field === 'format') {
-              const format = formatOptions.find(f => f.id === defaultValue)
-              mapped[field] = format?.name?.split(' ')[0] // Just "Bottle" or "Magnum"
+              const format = formatsData.value?.find((f: any) => f.id === defaultValue)
+              mapped[field] = format?.name
             } else {
               mapped[field] = defaultValue
             }
@@ -698,8 +695,8 @@ function reset() {
                     class="input flex-1"
                   >
                     <option :value="null">-- Set default --</option>
-                    <option v-for="f in formatOptions" :key="f.id" :value="f.id">
-                      {{ f.name }}
+                    <option v-for="f in formatsData" :key="f.id" :value="f.id">
+                      {{ f.name }} ({{ f.volumeMl }}ml)
                     </option>
                   </select>
                   <!-- Currency dropdown -->
