@@ -58,9 +58,23 @@ const manualDefaults = ref<Record<string, any>>({
 })
 
 // Reference data for dropdowns
-const { data: cellarsData } = await useFetch('/api/cellars')
+const { data: cellarsData, refresh: refreshCellars } = await useFetch('/api/cellars')
 const { data: regionsData } = await useFetch('/api/regions')
 const { data: appellationsData } = await useFetch('/api/appellations')
+
+// Cellar check
+const showCreateCellarModal = ref(false)
+const hasCellars = computed(() => (cellarsData.value?.length ?? 0) > 0)
+
+onMounted(() => {
+  if (!hasCellars.value) {
+    showCreateCellarModal.value = true
+  }
+})
+
+async function handleCellarsCreated() {
+  await refreshCellars()
+}
 
 // Fields that support manual defaults with dropdowns
 const _dropdownFields = ['cellar', 'region', 'appellation', 'color', 'format', 'purchaseCurrency']
@@ -929,5 +943,11 @@ function reset() {
         </button>
       </div>
     </div>
+
+    <!-- Create Cellar Modal -->
+    <CreateCellarModal
+      v-model="showCreateCellarModal"
+      @created="handleCellarsCreated"
+    />
   </div>
 </template>

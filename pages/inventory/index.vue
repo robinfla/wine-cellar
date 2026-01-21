@@ -11,6 +11,8 @@ const showFilters = ref(false)
 const showAddMenu = ref(false)
 const selectedLot = ref<any>(null)
 const showAddWineModal = ref(false)
+const showCreateCellarModal = ref(false)
+const pendingAction = ref<'addWine' | 'import' | null>(null)
 const searchQuery = ref('')
 const searchDebounce = ref<ReturnType<typeof setTimeout> | null>(null)
 
@@ -39,6 +41,39 @@ const isDeletingAll = ref(false)
 const { data: producers } = await useFetch('/api/producers')
 const { data: appellations } = await useFetch('/api/appellations')
 const { data: regionsData } = await useFetch('/api/regions')
+const { data: cellarsData, refresh: refreshCellars } = await useFetch('/api/cellars')
+
+const hasCellars = computed(() => (cellarsData.value?.length ?? 0) > 0)
+
+function handleAddWineClick() {
+  if (!hasCellars.value) {
+    pendingAction.value = 'addWine'
+    showCreateCellarModal.value = true
+  } else {
+    showAddWineModal.value = true
+  }
+  closeAddMenu()
+}
+
+function handleImportClick() {
+  if (!hasCellars.value) {
+    pendingAction.value = 'import'
+    showCreateCellarModal.value = true
+  } else {
+    router.push('/inventory/import')
+  }
+  closeAddMenu()
+}
+
+async function handleCellarsCreated() {
+  await refreshCellars()
+  if (pendingAction.value === 'addWine') {
+    showAddWineModal.value = true
+  } else if (pendingAction.value === 'import') {
+    router.push('/inventory/import')
+  }
+  pendingAction.value = null
+}
 
 // Drinking window state
 const drinkFromYear = ref<number | null>(null)
@@ -642,17 +677,16 @@ onMounted(() => {
             >
               <button
                 class="block w-full text-left px-4 py-2 text-sm text-muted-700 hover:bg-muted-100"
-                @click="showAddWineModal = true; closeAddMenu()"
+                @click="handleAddWineClick"
               >
                 Add Wine
               </button>
-              <NuxtLink
-                to="/inventory/import"
-                class="block px-4 py-2 text-sm text-muted-700 hover:bg-muted-100"
-                @click="closeAddMenu"
+              <button
+                class="block w-full text-left px-4 py-2 text-sm text-muted-700 hover:bg-muted-100"
+                @click="handleImportClick"
               >
                 Import CSV
-              </NuxtLink>
+              </button>
             </div>
           </div>
         </div>
@@ -1379,6 +1413,12 @@ onMounted(() => {
     <AddWineModal
       v-model="showAddWineModal"
       @success="handleWineAdded"
+    />
+
+    <!-- Create Cellar Modal -->
+    <CreateCellarModal
+      v-model="showCreateCellarModal"
+      @created="handleCellarsCreated"
     />
 
     <!-- Delete All Confirmation Modal -->
