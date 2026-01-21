@@ -364,43 +364,79 @@ export async function executeImport(
   let imported = 0
   let skipped = 0
 
+  const regionCache = new Map<string, number>()
+  const appellationCache = new Map<string, number>()
+  const producerCache = new Map<string, number>()
+  const wineCache = new Map<string, number>()
+
+  const cachedFindOrCreateRegion = async (name: string): Promise<number> => {
+    const key = name.toLowerCase().trim()
+    if (regionCache.has(key)) return regionCache.get(key)!
+    const id = await findOrCreateRegion(name)
+    regionCache.set(key, id)
+    return id
+  }
+
+  const cachedFindOrCreateAppellation = async (name: string, regionId?: number): Promise<number> => {
+    const key = `${name.toLowerCase().trim()}|${regionId || ''}`
+    if (appellationCache.has(key)) return appellationCache.get(key)!
+    const id = await findOrCreateAppellation(name, regionId)
+    appellationCache.set(key, id)
+    return id
+  }
+
+  const cachedFindOrCreateProducer = async (name: string, regionId?: number): Promise<number> => {
+    const key = `${name}|${userId}`
+    if (producerCache.has(key)) return producerCache.get(key)!
+    const id = await findOrCreateProducer(name, userId, regionId)
+    producerCache.set(key, id)
+    return id
+  }
+
+  const cachedFindOrCreateWine = async (
+    name: string,
+    producerId: number,
+    color: string,
+    appellationId?: number,
+  ): Promise<number> => {
+    const key = `${name}|${producerId}|${userId}`
+    if (wineCache.has(key)) return wineCache.get(key)!
+    const id = await findOrCreateWine(name, producerId, userId, color, appellationId)
+    wineCache.set(key, id)
+    return id
+  }
+
   for (const row of rows) {
-    // Skip invalid rows
     if (!row.isValid) {
       errors.push({ row: row.rowIndex, message: row.errors.join(', ') })
       continue
     }
 
-    // Skip duplicates if requested
     if (row.isDuplicate && skipDuplicates) {
       skipped++
       continue
     }
 
     try {
-      // Resolve region - use existing ID or create new from name
       let regionId = row.regionId
       if (!regionId && row.region && row.region.trim()) {
-        regionId = await findOrCreateRegion(row.region)
+        regionId = await cachedFindOrCreateRegion(row.region)
       }
 
-      // Resolve appellation - use existing ID or create new from name
       let appellationId = row.appellationId
       if (!appellationId && row.appellation && row.appellation.trim()) {
-        appellationId = await findOrCreateAppellation(row.appellation, regionId)
+        appellationId = await cachedFindOrCreateAppellation(row.appellation, regionId)
       }
 
-      const producerId = await findOrCreateProducer(row.producer, userId, regionId)
+      const producerId = await cachedFindOrCreateProducer(row.producer, regionId)
 
-      const wineId = await findOrCreateWine(
+      const wineId = await cachedFindOrCreateWine(
         row.wineName,
         producerId,
-        userId,
         row.color,
         appellationId,
       )
 
-      // Associate grapes if any
       if (row.grapeIds && row.grapeIds.length > 0) {
         for (const grapeId of row.grapeIds) {
           await db
@@ -428,7 +464,6 @@ export async function executeImport(
         })
         .returning()
 
-      // Create purchase event
       await db.insert(inventoryEvents).values({
         lotId: lot.id,
         eventType: 'purchase',
