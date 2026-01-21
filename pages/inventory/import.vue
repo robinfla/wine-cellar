@@ -117,6 +117,7 @@ const skipDuplicates = ref(true)
 // Step 4: Import
 const importResult = ref<any>(null)
 const isImporting = ref(false)
+const importProgress = ref({ current: 0, total: 0, imported: 0, skipped: 0, errors: [] as any[] })
 
 // File handling
 function handleFileUpload(event: Event) {
@@ -240,21 +241,65 @@ async function validateData() {
   }
 }
 
-// Import
+// Import with chunking
+const CHUNK_SIZE = 25
+
 async function executeImport() {
   isImporting.value = true
+  
+  const validRows = validatedRows.value.filter((r: any) => r.isValid && (!r.isDuplicate || !skipDuplicates.value))
+  
+  importProgress.value = {
+    current: 0,
+    total: validRows.length,
+    imported: 0,
+    skipped: 0,
+    errors: [],
+  }
+
   try {
-    const response = await $fetch('/api/inventory/import/execute', {
-      method: 'POST',
-      body: {
-        rows: validatedRows.value,
-        skipDuplicates: skipDuplicates.value,
-      },
-    })
-    importResult.value = response
+    for (let i = 0; i < validRows.length; i += CHUNK_SIZE) {
+      const chunk = validRows.slice(i, i + CHUNK_SIZE)
+      
+      try {
+        const response = await $fetch('/api/inventory/import/execute', {
+          method: 'POST',
+          body: {
+            rows: chunk,
+            skipDuplicates: skipDuplicates.value,
+          },
+        })
+        
+        importProgress.value.imported += response.imported
+        importProgress.value.skipped += response.skipped
+        importProgress.value.errors.push(...(response.errors || []))
+      } catch (error: any) {
+        const chunkErrors = chunk.map((row: any) => ({
+          row: row.rowIndex,
+          message: error.data?.message || error.message || 'Chunk import failed',
+        }))
+        importProgress.value.errors.push(...chunkErrors)
+      }
+      
+      importProgress.value.current = Math.min(i + CHUNK_SIZE, validRows.length)
+    }
+    
+    importResult.value = {
+      success: importProgress.value.errors.length === 0,
+      imported: importProgress.value.imported,
+      skipped: importProgress.value.skipped,
+      errors: importProgress.value.errors,
+    }
     currentStep.value = 4
   } catch (error: any) {
     console.error('Import error:', error)
+    importResult.value = {
+      success: false,
+      imported: importProgress.value.imported,
+      skipped: importProgress.value.skipped,
+      errors: [{ row: 0, message: error.message || 'Import failed' }],
+    }
+    currentStep.value = 4
   } finally {
     isImporting.value = false
   }
@@ -645,8 +690,27 @@ function reset() {
         </table>
       </div>
 
+      <!-- Progress bar during import -->
+      <div v-if="isImporting" class="mt-6 p-4 bg-primary-50 rounded-lg border-2 border-primary-200">
+        <div class="flex justify-between text-sm font-medium text-primary-700 mb-2">
+          <span>Importing wines...</span>
+          <span>{{ importProgress.current }} / {{ importProgress.total }}</span>
+        </div>
+        <div class="w-full bg-primary-200 rounded-full h-3">
+          <div
+            class="bg-primary-600 h-3 rounded-full transition-all duration-300"
+            :style="{ width: `${importProgress.total > 0 ? (importProgress.current / importProgress.total) * 100 : 0}%` }"
+          />
+        </div>
+        <div class="mt-2 flex gap-4 text-xs text-primary-600">
+          <span>Imported: {{ importProgress.imported }}</span>
+          <span>Skipped: {{ importProgress.skipped }}</span>
+          <span v-if="importProgress.errors.length">Errors: {{ importProgress.errors.length }}</span>
+        </div>
+      </div>
+
       <div class="mt-6 flex justify-between">
-        <button type="button" class="btn-secondary" @click="currentStep = 2">
+        <button type="button" class="btn-secondary" :disabled="isImporting" @click="currentStep = 2">
           Back
         </button>
         <button
