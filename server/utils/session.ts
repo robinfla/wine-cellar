@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto'
 import type { H3Event } from 'h3'
-import { getCookie, setCookie, deleteCookie } from 'h3'
+import { getCookie, setCookie, deleteCookie, getRequestURL } from 'h3'
 import { eq, and, gt } from 'drizzle-orm'
 import { db } from './db'
 import { sessions, users } from '../db/schema'
@@ -83,9 +83,11 @@ export function setSessionCookie(event: H3Event, token: string): void {
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + SESSION_EXPIRY_DAYS)
 
+  const isSecure = getRequestURL(event).protocol === 'https:'
+
   setCookie(event, SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecure,
     sameSite: 'lax',
     path: '/',
     expires: expiresAt,
@@ -96,9 +98,11 @@ export function setSessionCookie(event: H3Event, token: string): void {
  * Clear session cookie
  */
 export function clearSessionCookie(event: H3Event): void {
+  const isSecure = getRequestURL(event).protocol === 'https:'
+
   deleteCookie(event, SESSION_COOKIE_NAME, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecure,
     sameSite: 'lax',
     path: '/',
   })
