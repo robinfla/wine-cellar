@@ -64,32 +64,32 @@ export default defineEventHandler(async (event) => {
         sql`${inventoryLots.quantity} > 0
           AND ${inventoryLots.vintage} IS NOT NULL
           AND coalesce(
-            ${maturityOverrides.drinkFromYear},
+            ${maturityOverrides.drinkFromYear}::integer,
             ${inventoryLots.vintage} + coalesce(
-              ${wines.defaultDrinkFromYears},
-              CASE ${wines.color}
-                WHEN 'red' THEN ${DEFAULT_DRINK_FROM_YEARS.red}
-                WHEN 'white' THEN ${DEFAULT_DRINK_FROM_YEARS.white}
-                WHEN 'rose' THEN ${DEFAULT_DRINK_FROM_YEARS.rose}
-                WHEN 'sparkling' THEN ${DEFAULT_DRINK_FROM_YEARS.sparkling}
-                WHEN 'dessert' THEN ${DEFAULT_DRINK_FROM_YEARS.dessert}
-                WHEN 'fortified' THEN ${DEFAULT_DRINK_FROM_YEARS.fortified}
-                ELSE ${DEFAULT_DRINK_FROM_YEARS.red}
+              ${wines.defaultDrinkFromYears}::integer,
+              CASE ${wines.color}::text
+                WHEN 'red' THEN 3
+                WHEN 'white' THEN 1
+                WHEN 'rose' THEN 0
+                WHEN 'sparkling' THEN 0
+                WHEN 'dessert' THEN 2
+                WHEN 'fortified' THEN 0
+                ELSE 3
               END
             )
           ) <= ${currentYear}
           AND coalesce(
-            ${maturityOverrides.drinkUntilYear},
+            ${maturityOverrides.drinkUntilYear}::integer,
             ${inventoryLots.vintage} + coalesce(
-              ${wines.defaultDrinkUntilYears},
-              CASE ${wines.color}
-                WHEN 'red' THEN ${DEFAULT_DRINK_UNTIL_YEARS.red}
-                WHEN 'white' THEN ${DEFAULT_DRINK_UNTIL_YEARS.white}
-                WHEN 'rose' THEN ${DEFAULT_DRINK_UNTIL_YEARS.rose}
-                WHEN 'sparkling' THEN ${DEFAULT_DRINK_UNTIL_YEARS.sparkling}
-                WHEN 'dessert' THEN ${DEFAULT_DRINK_UNTIL_YEARS.dessert}
-                WHEN 'fortified' THEN ${DEFAULT_DRINK_UNTIL_YEARS.fortified}
-                ELSE ${DEFAULT_DRINK_UNTIL_YEARS.red}
+              ${wines.defaultDrinkUntilYears}::integer,
+              CASE ${wines.color}::text
+                WHEN 'red' THEN 15
+                WHEN 'white' THEN 8
+                WHEN 'rose' THEN 3
+                WHEN 'sparkling' THEN 10
+                WHEN 'dessert' THEN 30
+                WHEN 'fortified' THEN 50
+                ELSE 15
               END
             )
           ) >= ${currentYear}`,
