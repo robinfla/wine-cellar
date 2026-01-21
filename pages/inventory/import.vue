@@ -113,6 +113,11 @@ const validatedRows = ref<any[]>([])
 const validationSummary = ref<any>(null)
 const isValidating = ref(false)
 const skipDuplicates = ref(true)
+const validationProgress = ref({ current: 0, total: 0 })
+
+// Reference data for validation (fetched once)
+const importReferenceData = ref<any>(null)
+const isLoadingReferenceData = ref(false)
 
 // Step 4: Import
 const importResult = ref<any>(null)
@@ -222,34 +227,156 @@ function getMappedRows() {
     })
 }
 
-// Validate with chunking
-const VALIDATE_CHUNK_SIZE = 50
-const validationProgress = ref({ current: 0, total: 0 })
+// Color normalization map
+const colorMap: Record<string, string> = {
+  red: 'red', rouge: 'red',
+  white: 'white', blanc: 'white',
+  rose: 'rose', rosé: 'rose', pink: 'rose',
+  sparkling: 'sparkling', champagne: 'sparkling', effervescent: 'sparkling',
+  dessert: 'dessert', sweet: 'dessert', liquoreux: 'dessert',
+  fortified: 'fortified', porto: 'fortified', port: 'fortified', sherry: 'fortified',
+}
+
+function normalizeColor(color: string): string | null {
+  return colorMap[color?.toLowerCase().trim()] || null
+}
+
+function generateImportHash(row: any): string {
+  const normalized = [
+    row.producer?.toLowerCase().trim(),
+    row.wineName?.toLowerCase().trim(),
+    row.vintage?.toString() || 'nv',
+    row.format?.toLowerCase().trim() || 'standard',
+    row.cellar?.toLowerCase().trim(),
+  ].join('|')
+  return normalized
+}
 
 async function validateData() {
   isValidating.value = true
-  const allRows = getMappedRows()
-  
-  validationProgress.value = { current: 0, total: allRows.length }
-  validatedRows.value = []
+  validationProgress.value = { current: 0, total: 0 }
   
   try {
-    for (let i = 0; i < allRows.length; i += VALIDATE_CHUNK_SIZE) {
-      const chunk = allRows.slice(i, i + VALIDATE_CHUNK_SIZE)
+    if (!importReferenceData.value) {
+      isLoadingReferenceData.value = true
+      importReferenceData.value = await $fetch('/api/inventory/import/reference-data')
+      isLoadingReferenceData.value = false
+    }
+    
+    const refData = importReferenceData.value
+    const hashSet = new Set(refData.existingHashes)
+    const allRows = getMappedRows()
+    
+    validationProgress.value = { current: 0, total: allRows.length }
+    validatedRows.value = []
+    
+    for (let i = 0; i < allRows.length; i++) {
+      const row = allRows[i]
+      const errors: string[] = []
+      const warnings: string[] = []
       
-      const response = await $fetch('/api/inventory/import/validate', {
-        method: 'POST',
-        body: { rows: chunk },
+      const importHash = generateImportHash(row)
+      const isDuplicate = hashSet.has(importHash)
+      
+      if (isDuplicate) {
+        warnings.push('This row appears to be a duplicate of an existing entry')
+      }
+      
+      if (!row.cellar) errors.push('Cellar is required')
+      if (!row.producer) errors.push('Producer is required')
+      if (!row.wineName) errors.push('Wine name is required')
+      if (!row.color) errors.push('Color is required')
+      if (!row.quantity || Number(row.quantity) < 1) errors.push('Quantity must be at least 1')
+      
+      const cellar = refData.cellars.find((c: any) => c.name.toLowerCase() === row.cellar?.toLowerCase().trim())
+      if (!cellar && row.cellar) {
+        errors.push(`Cellar "${row.cellar}" not found`)
+      }
+      
+      const normalizedColor = normalizeColor(row.color)
+      if (!normalizedColor && row.color) {
+        errors.push(`Invalid color "${row.color}"`)
+      }
+      
+      let regionId: number | undefined
+      if (row.region) {
+        const region = refData.regions.find((r: any) => r.name.toLowerCase() === row.region.toLowerCase().trim())
+        if (region) regionId = region.id
+      }
+      
+      let appellationId: number | undefined
+      if (row.appellation) {
+        const appellation = refData.appellations.find((a: any) => a.name.toLowerCase() === row.appellation.toLowerCase().trim())
+        if (appellation) appellationId = appellation.id
+      }
+      
+      let formatId: number | undefined
+      const formatName = row.format?.toLowerCase().trim() || 'standard'
+      const format = refData.formats.find((f: any) =>
+        f.name.toLowerCase() === formatName ||
+        (formatName === '75cl' && f.volumeMl === 750) ||
+        (formatName === '750ml' && f.volumeMl === 750) ||
+        (formatName === '150cl' && f.volumeMl === 1500) ||
+        (formatName === '1500ml' && f.volumeMl === 1500)
+      )
+      if (format) {
+        formatId = format.id
+      } else {
+        const standard = refData.formats.find((f: any) => f.volumeMl === 750)
+        if (standard) {
+          formatId = standard.id
+          if (row.format && row.format.toLowerCase() !== 'standard') {
+            warnings.push(`Format "${row.format}" not found, defaulting to Standard`)
+          }
+        } else {
+          errors.push('Could not resolve bottle format')
+        }
+      }
+      
+      const grapeIds: number[] = []
+      if (row.grapes) {
+        const grapeNames = row.grapes.split(';').map((g: string) => g.trim()).filter(Boolean)
+        for (const grapeName of grapeNames) {
+          const grape = refData.grapes.find((g: any) => g.name.toLowerCase() === grapeName.toLowerCase())
+          if (grape) grapeIds.push(grape.id)
+        }
+      }
+      
+      let vintage: number | undefined
+      if (row.vintage && row.vintage !== 'NV' && row.vintage !== 'nv' && row.vintage.toString().trim() !== '') {
+        const v = Number(row.vintage)
+        if (isNaN(v) || v < 1900 || v > 2100) {
+          warnings.push(`Invalid vintage "${row.vintage}", will be treated as NV`)
+        } else {
+          vintage = v
+        }
+      }
+      
+      validatedRows.value.push({
+        ...row,
+        rowIndex: i + 1,
+        isValid: errors.length === 0,
+        errors,
+        warnings,
+        cellarId: cellar?.id,
+        regionId,
+        appellationId,
+        formatId,
+        grapeIds,
+        importHash,
+        isDuplicate,
+        color: normalizedColor || row.color,
+        vintage,
+        quantity: Number(row.quantity) || 0,
       })
       
-      const adjustedRows = response.rows.map((row: any) => ({
-        ...row,
-        rowIndex: row.rowIndex + i,
-      }))
-      
-      validatedRows.value.push(...adjustedRows)
-      validationProgress.value.current = Math.min(i + VALIDATE_CHUNK_SIZE, allRows.length)
+      if (i % 50 === 0) {
+        validationProgress.value.current = i
+        await new Promise(r => setTimeout(r, 0))
+      }
     }
+    
+    validationProgress.value.current = allRows.length
     
     const validCount = validatedRows.value.filter((r: any) => r.isValid).length
     const invalidCount = validatedRows.value.filter((r: any) => !r.isValid).length
