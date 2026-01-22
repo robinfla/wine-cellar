@@ -37,6 +37,8 @@ const isUpdating = ref(false)
 const showDeleteConfirm = ref(false)
 const showDeleteAllConfirm = ref(false)
 const isDeletingAll = ref(false)
+const showEmptyLotPrompt = ref(false)
+const showEmptyLots = ref(false)
 
 // Reference data for dropdowns
 const { data: producers } = await useFetch('/api/producers')
@@ -124,6 +126,7 @@ const { data: inventory, pending, refresh: refreshInventory } = await useFetch('
     color: color.value || undefined,
     vintage: vintage.value || undefined,
     cellarId: cellarId.value || undefined,
+    inStock: showEmptyLots.value ? 'false' : undefined,
     limit,
     offset: (page.value - 1) * limit,
   })),
@@ -370,10 +373,14 @@ async function _updateQuantity(delta: number) {
   }
 }
 
-// Save quantity directly from input
 async function saveQuantity() {
   if (!selectedLot.value) return
   const newQty = Math.max(0, selectedLot.value.quantity)
+
+  if (newQty === 0) {
+    showEmptyLotPrompt.value = true
+    return
+  }
 
   isUpdating.value = true
   try {
@@ -391,6 +398,52 @@ async function saveQuantity() {
   } finally {
     isUpdating.value = false
   }
+}
+
+async function keepEmptyLot() {
+  if (!selectedLot.value) return
+  isUpdating.value = true
+  try {
+    await $fetch(`/api/inventory/${selectedLot.value.id}`, {
+      method: 'PATCH',
+      body: { quantity: 0 },
+    })
+    selectedLot.value.quantity = 0
+    if (!showEmptyLots.value) {
+      closePanel()
+      await refreshInventory()
+    } else if (inventory.value?.lots) {
+      const lot = inventory.value.lots.find(l => l.id === selectedLot.value?.id)
+      if (lot) lot.quantity = 0
+    }
+  } catch (e) {
+    console.error('Failed to update quantity', e)
+  } finally {
+    isUpdating.value = false
+    showEmptyLotPrompt.value = false
+  }
+}
+
+async function deleteEmptyLot() {
+  if (!selectedLot.value) return
+  isUpdating.value = true
+  try {
+    await $fetch(`/api/inventory/${selectedLot.value.id}`, { method: 'DELETE' })
+    closePanel()
+    await refreshInventory()
+  } catch (e) {
+    console.error('Failed to delete lot', e)
+  } finally {
+    isUpdating.value = false
+    showEmptyLotPrompt.value = false
+  }
+}
+
+function cancelEmptyLotPrompt() {
+  if (selectedLot.value) {
+    selectedLot.value.quantity = 1
+  }
+  showEmptyLotPrompt.value = false
 }
 
 // Save format change
@@ -678,6 +731,17 @@ onMounted(() => {
               v-if="showMoreMenu"
               class="absolute right-0 z-10 mt-2 w-48 bg-white rounded-lg border border-muted-200 py-1 shadow-lg"
             >
+              <button
+                class="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-muted-700 hover:bg-muted-100"
+                @click="showEmptyLots = !showEmptyLots; showMoreMenu = false"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path v-if="showEmptyLots" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path v-if="showEmptyLots" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                </svg>
+                {{ showEmptyLots ? 'Hide empty lots' : 'Show empty lots' }}
+              </button>
               <a
                 href="/api/inventory/export"
                 download
@@ -848,11 +912,15 @@ onMounted(() => {
               v-for="lot in inventory.lots"
               :key="lot.id"
               class="cursor-pointer transition-colors"
-              :class="selectedLot?.id === lot.id ? 'bg-primary-50' : 'hover:bg-muted-50'"
+              :class="[
+                selectedLot?.id === lot.id ? 'bg-primary-50' : 'hover:bg-muted-50',
+                lot.quantity === 0 ? 'opacity-50' : ''
+              ]"
               @click="selectLot(lot)"
             >
               <td class="px-3 sm:px-4 py-3 text-sm font-semibold text-muted-900">
                 {{ lot.wineName }}
+                <span v-if="lot.quantity === 0" class="text-xs font-normal text-muted-400 ml-1">(finished)</span>
                 <span class="sm:hidden text-xs font-normal text-muted-500 block">{{ lot.producerName }}</span>
               </td>
               <td class="px-3 sm:px-4 py-3 text-sm text-muted-600 hidden sm:table-cell">{{ lot.producerName }}</td>
@@ -1517,6 +1585,70 @@ onMounted(() => {
                 @click="deleteFilteredWines"
               >
                 {{ isDeletingAll ? 'Deleting...' : (hasAnyFilter ? 'Delete Filtered' : 'Delete All') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Empty Lot Prompt Modal -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition-opacity duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-opacity duration-150 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="showEmptyLotPrompt"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          @click.self="cancelEmptyLotPrompt"
+        >
+          <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-display font-bold text-muted-900">Bottle Finished</h3>
+                <p class="text-sm text-muted-500">What would you like to do with this lot?</p>
+              </div>
+            </div>
+
+            <p class="text-sm text-muted-700 mb-6">
+              <strong>{{ selectedLot?.wineName }}</strong> {{ selectedLot?.vintage || 'NV' }} will have 0 bottles remaining.
+              You can keep it for history or delete it permanently.
+            </p>
+
+            <div class="flex flex-col gap-2">
+              <button
+                type="button"
+                class="w-full px-4 py-2.5 text-sm font-semibold text-muted-700 bg-white border-2 border-muted-300 rounded-xl hover:bg-muted-50 hover:scale-102 transition-all"
+                :disabled="isUpdating"
+                @click="keepEmptyLot"
+              >
+                {{ isUpdating ? 'Saving...' : 'Keep for history' }}
+              </button>
+              <button
+                type="button"
+                class="w-full px-4 py-2.5 text-sm font-semibold text-red-600 bg-red-50 border-2 border-red-200 rounded-xl hover:bg-red-100 hover:scale-102 transition-all"
+                :disabled="isUpdating"
+                @click="deleteEmptyLot"
+              >
+                {{ isUpdating ? 'Deleting...' : 'Delete permanently' }}
+              </button>
+              <button
+                type="button"
+                class="w-full px-4 py-2.5 text-sm font-semibold text-muted-500 hover:text-muted-700 transition-colors"
+                :disabled="isUpdating"
+                @click="cancelEmptyLotPrompt"
+              >
+                Cancel
               </button>
             </div>
           </div>
