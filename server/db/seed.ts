@@ -128,10 +128,8 @@ async function seed() {
     ]).onConflictDoNothing()
   }
 
-  // Seed grapes
   console.log('Seeding grapes...')
   await db.insert(schema.grapes).values([
-    // Red grapes
     { name: 'Cabernet Sauvignon', color: 'red' },
     { name: 'Merlot', color: 'red' },
     { name: 'Pinot Noir', color: 'red' },
@@ -148,8 +146,8 @@ async function seed() {
     { name: 'Gamay', color: 'red' },
     { name: 'Cinsault', color: 'red' },
     { name: 'Carignan', color: 'red' },
+    { name: 'Red Blend', color: 'red' },
 
-    // White grapes
     { name: 'Chardonnay', color: 'white' },
     { name: 'Sauvignon Blanc', color: 'white' },
     { name: 'Riesling', color: 'white' },
@@ -165,6 +163,7 @@ async function seed() {
     { name: 'Grüner Veltliner', color: 'white' },
     { name: 'Albariño', color: 'white' },
     { name: 'Vermentino', color: 'white' },
+    { name: 'White Blend', color: 'white' },
   ]).onConflictDoNothing()
 
   console.log('Seeding complete!')
