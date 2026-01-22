@@ -587,18 +587,30 @@ async function deleteLot() {
   }
 }
 
-// Delete all wines function
-async function deleteAllWines() {
+const hasAnyFilter = computed(() =>
+  debouncedSearch.value || maturityFilter.value || producerId.value || regionId.value || color.value || vintage.value || cellarId.value,
+)
+
+async function deleteFilteredWines() {
   isDeletingAll.value = true
   try {
     await $fetch('/api/inventory/delete-all', {
       method: 'POST',
-      body: { confirm: true },
+      body: {
+        confirm: true,
+        search: debouncedSearch.value || undefined,
+        maturity: maturityFilter.value || undefined,
+        producerId: producerId.value || undefined,
+        regionId: regionId.value || undefined,
+        color: color.value || undefined,
+        vintage: vintage.value || undefined,
+        cellarId: cellarId.value || undefined,
+      },
     })
     closePanel()
     await refreshInventory()
   } catch (e) {
-    console.error('Failed to delete all wines', e)
+    console.error('Failed to delete wines', e)
   } finally {
     isDeletingAll.value = false
     showDeleteAllConfirm.value = false
@@ -685,7 +697,7 @@ onMounted(() => {
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                Delete All Wines
+                {{ hasAnyFilter ? 'Delete Filtered' : 'Delete All' }}
               </button>
             </div>
           </div>
@@ -1475,13 +1487,18 @@ onMounted(() => {
                 </svg>
               </div>
               <div>
-                <h3 class="text-lg font-display font-bold text-muted-900">Delete All Wines</h3>
+                <h3 class="text-lg font-display font-bold text-muted-900">{{ hasAnyFilter ? 'Delete Filtered Wines' : 'Delete All Wines' }}</h3>
                 <p class="text-sm text-muted-500">This action cannot be undone</p>
               </div>
             </div>
 
             <p class="text-sm text-muted-700 mb-6">
-              This will permanently delete all <strong>{{ inventory?.total || 0 }}</strong> wines from your inventory, including all associated tasting notes and history.
+              <template v-if="hasAnyFilter">
+                This will permanently delete <strong>{{ inventory?.total || 0 }}</strong> wines matching your current filters, including all associated tasting notes and history.
+              </template>
+              <template v-else>
+                This will permanently delete all <strong>{{ inventory?.total || 0 }}</strong> wines from your inventory, including all associated tasting notes and history.
+              </template>
             </p>
 
             <div class="flex gap-3">
@@ -1497,9 +1514,9 @@ onMounted(() => {
                 type="button"
                 class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 hover:scale-105 transition-all disabled:opacity-50"
                 :disabled="isDeletingAll"
-                @click="deleteAllWines"
+                @click="deleteFilteredWines"
               >
-                {{ isDeletingAll ? 'Deleting...' : 'Delete All' }}
+                {{ isDeletingAll ? 'Deleting...' : (hasAnyFilter ? 'Delete Filtered' : 'Delete All') }}
               </button>
             </div>
           </div>

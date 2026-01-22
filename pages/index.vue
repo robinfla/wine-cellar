@@ -5,7 +5,6 @@ definePageMeta({
 
 const { user } = useAuth()
 
-// Fetch real stats
 const { data: statsData, pending } = await useFetch('/api/reports/stats')
 
 const formatCurrency = (value: number) => {
@@ -19,7 +18,6 @@ const formatCurrency = (value: number) => {
 
 const hasWines = computed(() => (statsData.value?.totals?.bottles || 0) > 0)
 
-// Color helpers
 const getColorLabel = (color: string) => {
   const labels: Record<string, string> = {
     red: 'Red',
@@ -44,106 +42,75 @@ const getColorHex = (color: string) => {
   return colors[color] || '#9ca3af'
 }
 
-// Chart color palettes - using flat design colors
 const cellarColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
 const regionColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16']
 const vintageColors = ['#8B5CF6', '#A855F7', '#C084FC', '#D8B4FE', '#E9D5FF']
 const grapeColors = ['#10B981', '#34D399', '#6EE7B7', '#A7F3D0', '#D1FAE5']
 
-// Compute pie chart segments
 const colorChartData = computed(() => {
   if (!statsData.value?.byColor) return []
   const total = statsData.value.totals.bottles
-  let offset = 0
-  return statsData.value.byColor.map((item) => {
-    const percent = (Number(item.bottles) / total) * 100
-    const segment = {
-      label: getColorLabel(item.color),
-      color: getColorHex(item.color),
-      bottles: item.bottles,
-      percent: Math.round(percent),
-      dashArray: `${percent} ${100 - percent}`,
-      offset: -offset,
-    }
-    offset += percent
-    return segment
-  })
+  const max = Math.max(...statsData.value.byColor.map(item => Number(item.bottles)))
+  return statsData.value.byColor.map((item) => ({
+    label: getColorLabel(item.color),
+    color: getColorHex(item.color),
+    bottles: Number(item.bottles),
+    percent: Math.round((Number(item.bottles) / total) * 100),
+    width: (Number(item.bottles) / max) * 100,
+  }))
 })
 
 const cellarChartData = computed(() => {
   if (!statsData.value?.byCellar) return []
   const total = statsData.value.totals.bottles
-  let offset = 0
-  return statsData.value.byCellar.map((item, i) => {
-    const percent = (Number(item.bottles) / total) * 100
-    const segment = {
-      label: item.cellarName,
-      color: cellarColors[i % cellarColors.length],
-      bottles: item.bottles,
-      percent: Math.round(percent),
-      dashArray: `${percent} ${100 - percent}`,
-      offset: -offset,
-    }
-    offset += percent
-    return segment
-  })
+  const max = Math.max(...statsData.value.byCellar.map(item => Number(item.bottles)))
+  return statsData.value.byCellar.map((item, i) => ({
+    label: item.cellarName,
+    color: cellarColors[i % cellarColors.length],
+    bottles: Number(item.bottles),
+    percent: Math.round((Number(item.bottles) / total) * 100),
+    width: (Number(item.bottles) / max) * 100,
+  }))
 })
 
 const regionChartData = computed(() => {
   if (!statsData.value?.byRegion) return []
-  const total = statsData.value.byRegion.reduce((sum, r) => sum + Number(r.bottles), 0)
-  let offset = 0
-  return statsData.value.byRegion.slice(0, 8).map((item, i) => {
-    const percent = (Number(item.bottles) / total) * 100
-    const segment = {
-      label: item.regionName,
-      color: regionColors[i % regionColors.length],
-      bottles: item.bottles,
-      percent: Math.round(percent),
-      dashArray: `${percent} ${100 - percent}`,
-      offset: -offset,
-    }
-    offset += percent
-    return segment
-  })
+  const data = statsData.value.byRegion.slice(0, 6)
+  const total = data.reduce((sum, r) => sum + Number(r.bottles), 0)
+  const max = Math.max(...data.map(item => Number(item.bottles)))
+  return data.map((item, i) => ({
+    label: item.regionName,
+    color: regionColors[i % regionColors.length],
+    bottles: Number(item.bottles),
+    percent: Math.round((Number(item.bottles) / total) * 100),
+    width: (Number(item.bottles) / max) * 100,
+  }))
 })
 
 const vintageChartData = computed(() => {
   if (!statsData.value?.byVintage) return []
   const total = statsData.value.byVintage.reduce((sum, v) => sum + Number(v.bottles), 0)
-  let offset = 0
-  return statsData.value.byVintage.map((item, i) => {
-    const percent = (Number(item.bottles) / total) * 100
-    const segment = {
-      label: String(item.vintage),
-      color: vintageColors[i % vintageColors.length],
-      bottles: item.bottles,
-      percent: Math.round(percent),
-      dashArray: `${percent} ${100 - percent}`,
-      offset: -offset,
-    }
-    offset += percent
-    return segment
-  })
+  const max = Math.max(...statsData.value.byVintage.map(item => Number(item.bottles)))
+  return statsData.value.byVintage.map((item, i) => ({
+    label: String(item.vintage),
+    color: vintageColors[i % vintageColors.length],
+    bottles: Number(item.bottles),
+    percent: Math.round((Number(item.bottles) / total) * 100),
+    width: (Number(item.bottles) / max) * 100,
+  }))
 })
 
 const grapeChartData = computed(() => {
   if (!statsData.value?.byGrape) return []
   const total = statsData.value.byGrape.reduce((sum, g) => sum + Number(g.bottles), 0)
-  let offset = 0
-  return statsData.value.byGrape.map((item, i) => {
-    const percent = (Number(item.bottles) / total) * 100
-    const segment = {
-      label: item.grapeName,
-      color: grapeColors[i % grapeColors.length],
-      bottles: item.bottles,
-      percent: Math.round(percent),
-      dashArray: `${percent} ${100 - percent}`,
-      offset: -offset,
-    }
-    offset += percent
-    return segment
-  })
+  const max = Math.max(...statsData.value.byGrape.map(item => Number(item.bottles)))
+  return statsData.value.byGrape.map((item, i) => ({
+    label: item.grapeName,
+    color: grapeColors[i % grapeColors.length],
+    bottles: Number(item.bottles),
+    percent: Math.round((Number(item.bottles) / total) * 100),
+    width: (Number(item.bottles) / max) * 100,
+  }))
 })
 </script>
 
@@ -204,152 +171,84 @@ const grapeChartData = computed(() => {
         </div>
       </div>
 
-      <!-- Charts grid -->
-      <div class="grid gap-6 lg:grid-cols-2 mb-6">
+      <!-- Charts grid - compact 2x2 layout -->
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <!-- By Cellar -->
-        <div class="card">
-          <h2 class="text-lg font-semibold text-muted-900 mb-4">By Cellar</h2>
-          <div class="flex items-center gap-6">
-            <svg viewBox="0 0 36 36" class="w-32 h-32 flex-shrink-0">
-              <circle
-                v-for="(segment, i) in cellarChartData"
-                :key="i"
-                cx="18"
-                cy="18"
-                r="15.9"
-                fill="none"
-                :stroke="segment.color"
-                stroke-width="3.5"
-                :stroke-dasharray="segment.dashArray"
-                :stroke-dashoffset="segment.offset"
-                transform="rotate(-90 18 18)"
-              />
-            </svg>
-            <div class="flex flex-col gap-2">
-              <div v-for="item in cellarChartData" :key="item.label" class="flex items-center gap-2 text-sm">
-                <span class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: item.color }" />
-                <span class="text-muted-700 font-medium">{{ item.label }}</span>
-                <span class="text-muted-500">({{ item.percent }}%)</span>
+        <div class="card p-4">
+          <h3 class="text-sm font-semibold text-muted-500 mb-3">By Cellar</h3>
+          <div class="space-y-2">
+            <div v-for="item in cellarChartData" :key="item.label" class="group">
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-muted-700 font-medium truncate">{{ item.label }}</span>
+                <span class="text-muted-500 ml-2">{{ item.bottles }}</span>
+              </div>
+              <div class="h-2 bg-muted-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all" :style="{ width: `${item.width}%`, backgroundColor: item.color }" />
               </div>
             </div>
           </div>
         </div>
 
         <!-- By Color -->
-        <div class="card">
-          <h2 class="text-lg font-semibold text-muted-900 mb-4">By Color</h2>
-          <div class="flex items-center gap-6">
-            <svg viewBox="0 0 36 36" class="w-32 h-32 flex-shrink-0">
-              <circle
-                v-for="(segment, i) in colorChartData"
-                :key="i"
-                cx="18"
-                cy="18"
-                r="15.9"
-                fill="none"
-                :stroke="segment.color"
-                stroke-width="3.5"
-                :stroke-dasharray="segment.dashArray"
-                :stroke-dashoffset="segment.offset"
-                transform="rotate(-90 18 18)"
-              />
-            </svg>
-            <div class="flex flex-col gap-2">
-              <div v-for="item in colorChartData" :key="item.label" class="flex items-center gap-2 text-sm">
-                <span class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: item.color }" />
+        <div class="card p-4">
+          <h3 class="text-sm font-semibold text-muted-500 mb-3">By Color</h3>
+          <div class="space-y-2">
+            <div v-for="item in colorChartData" :key="item.label" class="group">
+              <div class="flex justify-between text-xs mb-1">
                 <span class="text-muted-700 font-medium">{{ item.label }}</span>
-                <span class="text-muted-500">({{ item.percent }}%)</span>
+                <span class="text-muted-500">{{ item.bottles }}</span>
+              </div>
+              <div class="h-2 bg-muted-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all" :style="{ width: `${item.width}%`, backgroundColor: item.color }" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- By Region -->
+        <div class="card p-4">
+          <h3 class="text-sm font-semibold text-muted-500 mb-3">Top Regions</h3>
+          <div class="space-y-2">
+            <div v-for="item in regionChartData" :key="item.label" class="group">
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-muted-700 font-medium truncate">{{ item.label }}</span>
+                <span class="text-muted-500 ml-2">{{ item.bottles }}</span>
+              </div>
+              <div class="h-2 bg-muted-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all" :style="{ width: `${item.width}%`, backgroundColor: item.color }" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- By Vintage -->
+        <div v-if="vintageChartData.length > 0" class="card p-4">
+          <h3 class="text-sm font-semibold text-muted-500 mb-3">Top Vintages</h3>
+          <div class="space-y-2">
+            <div v-for="item in vintageChartData" :key="item.label" class="group">
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-muted-700 font-medium">{{ item.label }}</span>
+                <span class="text-muted-500">{{ item.bottles }}</span>
+              </div>
+              <div class="h-2 bg-muted-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all" :style="{ width: `${item.width}%`, backgroundColor: item.color }" />
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- By Region (full width) -->
-      <div class="card">
-        <h2 class="text-lg font-semibold text-muted-900 mb-4">By Region</h2>
-        <div class="flex flex-col sm:flex-row items-center gap-6">
-          <svg viewBox="0 0 36 36" class="w-40 h-40 flex-shrink-0">
-            <circle
-              v-for="(segment, i) in regionChartData"
-              :key="i"
-              cx="18"
-              cy="18"
-              r="15.9"
-              fill="none"
-              :stroke="segment.color"
-              stroke-width="3.5"
-              :stroke-dasharray="segment.dashArray"
-              :stroke-dashoffset="segment.offset"
-              transform="rotate(-90 18 18)"
-            />
-          </svg>
-          <div class="flex flex-wrap gap-x-6 gap-y-2">
-            <div v-for="item in regionChartData" :key="item.label" class="flex items-center gap-2 text-sm">
-              <span class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: item.color }" />
-              <span class="text-muted-700 font-medium">{{ item.label }}</span>
-              <span class="text-muted-500">({{ item.bottles }})</span>
+      <!-- By Grape (separate row if exists) -->
+      <div v-if="grapeChartData.length > 0" class="card p-4 mt-4">
+        <h3 class="text-sm font-semibold text-muted-500 mb-3">Top Grape Varieties</h3>
+        <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <div v-for="item in grapeChartData" :key="item.label" class="group">
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-muted-700 font-medium truncate">{{ item.label }}</span>
+              <span class="text-muted-500 ml-2">{{ item.bottles }}</span>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- By Vintage and By Grape -->
-      <div class="grid gap-6 lg:grid-cols-2 mt-6">
-        <!-- By Vintage (Top 5) -->
-        <div v-if="vintageChartData.length > 0" class="card">
-          <h2 class="text-lg font-semibold text-muted-900 mb-4">Top 5 Vintages</h2>
-          <div class="flex items-center gap-6">
-            <svg viewBox="0 0 36 36" class="w-32 h-32 flex-shrink-0">
-              <circle
-                v-for="(segment, i) in vintageChartData"
-                :key="i"
-                cx="18"
-                cy="18"
-                r="15.9"
-                fill="none"
-                :stroke="segment.color"
-                stroke-width="3.5"
-                :stroke-dasharray="segment.dashArray"
-                :stroke-dashoffset="segment.offset"
-                transform="rotate(-90 18 18)"
-              />
-            </svg>
-            <div class="flex flex-col gap-2">
-              <div v-for="item in vintageChartData" :key="item.label" class="flex items-center gap-2 text-sm">
-                <span class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: item.color }" />
-                <span class="text-muted-700 font-medium">{{ item.label }}</span>
-                <span class="text-muted-500">({{ item.bottles }} bottles)</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- By Grape (Top 5) -->
-        <div v-if="grapeChartData.length > 0" class="card">
-          <h2 class="text-lg font-semibold text-muted-900 mb-4">Top 5 Grape Varieties</h2>
-          <div class="flex items-center gap-6">
-            <svg viewBox="0 0 36 36" class="w-32 h-32 flex-shrink-0">
-              <circle
-                v-for="(segment, i) in grapeChartData"
-                :key="i"
-                cx="18"
-                cy="18"
-                r="15.9"
-                fill="none"
-                :stroke="segment.color"
-                stroke-width="3.5"
-                :stroke-dasharray="segment.dashArray"
-                :stroke-dashoffset="segment.offset"
-                transform="rotate(-90 18 18)"
-              />
-            </svg>
-            <div class="flex flex-col gap-2">
-              <div v-for="item in grapeChartData" :key="item.label" class="flex items-center gap-2 text-sm">
-                <span class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: item.color }" />
-                <span class="text-muted-700 font-medium">{{ item.label }}</span>
-                <span class="text-muted-500">({{ item.bottles }} bottles)</span>
-              </div>
+            <div class="h-2 bg-muted-100 rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all" :style="{ width: `${item.width}%`, backgroundColor: item.color }" />
             </div>
           </div>
         </div>
