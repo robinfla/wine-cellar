@@ -261,10 +261,24 @@ function clearFilters() {
   cellarId.value = undefined
 }
 
-// Close add menu when clicking outside
+// Close menus when clicking outside
 function closeAddMenu() {
   showAddMenu.value = false
 }
+
+function closeMenus() {
+  showAddMenu.value = false
+  showMoreMenu.value = false
+}
+
+// Handle click outside to close dropdowns
+onMounted(() => {
+  document.addEventListener('click', closeMenus)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeMenus)
+})
 
 // Tasting notes functions
 async function fetchTastingNotes(lotId: number) {
