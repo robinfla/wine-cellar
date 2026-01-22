@@ -79,6 +79,7 @@ async function handleCellarCreated() {
             <p class="mt-1 text-sm text-muted-500">
               {{ cellar.countryCode }}
               <span v-if="cellar.isVirtual" class="ml-2 text-xs font-semibold bg-muted-200 text-muted-700 px-2 py-0.5 rounded">Virtual</span>
+              <span class="ml-2 text-xs font-semibold bg-primary-100 text-primary-700 px-2 py-0.5 rounded">{{ cellar.bottleCount }} bottles</span>
             </p>
           </div>
           <div class="flex items-center gap-3">

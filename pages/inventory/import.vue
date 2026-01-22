@@ -135,6 +135,19 @@ const importResult = ref<any>(null)
 const isImporting = ref(false)
 const importProgress = ref({ current: 0, total: 0, imported: 0, skipped: 0, errors: [] as any[] })
 
+// Toast notifications
+const toasts = ref<{ id: number; message: string; type: 'success' | 'error' | 'warning' | 'info' }[]>([])
+let toastId = 0
+
+function showToast(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') {
+  const id = ++toastId
+  toasts.value.push({ id, message, type })
+}
+
+function removeToast(id: number) {
+  toasts.value = toasts.value.filter(t => t.id !== id)
+}
+
 // File handling
 function handleFileUpload(event: Event) {
   const input = event.target as HTMLInputElement
@@ -152,10 +165,14 @@ function handleFileUpload(event: Event) {
         // Auto-map columns based on header names
         autoMapColumns()
         currentStep.value = 2
+        showToast(`Loaded ${rawData.value.length} rows from ${file.name}`, 'success')
+      } else {
+        showToast('CSV file appears to be empty', 'error')
       }
     },
     error: (error) => {
       console.error('CSV parse error:', error)
+      showToast(`Failed to parse CSV: ${error.message}`, 'error')
     },
   })
 }
@@ -393,9 +410,11 @@ async function validateData() {
     const invalidCount = validatedRows.value.filter((r: any) => !r.isValid).length
     const duplicateCount = validatedRows.value.filter((r: any) => r.isDuplicate).length
     const warningCount = validatedRows.value.filter((r: any) => r.warnings?.length > 0).length
+    const totalBottles = validatedRows.value.reduce((sum: number, r: any) => sum + (Number(r.quantity) || 0), 0)
     
     validationSummary.value = {
       total: validatedRows.value.length,
+      totalBottles,
       valid: validCount,
       invalid: invalidCount,
       duplicates: duplicateCount,
@@ -438,15 +457,25 @@ async function executeImport() {
       skipped: response.skipped,
       errors: response.errors || [],
     }
+    
+    if (response.imported > 0) {
+      showToast(`Successfully imported ${response.imported} wines`, 'success')
+    }
+    if (response.errors.length > 0) {
+      showToast(`${response.errors.length} rows failed to import`, 'warning')
+    }
+    
     currentStep.value = 4
   } catch (error: unknown) {
     const err = error as { data?: { message?: string }; message?: string }
     console.error('Import error:', error)
+    const errorMessage = err.data?.message || err.message || 'Import failed'
+    showToast(errorMessage, 'error')
     importResult.value = {
       success: false,
       imported: 0,
       skipped: 0,
-      errors: [{ row: 0, message: err.data?.message || err.message || 'Import failed' }],
+      errors: [{ row: 0, message: errorMessage }],
     }
     currentStep.value = 4
   } finally {
@@ -770,16 +799,16 @@ function reset() {
       <!-- Summary -->
       <div v-if="validationSummary" class="grid gap-4 sm:grid-cols-4 mb-6">
         <div class="p-3 bg-muted-100 rounded-lg border-2 border-muted-200">
-          <p class="text-2xl font-bold text-muted-900">{{ validationSummary.total }}</p>
-          <p class="text-sm font-semibold text-muted-600">Total rows</p>
+          <p class="text-2xl font-bold text-muted-900">{{ validationSummary.totalBottles }}</p>
+          <p class="text-sm font-semibold text-muted-600">Total bottles</p>
         </div>
         <div class="p-3 bg-secondary-50 rounded-lg border-2 border-secondary-200">
           <p class="text-2xl font-bold text-secondary-700">{{ validationSummary.valid }}</p>
-          <p class="text-sm font-semibold text-secondary-600">Valid</p>
+          <p class="text-sm font-semibold text-secondary-600">Valid rows</p>
         </div>
         <div class="p-3 bg-red-50 rounded-lg border-2 border-red-200">
           <p class="text-2xl font-bold text-red-700">{{ validationSummary.invalid }}</p>
-          <p class="text-sm font-semibold text-red-600">Invalid</p>
+          <p class="text-sm font-semibold text-red-600">Invalid rows</p>
         </div>
         <div class="p-3 bg-accent-50 rounded-lg border-2 border-accent-200">
           <p class="text-2xl font-bold text-accent-700">{{ validationSummary.duplicates }}</p>
@@ -926,5 +955,18 @@ function reset() {
       v-model="showCreateCellarModal"
       @created="handleCellarsCreated"
     />
+
+    <!-- Toast notifications -->
+    <Teleport to="body">
+      <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+        <Toast
+          v-for="toast in toasts"
+          :key="toast.id"
+          :message="toast.message"
+          :type="toast.type"
+          @close="removeToast(toast.id)"
+        />
+      </div>
+    </Teleport>
   </div>
 </template>
