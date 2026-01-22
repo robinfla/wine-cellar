@@ -721,7 +721,7 @@ onMounted(() => {
           <div class="relative">
             <button
               class="inline-flex items-center justify-center w-9 h-9 text-muted-500 bg-white border border-muted-300 rounded-lg hover:bg-muted-50 hover:text-muted-700 transition-colors"
-              @click="showMoreMenu = !showMoreMenu"
+              @click.stop="showMoreMenu = !showMoreMenu"
             >
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
@@ -770,7 +770,7 @@ onMounted(() => {
           <div class="relative">
             <button
               class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 hover:scale-105 transition-transform"
-              @click="showAddMenu = !showAddMenu"
+              @click.stop="showAddMenu = !showAddMenu"
             >
               <span class="hidden sm:inline">Add Wine</span>
               <span class="sm:hidden">Add</span>
