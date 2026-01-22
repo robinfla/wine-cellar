@@ -34,7 +34,7 @@ const newInviteExpiresDays = ref<number | undefined>(undefined)
 const isCreating = ref(false)
 const createError = ref('')
 
-const appUrl = useRuntimeConfig().public.appUrl || window.location.origin
+const appUrl = ref('')
 
 async function loadUsers() {
   isLoadingUsers.value = true
@@ -88,9 +88,19 @@ async function deleteInvitation(id: number) {
   }
 }
 
-function copyInviteLink(code: string) {
-  const link = `${appUrl}/register?code=${code}`
-  navigator.clipboard.writeText(link)
+async function copyInviteLink(code: string) {
+  const link = `${appUrl.value}/register?code=${code}`
+  try {
+    await navigator.clipboard.writeText(link)
+  } catch {
+    // Fallback for older browsers or non-HTTPS
+    const textArea = document.createElement('textarea')
+    textArea.value = link
+    document.body.appendChild(textArea)
+    textArea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textArea)
+  }
 }
 
 function formatDate(dateStr: string | null) {
@@ -111,6 +121,7 @@ function getInvitationStatus(inv: Invitation) {
 }
 
 onMounted(() => {
+  appUrl.value = useRuntimeConfig().public.appUrl || window.location.origin
   loadUsers()
   loadInvitations()
 })
