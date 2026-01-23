@@ -32,6 +32,7 @@ const editValues = ref({
   vintage: null as number | null,
   appellationId: null as number | null,
   regionId: null as number | null,
+  color: '',
 })
 const isUpdating = ref(false)
 const showDeleteConfirm = ref(false)
@@ -520,6 +521,8 @@ function startEditing(field: string) {
     editValues.value.appellationId = selectedLot.value.appellationId || null
   } else if (field === 'region') {
     editValues.value.regionId = selectedLot.value.wineRegionId || selectedLot.value.regionId || null
+  } else if (field === 'color') {
+    editValues.value.color = selectedLot.value.wineColor || ''
   }
 }
 
@@ -528,7 +531,7 @@ async function saveField(field: string) {
   isUpdating.value = true
   try {
     // Wine-level fields use wine PATCH endpoint
-    if (field === 'wineName' || field === 'producer' || field === 'appellation' || field === 'region') {
+    if (field === 'wineName' || field === 'producer' || field === 'appellation' || field === 'region' || field === 'color') {
       const body: Record<string, any> = {}
       if (field === 'wineName') {
         body.name = editValues.value.wineName
@@ -555,9 +558,11 @@ async function saveField(field: string) {
         body.regionId = editValues.value.regionId
         selectedLot.value.wineRegionId = editValues.value.regionId
         selectedLot.value.regionId = editValues.value.regionId
-        // Update region name in local state
         const region = regionsData.value?.find((r: any) => r.id === editValues.value.regionId)
         selectedLot.value.regionName = region?.name || null
+      } else if (field === 'color') {
+        body.color = editValues.value.color
+        selectedLot.value.wineColor = editValues.value.color
       }
       await $fetch(`/api/wines/${selectedLot.value.wineId}`, {
         method: 'PATCH',
@@ -581,6 +586,7 @@ async function saveField(field: string) {
             lot.wineRegionId = selectedLot.value.wineRegionId
             lot.regionId = selectedLot.value.regionId
           }
+          if (field === 'color') lot.wineColor = selectedLot.value.wineColor
         }
       }
     }
@@ -982,7 +988,45 @@ onMounted(() => {
             <div class="flex-1 min-w-0">
               <!-- Wine Name - Editable -->
               <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full flex-shrink-0" :class="getColorDot(selectedLot.wineColor)" />
+                <!-- Color dot - Editable -->
+                <div v-if="editingField === 'color'" class="flex items-center gap-1">
+                  <select
+                    v-model="editValues.color"
+                    class="input text-sm py-1 w-24"
+                  >
+                    <option value="red">Red</option>
+                    <option value="white">White</option>
+                    <option value="rose">Rosé</option>
+                    <option value="sparkling">Sparkling</option>
+                    <option value="dessert">Dessert</option>
+                    <option value="fortified">Fortified</option>
+                  </select>
+                  <button
+                    type="button"
+                    class="p-1.5 text-secondary-600 hover:text-secondary-700"
+                    @click="saveField('color')"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="p-1.5 text-muted-400 hover:text-muted-600"
+                    @click="cancelEditing"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <span
+                  v-else
+                  class="w-3 h-3 rounded-full flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary-300 hover:ring-offset-1 transition-all"
+                  :class="getColorDot(selectedLot.wineColor)"
+                  :title="`${selectedLot.wineColor} - click to edit`"
+                  @click="startEditing('color')"
+                />
                 <div v-if="editingField === 'wineName'" class="flex items-center gap-1 flex-1">
                   <input
                     v-model="editValues.wineName"
