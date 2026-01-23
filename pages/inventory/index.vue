@@ -792,7 +792,7 @@ onMounted(() => {
                 class="block w-full text-left px-4 py-2 text-sm text-muted-700 hover:bg-muted-100"
                 @click="handleImportClick"
               >
-                Import CSV
+                Import File
               </button>
             </div>
           </div>
