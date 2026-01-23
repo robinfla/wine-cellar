@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Papa from 'papaparse'
+import * as XLSX from 'xlsx'
 
 definePageMeta({
   middleware: 'auth',
@@ -148,33 +149,73 @@ function removeToast(id: number) {
   toasts.value = toasts.value.filter(t => t.id !== id)
 }
 
-// File handling
+function parseExcelFile(file: File): Promise<{ headers: string[]; data: string[][] }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer)
+        const workbook = XLSX.read(data, { type: 'array' })
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as string[][]
+        
+        if (jsonData.length > 0) {
+          resolve({
+            headers: jsonData[0].map(h => String(h ?? '')),
+            data: jsonData.slice(1).map(row => row.map(cell => String(cell ?? ''))),
+          })
+        } else {
+          reject(new Error('Excel file appears to be empty'))
+        }
+      } catch (err) {
+        reject(err)
+      }
+    }
+    reader.onerror = () => reject(new Error('Failed to read file'))
+    reader.readAsArrayBuffer(file)
+  })
+}
+
 function handleFileUpload(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
 
   fileName.value = file.name
+  const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
 
-  Papa.parse(file, {
-    complete: (results) => {
-      if (results.data.length > 0) {
-        headers.value = results.data[0] as string[]
-        rawData.value = results.data.slice(1) as string[][]
-
-        // Auto-map columns based on header names
+  if (isExcel) {
+    parseExcelFile(file)
+      .then((result) => {
+        headers.value = result.headers
+        rawData.value = result.data
         autoMapColumns()
         currentStep.value = 2
         showToast(`Loaded ${rawData.value.length} rows from ${file.name}`, 'success')
-      } else {
-        showToast('CSV file appears to be empty', 'error')
-      }
-    },
-    error: (error) => {
-      console.error('CSV parse error:', error)
-      showToast(`Failed to parse CSV: ${error.message}`, 'error')
-    },
-  })
+      })
+      .catch((error) => {
+        console.error('Excel parse error:', error)
+        showToast(`Failed to parse Excel: ${error.message}`, 'error')
+      })
+  } else {
+    Papa.parse(file, {
+      complete: (results) => {
+        if (results.data.length > 0) {
+          headers.value = results.data[0] as string[]
+          rawData.value = results.data.slice(1) as string[][]
+          autoMapColumns()
+          currentStep.value = 2
+          showToast(`Loaded ${rawData.value.length} rows from ${file.name}`, 'success')
+        } else {
+          showToast('CSV file appears to be empty', 'error')
+        }
+      },
+      error: (error) => {
+        console.error('CSV parse error:', error)
+        showToast(`Failed to parse CSV: ${error.message}`, 'error')
+      },
+    })
+  }
 }
 
 function autoMapColumns() {
@@ -520,7 +561,7 @@ function reset() {
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-muted-900">Import Wines</h1>
       <p class="mt-1 text-sm text-muted-600">
-        Import your wine inventory from a CSV file
+        Import your wine inventory from a CSV or Excel file
       </p>
     </div>
 
@@ -558,7 +599,7 @@ function reset() {
 
     <!-- Step 1: Upload -->
     <div v-if="currentStep === 1" class="card">
-      <h2 class="text-lg font-semibold text-muted-900 mb-4">Upload CSV File</h2>
+      <h2 class="text-lg font-semibold text-muted-900 mb-4">Upload File</h2>
 
       <div class="border-2 border-dashed border-muted-300 rounded-lg p-8 text-center">
         <svg class="mx-auto h-12 w-12 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -566,17 +607,17 @@ function reset() {
         </svg>
         <div class="mt-4">
           <label class="cursor-pointer">
-            <span class="btn-primary">Select CSV file</span>
+            <span class="btn-primary">Select file</span>
             <input
               type="file"
-              accept=".csv"
+              accept=".csv,.xlsx,.xls"
               class="hidden"
               @change="handleFileUpload"
             >
           </label>
         </div>
         <p class="mt-2 text-sm text-muted-500">
-          CSV file with headers in the first row
+          CSV or Excel file (.xlsx, .xls) with headers in the first row
         </p>
       </div>
 

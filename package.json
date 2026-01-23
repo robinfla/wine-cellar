@@ -32,6 +32,7 @@
     "postgres": "^3.4.5",
     "vue": "^3.5.26",
     "vue-router": "^4.6.4",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {
