@@ -18,6 +18,10 @@ const formatCurrency = (value: number) => {
 
 const hasWines = computed(() => (statsData.value?.totals?.bottles || 0) > 0)
 
+const showAllRegions = ref(false)
+const showAllVintages = ref(false)
+const showAllGrapes = ref(false)
+
 const getColorLabel = (color: string) => {
   const labels: Record<string, string> = {
     red: 'Red',
@@ -75,9 +79,10 @@ const cellarChartData = computed(() => {
 
 const regionChartData = computed(() => {
   if (!statsData.value?.byRegion) return []
-  const data = statsData.value.byRegion.slice(0, 6)
-  const total = data.reduce((sum, r) => sum + Number(r.bottles), 0)
-  const max = Math.max(...data.map(item => Number(item.bottles)))
+  const data = showAllRegions.value ? statsData.value.byRegion : statsData.value.byRegion.slice(0, 5)
+  const allData = statsData.value.byRegion
+  const total = allData.reduce((sum, r) => sum + Number(r.bottles), 0)
+  const max = Math.max(...allData.map(item => Number(item.bottles)))
   return data.map((item, i) => ({
     label: item.regionName,
     color: regionColors[i % regionColors.length],
@@ -87,11 +92,15 @@ const regionChartData = computed(() => {
   }))
 })
 
+const hasMoreRegions = computed(() => (statsData.value?.byRegion?.length || 0) > 5)
+
 const vintageChartData = computed(() => {
   if (!statsData.value?.byVintage) return []
-  const total = statsData.value.byVintage.reduce((sum, v) => sum + Number(v.bottles), 0)
-  const max = Math.max(...statsData.value.byVintage.map(item => Number(item.bottles)))
-  return statsData.value.byVintage.map((item, i) => ({
+  const data = showAllVintages.value ? statsData.value.byVintage : statsData.value.byVintage.slice(0, 5)
+  const allData = statsData.value.byVintage
+  const total = allData.reduce((sum, v) => sum + Number(v.bottles), 0)
+  const max = Math.max(...allData.map(item => Number(item.bottles)))
+  return data.map((item, i) => ({
     label: String(item.vintage),
     color: vintageColors[i % vintageColors.length],
     bottles: Number(item.bottles),
@@ -100,11 +109,15 @@ const vintageChartData = computed(() => {
   }))
 })
 
+const hasMoreVintages = computed(() => (statsData.value?.byVintage?.length || 0) > 5)
+
 const grapeChartData = computed(() => {
   if (!statsData.value?.byGrape) return []
-  const total = statsData.value.byGrape.reduce((sum, g) => sum + Number(g.bottles), 0)
-  const max = Math.max(...statsData.value.byGrape.map(item => Number(item.bottles)))
-  return statsData.value.byGrape.map((item, i) => ({
+  const data = showAllGrapes.value ? statsData.value.byGrape : statsData.value.byGrape.slice(0, 5)
+  const allData = statsData.value.byGrape
+  const total = allData.reduce((sum, g) => sum + Number(g.bottles), 0)
+  const max = Math.max(...allData.map(item => Number(item.bottles)))
+  return data.map((item, i) => ({
     label: item.grapeName,
     color: grapeColors[i % grapeColors.length],
     bottles: Number(item.bottles),
@@ -112,6 +125,8 @@ const grapeChartData = computed(() => {
     width: (Number(item.bottles) / max) * 100,
   }))
 })
+
+const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5)
 </script>
 
 <template>
@@ -219,6 +234,13 @@ const grapeChartData = computed(() => {
               </div>
             </div>
           </div>
+          <button
+            v-if="hasMoreRegions"
+            class="mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium"
+            @click="showAllRegions = !showAllRegions"
+          >
+            {{ showAllRegions ? 'Show less' : 'See all regions' }}
+          </button>
         </div>
 
         <!-- By Vintage -->
@@ -235,6 +257,13 @@ const grapeChartData = computed(() => {
               </div>
             </div>
           </div>
+          <button
+            v-if="hasMoreVintages"
+            class="mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium"
+            @click="showAllVintages = !showAllVintages"
+          >
+            {{ showAllVintages ? 'Show less' : 'See all vintages' }}
+          </button>
         </div>
       </div>
 
@@ -252,6 +281,13 @@ const grapeChartData = computed(() => {
             </div>
           </div>
         </div>
+        <button
+          v-if="hasMoreGrapes"
+          class="mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium"
+          @click="showAllGrapes = !showAllGrapes"
+        >
+          {{ showAllGrapes ? 'Show less' : 'See all varieties' }}
+        </button>
       </div>
     </template>
   </div>
