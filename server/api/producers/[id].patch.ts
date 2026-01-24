@@ -58,10 +58,20 @@ export default defineEventHandler(async (event) => {
     updateData.notes = parsed.data.notes
   }
 
-  await db
-    .update(producers)
-    .set(updateData)
-    .where(eq(producers.id, id))
+  try {
+    await db
+      .update(producers)
+      .set(updateData)
+      .where(eq(producers.id, id))
+  } catch (e: any) {
+    if (e.code === '23505') {
+      throw createError({
+        statusCode: 409,
+        message: 'A producer with this name already exists in this region',
+      })
+    }
+    throw e
+  }
 
   const [updated] = await db
     .select({

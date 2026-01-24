@@ -10,6 +10,8 @@ const route = useRoute()
 const selectedAllocation = ref<any>(null)
 const showAddModal = ref(false)
 const showAddItemModal = ref(false)
+const editingProducer = ref(false)
+const editProducerId = ref<number | null>(null)
 
 // View tab state
 const viewTab = ref<'list' | 'timeline'>('list')
@@ -177,11 +179,15 @@ const formatMonth = (date: string | Date | null) => {
 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 const claimMonthOptions = computed(() => {
-  const year = selectedAllocation.value?.year || new Date().getFullYear()
-  return monthNames.map((name, index) => ({
-    value: `${year}-${String(index + 1).padStart(2, '0')}`,
-    label: name,
-  }))
+  const allocationYear = selectedAllocation.value?.year || new Date().getFullYear()
+  // Include both allocation year and next year (claims often open year after allocation)
+  const years = [allocationYear, allocationYear + 1]
+  return years.flatMap((year) =>
+    monthNames.map((name, index) => ({
+      value: `${year}-${String(index + 1).padStart(2, '0')}`,
+      label: `${name} ${year}`,
+    })),
+  )
 })
 
 // Compute totals by currency
@@ -196,15 +202,19 @@ const totalsByCurrency = computed(() => {
   return Object.entries(totals).map(([currency, value]) => ({ currency, value }))
 })
 
-// Select allocation and fetch details
-async function selectAllocation(allocation: any) {
-  const details = await $fetch(`/api/allocations/${allocation.id}`)
-  // Convert claimOpensAt to YYYY-MM format for month input
+// Convert claimOpensAt to YYYY-MM format for month dropdown
+const formatClaimOpensAt = (details: any) => {
   if (details.claimOpensAt) {
     const date = new Date(details.claimOpensAt)
     details.claimOpensAt = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
   }
-  selectedAllocation.value = details
+  return details
+}
+
+// Select allocation and fetch details
+async function selectAllocation(allocation: any) {
+  const details = await $fetch(`/api/allocations/${allocation.id}`)
+  selectedAllocation.value = formatClaimOpensAt(details)
 }
 
 function closePanel() {
@@ -261,7 +271,6 @@ async function updateClaimMonth(claimMonth: string | null) {
   if (!selectedAllocation.value) return
   isUpdating.value = true
   try {
-    // Convert YYYY-MM to ISO datetime string
     const claimOpensAt = claimMonth ? new Date(`${claimMonth}-01T00:00:00Z`).toISOString() : null
     await $fetch(`/api/allocations/${selectedAllocation.value.id}`, {
       method: 'PATCH',
@@ -270,6 +279,41 @@ async function updateClaimMonth(claimMonth: string | null) {
     await refreshAllocations()
   } catch (e) {
     console.error('Failed to update claim month', e)
+  } finally {
+    isUpdating.value = false
+  }
+}
+
+function startEditingProducer() {
+  if (!selectedAllocation.value) return
+  editProducerId.value = selectedAllocation.value.producerId
+  editingProducer.value = true
+}
+
+function cancelEditingProducer() {
+  editingProducer.value = false
+  editProducerId.value = null
+}
+
+async function saveProducer() {
+  if (!selectedAllocation.value || !editProducerId.value) return
+  isUpdating.value = true
+  try {
+    await $fetch(`/api/allocations/${selectedAllocation.value.id}`, {
+      method: 'PATCH',
+      body: { producerId: editProducerId.value },
+    })
+    const producer = producers.value?.find((p: any) => p.id === editProducerId.value)
+    if (producer) {
+      selectedAllocation.value.producerId = editProducerId.value
+      selectedAllocation.value.producerName = producer.name
+      selectedAllocation.value.regionName = producer.regionName || null
+    }
+    editingProducer.value = false
+    editProducerId.value = null
+    await refreshAllocations()
+  } catch (e) {
+    console.error('Failed to update producer', e)
   } finally {
     isUpdating.value = false
   }
@@ -296,12 +340,7 @@ async function deleteAllocation() {
 // Navigate to linked year
 async function goToLinkedYear(yearData: { id: number }) {
   const details = await $fetch(`/api/allocations/${yearData.id}`)
-  // Convert claimOpensAt to YYYY-MM format for month input
-  if (details.claimOpensAt) {
-    const date = new Date(details.claimOpensAt)
-    details.claimOpensAt = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-  }
-  selectedAllocation.value = details
+  selectedAllocation.value = formatClaimOpensAt(details)
 }
 
 // Receive allocation
@@ -316,7 +355,7 @@ async function receiveAllocation() {
     })
     // Refresh the selected allocation
     const details = await $fetch(`/api/allocations/${selectedAllocation.value.id}`)
-    selectedAllocation.value = details
+    selectedAllocation.value = formatClaimOpensAt(details)
     await refreshAllocations()
     alert(`Received! Created ${result.createdLots} inventory lots.${result.nextYearAllocation ? ' Next year allocation created.' : ''}`)
   } catch (e: any) {
@@ -348,18 +387,16 @@ async function handleWineCreated(wineId: number) {
 
 async function fetchProducerWines(producerId: number) {
   try {
-    const result = await $fetch<{ wines: any[] }>('/api/wines', {
-      query: { producerId },
-    })
-    producerWines.value = result.wines
-    // Other wines = all wines not from this producer
-    otherWines.value = (wines.value?.wines || wines.value || []).filter(
-      (w: any) => w.producerId !== producerId,
-    )
+    const [producerResult, allResult] = await Promise.all([
+      $fetch<{ wines: any[] }>('/api/wines', { query: { producerId, limit: 1000 } }),
+      $fetch<{ wines: any[] }>('/api/wines', { query: { limit: 1000 } }),
+    ])
+    producerWines.value = producerResult.wines
+    otherWines.value = allResult.wines.filter((w: any) => w.producerId !== producerId)
   } catch (e) {
     console.error('Failed to fetch producer wines', e)
     producerWines.value = []
-    otherWines.value = wines.value?.wines || wines.value || []
+    otherWines.value = []
   }
 }
 
@@ -383,7 +420,7 @@ async function addItem() {
     newItem.value = { wineId: null, formatId: 1, quantityClaimed: 0, pricePerBottle: '', currency: 'EUR' }
     // Refresh allocation details
     const details = await $fetch(`/api/allocations/${selectedAllocation.value.id}`)
-    selectedAllocation.value = details
+    selectedAllocation.value = formatClaimOpensAt(details)
   } catch (e) {
     console.error('Failed to add item', e)
   }
@@ -403,7 +440,7 @@ async function updateItem(item: any) {
     })
     // Refresh allocation details
     const details = await $fetch(`/api/allocations/${selectedAllocation.value.id}`)
-    selectedAllocation.value = details
+    selectedAllocation.value = formatClaimOpensAt(details)
     await refreshAllocations()
   } catch (e) {
     console.error('Failed to update item', e)
@@ -419,7 +456,7 @@ async function deleteItem(itemId: number) {
     })
     // Refresh allocation details
     const details = await $fetch(`/api/allocations/${selectedAllocation.value.id}`)
-    selectedAllocation.value = details
+    selectedAllocation.value = formatClaimOpensAt(details)
     await refreshAllocations()
   } catch (e) {
     console.error('Failed to delete item', e)
@@ -626,7 +663,41 @@ onMounted(() => {
         <div class="sticky top-0 bg-white border-b border-muted-200 px-6 py-4 z-10">
           <div class="flex items-start justify-between gap-3">
             <div class="flex-1 min-w-0">
-              <h2 class="font-display font-bold text-xl text-muted-900 truncate">
+              <div v-if="editingProducer" class="flex items-center gap-2">
+                <select
+                  v-model="editProducerId"
+                  class="input text-lg font-bold py-1 flex-1"
+                  :disabled="isUpdating"
+                >
+                  <option v-for="p in producers" :key="p.id" :value="p.id">
+                    {{ p.name }}
+                  </option>
+                </select>
+                <button
+                  type="button"
+                  class="p-1.5 text-secondary-600 hover:text-secondary-700"
+                  :disabled="isUpdating"
+                  @click="saveProducer"
+                >
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  class="p-1.5 text-muted-400 hover:text-muted-600"
+                  @click="cancelEditingProducer"
+                >
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <h2
+                v-else
+                class="font-display font-bold text-xl text-muted-900 truncate cursor-pointer hover:text-primary-600"
+                @click="startEditingProducer"
+              >
                 {{ selectedAllocation.producerName }}
               </h2>
               <p class="text-sm text-muted-500">{{ selectedAllocation.year }} Allocation</p>

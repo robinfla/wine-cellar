@@ -4,6 +4,7 @@ import { db } from '~/server/utils/db'
 import { allocations } from '~/server/db/schema'
 
 const updateSchema = z.object({
+  producerId: z.number().int().positive().optional(),
   claimOpensAt: z.string().datetime().nullable().optional(),
   claimClosesAt: z.string().datetime().nullable().optional(),
   status: z.enum(['upcoming', 'to_claim', 'on_the_way', 'received', 'cancelled']).optional(),
@@ -50,6 +51,10 @@ export default defineEventHandler(async (event) => {
   // Build update object
   const updates: Record<string, any> = {
     updatedAt: new Date(),
+  }
+
+  if (parsed.data.producerId !== undefined) {
+    updates.producerId = parsed.data.producerId
   }
 
   if (parsed.data.claimOpensAt !== undefined) {

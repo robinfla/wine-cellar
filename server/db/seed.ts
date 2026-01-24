@@ -128,6 +128,10 @@ async function seed() {
     ]).onConflictDoNothing()
   }
 
+  await db.insert(schema.appellations).values([
+    { name: 'Vin de France', regionId: null, level: 'IGP' },
+  ]).onConflictDoNothing()
+
   console.log('Seeding grapes...')
   await db.insert(schema.grapes).values([
     { name: 'Cabernet Sauvignon', color: 'red' },

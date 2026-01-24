@@ -97,9 +97,18 @@ async function createAppellation() {
   }
 }
 
-// Reset appellation when region changes
-watch(() => form.value.regionId, () => {
+watch(() => form.value.regionId, async () => {
   form.value.appellationId = undefined
+  if (form.value.regionId) {
+    const selectedRegion = regions.value?.find(r => r.id === form.value.regionId)
+    if (selectedRegion?.countryCode === 'FR') {
+      await refreshAppellations()
+      const vinDeFrance = appellations.value?.find(a => a.name === 'Vin de France')
+      if (vinDeFrance) {
+        form.value.appellationId = vinDeFrance.id
+      }
+    }
+  }
 })
 
 const isSubmitting = ref(false)

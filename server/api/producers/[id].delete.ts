@@ -1,6 +1,6 @@
-import { eq, and, count } from 'drizzle-orm'
+import { eq, and, sql, count } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
-import { producers, wines } from '~/server/db/schema'
+import { producers, wines, inventoryLots, wineGrapes, allocations, allocationItems } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
   const userId = event.context.user?.id
@@ -22,21 +22,56 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Producer not found' })
   }
 
-  const [{ wineCount }] = await db
-    .select({ wineCount: count() })
+  const [{ bottleCount }] = await db
+    .select({ bottleCount: sql<number>`coalesce(sum(${inventoryLots.quantity}), 0)` })
     .from(wines)
+    .leftJoin(inventoryLots, eq(inventoryLots.wineId, wines.id))
     .where(eq(wines.producerId, id))
 
-  if (wineCount > 0) {
+  if (Number(bottleCount) > 0) {
     throw createError({
       statusCode: 409,
-      message: `Cannot delete producer with ${wineCount} existing wine${wineCount === 1 ? '' : 's'}. Remove the wines first.`,
+      message: `Cannot delete producer with ${bottleCount} bottle${Number(bottleCount) === 1 ? '' : 's'} in inventory.`,
     })
   }
 
-  await db
-    .delete(producers)
-    .where(eq(producers.id, id))
+  const [{ allocationCount }] = await db
+    .select({ allocationCount: count() })
+    .from(allocations)
+    .where(eq(allocations.producerId, id))
+
+  if (Number(allocationCount) > 0) {
+    throw createError({
+      statusCode: 409,
+      message: `Cannot delete producer with ${allocationCount} allocation${Number(allocationCount) === 1 ? '' : 's'}. Delete the allocations first.`,
+    })
+  }
+
+  const producerWines = await db
+    .select({ id: wines.id })
+    .from(wines)
+    .where(eq(wines.producerId, id))
+
+  const wineIds = producerWines.map(w => w.id)
+
+  if (wineIds.length > 0) {
+    await db.delete(allocationItems).where(sql`${allocationItems.wineId} IN (${sql.join(wineIds, sql`, `)})`)
+    await db.delete(wineGrapes).where(sql`${wineGrapes.wineId} IN (${sql.join(wineIds, sql`, `)})`)
+    await db.delete(inventoryLots).where(sql`${inventoryLots.wineId} IN (${sql.join(wineIds, sql`, `)})`)
+    await db.delete(wines).where(eq(wines.producerId, id))
+  }
+
+  try {
+    await db.delete(producers).where(eq(producers.id, id))
+  } catch (e: any) {
+    if (e.code === '23503') {
+      throw createError({
+        statusCode: 409,
+        message: 'Cannot delete producer: it is still referenced by other records.',
+      })
+    }
+    throw e
+  }
 
   return { success: true }
 })

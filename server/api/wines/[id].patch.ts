@@ -8,6 +8,9 @@ const updateWineSchema = z.object({
   producerId: z.number().int().positive().optional(),
   appellationId: z.number().int().positive().nullable().optional(),
   regionId: z.number().int().positive().nullable().optional(),
+  color: z.enum(['red', 'white', 'rose', 'sparkling', 'dessert', 'fortified']).optional(),
+  defaultDrinkFromYears: z.number().int().min(0).nullable().optional(),
+  defaultDrinkUntilYears: z.number().int().min(0).nullable().optional(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -68,12 +71,34 @@ export default defineEventHandler(async (event) => {
     updates.regionId = parsed.data.regionId
   }
 
-  // Update wine
-  const [updated] = await db
-    .update(wines)
-    .set(updates)
-    .where(eq(wines.id, id))
-    .returning()
+  if (parsed.data.color !== undefined) {
+    updates.color = parsed.data.color
+  }
 
-  return updated
+  if (parsed.data.defaultDrinkFromYears !== undefined) {
+    updates.defaultDrinkFromYears = parsed.data.defaultDrinkFromYears
+  }
+
+  if (parsed.data.defaultDrinkUntilYears !== undefined) {
+    updates.defaultDrinkUntilYears = parsed.data.defaultDrinkUntilYears
+  }
+
+  // Update wine
+  try {
+    const [updated] = await db
+      .update(wines)
+      .set(updates)
+      .where(eq(wines.id, id))
+      .returning()
+
+    return updated
+  } catch (e: any) {
+    if (e.code === '23505') {
+      throw createError({
+        statusCode: 409,
+        message: 'A wine with this name, producer, and color already exists',
+      })
+    }
+    throw e
+  }
 })

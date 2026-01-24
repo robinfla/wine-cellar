@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { eq, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import { wines, wineGrapes } from '~/server/db/schema'
 
@@ -35,12 +36,25 @@ export default defineEventHandler(async (event) => {
 
   const { grapeIds, ...wineData } = parsed.data
 
+  const [existingWine] = await db
+    .select()
+    .from(wines)
+    .where(and(
+      eq(wines.name, wineData.name),
+      eq(wines.producerId, wineData.producerId),
+      eq(wines.color, wineData.color),
+      eq(wines.userId, userId),
+    ))
+
+  if (existingWine) {
+    return existingWine
+  }
+
   const [wine] = await db
     .insert(wines)
     .values({ ...wineData, userId })
     .returning()
 
-  // Insert grape associations if provided
   if (grapeIds && grapeIds.length > 0) {
     await db.insert(wineGrapes).values(
       grapeIds.map(g => ({
