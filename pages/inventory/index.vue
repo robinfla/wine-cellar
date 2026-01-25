@@ -19,7 +19,7 @@ const searchDebounce = ref<ReturnType<typeof setTimeout> | null>(null)
 
 // Tasting notes state
 const tastingNotes = ref<any[]>([])
-const newTastingNote = ref({ score: '' as string | number, comment: '' })
+const newTastingNote = ref({ score: '' as string | number, comment: '', pairing: '' })
 const isAddingNote = ref(false)
 
 // Editing state
@@ -302,9 +302,10 @@ async function addTastingNote() {
       body: {
         score: newTastingNote.value.score ? Number(newTastingNote.value.score) : null,
         comment: newTastingNote.value.comment || null,
+        pairing: newTastingNote.value.pairing || null,
       },
     })
-    newTastingNote.value = { score: '', comment: '' }
+    newTastingNote.value = { score: '', comment: '', pairing: '' }
     await fetchTastingNotes(selectedLot.value.id)
   } catch (e) {
     console.error('Failed to add tasting note', e)
@@ -574,6 +575,7 @@ async function saveField(field: string) {
         if (lot) {
           if (field === 'wineName') lot.wineName = selectedLot.value.wineName
           if (field === 'producer') {
+            lot.producerId = selectedLot.value.producerId
             lot.producerName = selectedLot.value.producerName
             // Only update region from producer if wine doesn't have its own region
             if (!lot.wineRegionId) {
@@ -619,8 +621,14 @@ async function saveField(field: string) {
       })
     }
     editingField.value = null
-  } catch (e) {
+  } catch (e: any) {
     console.error('Failed to save field', e)
+    const message = e?.data?.message || e?.message || 'Unknown error'
+    if (message.includes('already exists')) {
+      alert(`Cannot update: A wine with this combination already exists. You may need to merge wines or rename the duplicate.`)
+    } else {
+      alert(`Failed to save: ${message}`)
+    }
   } finally {
     isUpdating.value = false
   }
@@ -1478,10 +1486,19 @@ onMounted(() => {
                 />
               </div>
             </div>
+            <div class="mb-3">
+              <label class="block text-xs font-medium text-muted-500 mb-1.5">Food Pairing</label>
+              <input
+                v-model="newTastingNote.pairing"
+                type="text"
+                class="input text-sm w-full"
+                placeholder="e.g., Grilled steak, aged cheese..."
+              >
+            </div>
             <button
               type="button"
               class="w-full px-3 py-2 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-600 hover:scale-102 transition-all disabled:opacity-50"
-              :disabled="isAddingNote || (!newTastingNote.score && !newTastingNote.comment)"
+              :disabled="isAddingNote || (!newTastingNote.score && !newTastingNote.comment && !newTastingNote.pairing)"
               @click="addTastingNote"
             >
               {{ isAddingNote ? 'Adding...' : 'Add Note' }}
@@ -1515,6 +1532,12 @@ onMounted(() => {
                 </button>
               </div>
               <p v-if="note.comment" class="text-sm text-muted-600">{{ note.comment }}</p>
+              <p v-if="note.pairing" class="text-sm text-muted-500 mt-2 flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span class="font-medium">Pairs with:</span> {{ note.pairing }}
+              </p>
             </div>
           </div>
           <p v-else class="text-sm text-muted-500 text-center py-4">

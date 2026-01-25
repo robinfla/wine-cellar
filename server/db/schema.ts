@@ -234,6 +234,7 @@ export const tastingNotes = pgTable('tasting_notes', {
   lotId: integer('lot_id').references(() => inventoryLots.id, { onDelete: 'cascade' }).notNull(),
   score: integer('score'),
   comment: text('comment'),
+  pairing: text('pairing'),
   tastedAt: timestamp('tasted_at').notNull().defaultNow(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => ({

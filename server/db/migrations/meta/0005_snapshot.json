@@ -1,6 +1,6 @@
 {
-  "id": "83f26f87-7c63-4c49-a7dd-5dd4bca71921",
-  "prevId": "c8729434-0cea-4de2-8bf0-a4799d88a207",
+  "id": "2de049ee-0a92-44a5-afd8-8be0fd5fc62b",
+  "prevId": "83f26f87-7c63-4c49-a7dd-5dd4bca71921",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1700,6 +1700,12 @@
         },
         "comment": {
           "name": "comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pairing": {
+          "name": "pairing",
           "type": "text",
           "primaryKey": false,
           "notNull": false

@@ -6,6 +6,7 @@ import { tastingNotes, inventoryLots } from '~/server/db/schema'
 const tastingNoteSchema = z.object({
   score: z.number().int().min(0).max(100).optional().nullable(),
   comment: z.string().optional().nullable(),
+  pairing: z.string().optional().nullable(),
   tastedAt: z.string().datetime().optional(),
 })
 
@@ -49,13 +50,13 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Create tasting note
   const [note] = await db
     .insert(tastingNotes)
     .values({
       lotId: id,
       score: parsed.data.score ?? null,
       comment: parsed.data.comment ?? null,
+      pairing: parsed.data.pairing ?? null,
       tastedAt: parsed.data.tastedAt ? new Date(parsed.data.tastedAt) : new Date(),
     })
     .returning()
