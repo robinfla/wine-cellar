@@ -311,6 +311,7 @@ export const allocationItems = pgTable('allocation_items', {
   allocationId: integer('allocation_id').references(() => allocations.id, { onDelete: 'cascade' }).notNull(),
   wineId: integer('wine_id').references(() => wines.id).notNull(),
   formatId: integer('format_id').references(() => formats.id).notNull(),
+  vintage: integer('vintage'),
 
   // Quantities
   quantityAvailable: integer('quantity_available'),
@@ -329,7 +330,7 @@ export const allocationItems = pgTable('allocation_items', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
-  uniqueAllocationWine: unique().on(table.allocationId, table.wineId, table.formatId),
+  uniqueAllocationWine: unique().on(table.allocationId, table.wineId, table.formatId, table.vintage),
   allocationIdx: index('allocation_items_allocation_idx').on(table.allocationId),
   wineIdx: index('allocation_items_wine_idx').on(table.wineId),
 }))

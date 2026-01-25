@@ -62,6 +62,7 @@ export default defineEventHandler(async (event) => {
       formatId: allocationItems.formatId,
       formatName: formats.name,
       formatVolumeMl: formats.volumeMl,
+      vintage: allocationItems.vintage,
       quantityAvailable: allocationItems.quantityAvailable,
       quantityClaimed: allocationItems.quantityClaimed,
       pricePerBottle: allocationItems.pricePerBottle,

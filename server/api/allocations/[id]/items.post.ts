@@ -6,6 +6,7 @@ import { allocations, allocationItems } from '~/server/db/schema'
 const createSchema = z.object({
   wineId: z.number().int().positive(),
   formatId: z.number().int().positive(),
+  vintage: z.number().int().min(1900).max(2100).nullable().optional(),
   quantityAvailable: z.number().int().min(0).nullable().optional(),
   quantityClaimed: z.number().int().min(0).optional(),
   pricePerBottle: z.string().or(z.number()).nullable().optional(),
@@ -60,6 +61,7 @@ export default defineEventHandler(async (event) => {
       allocationId,
       wineId: parsed.data.wineId,
       formatId: parsed.data.formatId,
+      vintage: parsed.data.vintage ?? null,
       quantityAvailable: parsed.data.quantityAvailable ?? null,
       quantityClaimed: parsed.data.quantityClaimed ?? 0,
       pricePerBottle: parsed.data.pricePerBottle?.toString() ?? null,

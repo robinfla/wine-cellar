@@ -403,6 +403,7 @@ async function fetchProducerWines(producerId: number) {
 const newItem = ref({
   wineId: null as number | null,
   formatId: 1,
+  vintage: null as number | null,
   quantityClaimed: 0,
   pricePerBottle: '',
   currency: 'EUR' as 'EUR' | 'ZAR',
@@ -417,7 +418,7 @@ async function addItem() {
       body: newItem.value,
     })
     showAddItemModal.value = false
-    newItem.value = { wineId: null, formatId: 1, quantityClaimed: 0, pricePerBottle: '', currency: 'EUR' }
+    newItem.value = { wineId: null, formatId: 1, vintage: null, quantityClaimed: 0, pricePerBottle: '', currency: 'EUR' }
     // Refresh allocation details
     const details = await $fetch(`/api/allocations/${selectedAllocation.value.id}`)
     selectedAllocation.value = formatClaimOpensAt(details)
@@ -816,7 +817,10 @@ onMounted(() => {
             >
               <div class="flex items-start justify-between mb-2">
                 <div>
-                  <p class="text-sm font-semibold text-muted-900">{{ item.wineName }}</p>
+                  <p class="text-sm font-semibold text-muted-900">
+                    {{ item.wineName }}
+                    <span v-if="item.vintage" class="font-normal text-muted-600">{{ item.vintage }}</span>
+                  </p>
                   <p class="text-xs text-muted-500">{{ item.formatName }}</p>
                 </div>
                 <button
@@ -1155,13 +1159,19 @@ onMounted(() => {
                   </button>
                 </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium text-muted-700 mb-2">Format</label>
-                <select v-model="newItem.formatId" class="input">
-                  <option v-for="f in formats" :key="f.id" :value="f.id">
-                    {{ f.name }}
-                  </option>
-                </select>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-muted-700 mb-2">Vintage</label>
+                  <input v-model.number="newItem.vintage" type="number" min="1900" max="2100" class="input" placeholder="e.g. 2022">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-muted-700 mb-2">Format</label>
+                  <select v-model="newItem.formatId" class="input">
+                    <option v-for="f in formats" :key="f.id" :value="f.id">
+                      {{ f.name }}
+                    </option>
+                  </select>
+                </div>
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div>
