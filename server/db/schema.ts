@@ -361,6 +361,8 @@ export const wineValuations = pgTable('wine_valuations', {
 
   status: valuationStatusEnum('status').default('pending').notNull(),
   confidence: decimal('confidence', { precision: 3, scale: 2 }),
+  rating: decimal('rating', { precision: 2, scale: 1 }),
+  ratingsCount: integer('ratings_count'),
 
   fetchedAt: timestamp('fetched_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),

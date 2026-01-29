@@ -58,6 +58,8 @@ export interface MatchCandidate {
   priceLow?: number
   priceHigh?: number
   sourceUrl?: string
+  rating?: number
+  ratingsCount?: number
 }
 
 export interface MatchResult {

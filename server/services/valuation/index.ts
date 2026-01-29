@@ -71,6 +71,8 @@ export const fetchValuationForWine = async (
         sourceWinery: w.winery?.name || '',
         sourceVintage: w.vintage?.year,
         price: w.price?.amount,
+        rating: w.statistics?.ratings_average,
+        ratingsCount: w.statistics?.ratings_count,
       }))
 
     const match = findBestMatch(
@@ -95,6 +97,8 @@ export const fetchValuationForWine = async (
         sourceName: `${match.candidate.sourceWinery} ${match.candidate.sourceName}`.trim(),
         status,
         confidence: match.confidence.toString(),
+        rating: match.candidate.rating?.toString() || null,
+        ratingsCount: match.candidate.ratingsCount || null,
       })
 
       return { success: true, valuation }
@@ -181,6 +185,8 @@ export const getAllValuations = async (userId: number) => {
       sourceName: wineValuations.sourceName,
       status: wineValuations.status,
       confidence: wineValuations.confidence,
+      rating: wineValuations.rating,
+      ratingsCount: wineValuations.ratingsCount,
       fetchedAt: wineValuations.fetchedAt,
     })
     .from(wineValuations)
