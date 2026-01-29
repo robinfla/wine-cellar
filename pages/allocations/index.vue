@@ -434,6 +434,7 @@ async function updateItem(item: any) {
     await $fetch(`/api/allocations/${selectedAllocation.value.id}/items/${item.id}`, {
       method: 'PATCH',
       body: {
+        vintage: item.vintage || null,
         quantityClaimed: item.quantityClaimed,
         pricePerBottle: item.pricePerBottle,
         currency: item.currency,
@@ -817,10 +818,7 @@ onMounted(() => {
             >
               <div class="flex items-start justify-between mb-2">
                 <div>
-                  <p class="text-sm font-semibold text-muted-900">
-                    {{ item.wineName }}
-                    <span v-if="item.vintage" class="font-normal text-muted-600">{{ item.vintage }}</span>
-                  </p>
+                  <p class="text-sm font-semibold text-muted-900">{{ item.wineName }}</p>
                   <p class="text-xs text-muted-500">{{ item.formatName }}</p>
                 </div>
                 <button
@@ -834,6 +832,19 @@ onMounted(() => {
                 </button>
               </div>
               <div class="flex gap-2">
+                <div class="w-16 sm:w-18">
+                  <label class="block text-xs text-muted-500 mb-1">Vintage</label>
+                  <input
+                    v-model.number="item.vintage"
+                    type="number"
+                    min="1900"
+                    max="2100"
+                    placeholder="—"
+                    class="input w-full text-sm py-1.5 text-center"
+                    :disabled="selectedAllocation.status === 'received'"
+                    @change="updateItem(item)"
+                  >
+                </div>
                 <div class="w-12 sm:w-14">
                   <label class="block text-xs text-muted-500 mb-1">Qty</label>
                   <input

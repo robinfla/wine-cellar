@@ -41,6 +41,12 @@ const isDeletingAll = ref(false)
 const showEmptyLotPrompt = ref(false)
 const showEmptyLots = ref(false)
 
+// Market valuation state
+const valuation = ref<any>(null)
+const isFetchingValuation = ref(false)
+const manualPriceInput = ref('')
+const isSavingManualPrice = ref(false)
+
 // Reference data for dropdowns
 const { data: producers } = await useFetch('/api/producers')
 const { data: appellations } = await useFetch('/api/appellations')
@@ -243,12 +249,89 @@ const totalPages = computed(() => Math.ceil((inventory.value?.total || 0) / limi
 const canPrev = computed(() => page.value > 1)
 const canNext = computed(() => page.value < totalPages.value)
 
-function selectLot(lot: any) {
+async function selectLot(lot: any) {
   selectedLot.value = lot
+  valuation.value = null
+  fetchValuation(lot.wineId, lot.vintage)
 }
 
 function closePanel() {
   selectedLot.value = null
+  valuation.value = null
+}
+
+async function fetchValuation(wineId: number, vintage: number | null) {
+  try {
+    const { valuations } = await $fetch<{ valuations: any[] }>('/api/valuations')
+    valuation.value = valuations.find(
+      v => v.wineId === wineId && v.vintage === vintage
+    ) || null
+  } catch {
+    valuation.value = null
+  }
+}
+
+async function fetchWineValuation() {
+  if (!selectedLot.value) return
+  isFetchingValuation.value = true
+  try {
+    const result = await $fetch('/api/valuations/fetch', {
+      method: 'POST',
+      body: {
+        wineId: selectedLot.value.wineId,
+        vintage: selectedLot.value.vintage,
+      },
+    })
+    valuation.value = result
+  } catch (e) {
+    console.error('Failed to fetch valuation:', e)
+  } finally {
+    isFetchingValuation.value = false
+  }
+}
+
+async function confirmValuation() {
+  if (!valuation.value?.id) return
+  try {
+    const updated = await $fetch(`/api/valuations/${valuation.value.id}/confirm`, {
+      method: 'POST',
+    })
+    valuation.value = { ...valuation.value, ...updated }
+  } catch (e) {
+    console.error('Failed to confirm valuation:', e)
+  }
+}
+
+async function saveManualPrice() {
+  if (!selectedLot.value || !manualPriceInput.value) return
+  const price = parseFloat(manualPriceInput.value)
+  if (isNaN(price) || price <= 0) return
+
+  isSavingManualPrice.value = true
+  try {
+    if (valuation.value?.id) {
+      const updated = await $fetch(`/api/valuations/${valuation.value.id}/manual`, {
+        method: 'POST',
+        body: { priceEstimate: price },
+      })
+      valuation.value = { ...valuation.value, ...updated }
+    } else {
+      const result = await $fetch('/api/valuations/manual', {
+        method: 'POST',
+        body: {
+          wineId: selectedLot.value.wineId,
+          vintage: selectedLot.value.vintage,
+          priceEstimate: price,
+        },
+      })
+      valuation.value = result
+    }
+    manualPriceInput.value = ''
+  } catch (e) {
+    console.error('Failed to save manual price:', e)
+  } finally {
+    isSavingManualPrice.value = false
+  }
 }
 
 // Check if any filters are active
@@ -1445,6 +1528,133 @@ onMounted(() => {
           <div v-if="selectedLot.notes" class="mt-4 pt-4 border-t border-muted-200">
             <p class="text-xs font-semibold text-muted-500 uppercase tracking-wide mb-2">Notes</p>
             <p class="text-sm text-muted-600">{{ selectedLot.notes }}</p>
+          </div>
+        </div>
+
+        <!-- Section: Market Value (gray bg) -->
+        <div class="px-6 py-5 bg-muted-50">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-secondary-100 flex items-center justify-center">
+                <svg class="w-4 h-4 text-secondary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 class="font-display font-bold text-muted-900">Market Value</h3>
+            </div>
+            <button
+              class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+              :disabled="isFetchingValuation"
+              @click="fetchWineValuation"
+            >
+              <svg v-if="isFetchingValuation" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <svg v-else class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {{ isFetchingValuation ? 'Fetching...' : 'Refresh' }}
+            </button>
+          </div>
+
+          <div v-if="valuation && valuation.priceEstimate" class="p-4 bg-white rounded-xl border-2 border-muted-200">
+            <div class="flex items-baseline justify-between mb-2">
+              <span class="text-2xl font-bold text-muted-900">€{{ Number(valuation.priceEstimate).toFixed(0) }}</span>
+              <span
+                v-if="valuation.status === 'needs_review'"
+                class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium"
+              >
+                Needs Review
+              </span>
+              <span
+                v-else-if="valuation.status === 'matched' || valuation.status === 'confirmed'"
+                class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium"
+              >
+                {{ valuation.status === 'confirmed' ? 'Confirmed' : 'Matched' }}
+              </span>
+            </div>
+            <div v-if="valuation.priceLow || valuation.priceHigh" class="text-xs text-muted-500 mb-3">
+              Range: €{{ Number(valuation.priceLow || valuation.priceEstimate).toFixed(0) }} - €{{ Number(valuation.priceHigh || valuation.priceEstimate).toFixed(0) }}
+            </div>
+            <div class="flex items-center justify-between text-xs text-muted-500">
+              <a
+                v-if="valuation.sourceUrl"
+                :href="valuation.sourceUrl"
+                target="_blank"
+                class="flex items-center gap-1 hover:text-primary-600"
+              >
+                <span>{{ valuation.source === 'vivino' ? 'Vivino' : valuation.source }}</span>
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+              <span v-else>{{ valuation.source || 'Unknown' }}</span>
+              <span v-if="valuation.fetchedAt">
+                {{ formatDate(valuation.fetchedAt) }}
+              </span>
+            </div>
+            <div v-if="valuation.status === 'needs_review'" class="mt-3 pt-3 border-t border-muted-100">
+              <p class="text-xs text-muted-600 mb-2">
+                Match: {{ valuation.sourceName }} ({{ Math.round(valuation.confidence * 100) }}% confidence)
+              </p>
+              <button
+                class="text-xs text-secondary-600 hover:text-secondary-700 font-medium"
+                @click="confirmValuation"
+              >
+                Confirm this match
+              </button>
+            </div>
+          </div>
+
+          <div v-else-if="valuation && (valuation.status === 'no_match' || valuation.status === 'pending')" class="p-4 bg-white rounded-xl border-2 border-muted-200">
+            <p class="text-sm text-muted-500 text-center mb-3">
+              {{ valuation.status === 'no_match' ? 'No match found.' : 'Enter price manually' }}
+            </p>
+            <div class="flex gap-2">
+              <div class="relative flex-1">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-400 text-sm">€</span>
+                <input
+                  v-model="manualPriceInput"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  class="input pl-7 text-sm w-full"
+                >
+              </div>
+              <button
+                class="btn btn-secondary text-sm px-4"
+                :disabled="isSavingManualPrice || !manualPriceInput"
+                @click="saveManualPrice"
+              >
+                {{ isSavingManualPrice ? 'Saving...' : 'Save' }}
+              </button>
+            </div>
+          </div>
+
+          <div v-else class="p-4 bg-white rounded-xl border-2 border-dashed border-muted-200">
+            <p class="text-sm text-muted-500 mb-3 text-center">No valuation yet</p>
+            <div class="flex gap-2">
+              <div class="relative flex-1">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-400 text-sm">€</span>
+                <input
+                  v-model="manualPriceInput"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  class="input pl-7 text-sm w-full"
+                >
+              </div>
+              <button
+                class="btn btn-secondary text-sm px-4"
+                :disabled="isSavingManualPrice || !manualPriceInput"
+                @click="saveManualPrice"
+              >
+                {{ isSavingManualPrice ? 'Saving...' : 'Save' }}
+              </button>
+            </div>
           </div>
         </div>
 

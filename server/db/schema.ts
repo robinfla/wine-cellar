@@ -48,6 +48,15 @@ export const allocationStatusEnum = pgEnum('allocation_status', [
   'cancelled',
 ])
 
+export const valuationStatusEnum = pgEnum('valuation_status', [
+  'pending',      // Not yet fetched
+  'matched',      // Auto-matched with high confidence
+  'needs_review', // Low confidence, user should verify
+  'confirmed',    // User confirmed the match
+  'no_match',     // Could not find a match
+  'manual',       // User entered manually
+])
+
 // Users (must be defined before tables that reference it)
 export const users = pgTable('users', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
@@ -335,6 +344,33 @@ export const allocationItems = pgTable('allocation_items', {
   wineIdx: index('allocation_items_wine_idx').on(table.wineId),
 }))
 
+// Wine valuations (market prices from external sources)
+export const wineValuations = pgTable('wine_valuations', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  wineId: integer('wine_id').references(() => wines.id, { onDelete: 'cascade' }).notNull(),
+  vintage: integer('vintage'),
+
+  priceEstimate: decimal('price_estimate', { precision: 10, scale: 2 }),
+  priceLow: decimal('price_low', { precision: 10, scale: 2 }),
+  priceHigh: decimal('price_high', { precision: 10, scale: 2 }),
+
+  source: text('source'),
+  sourceUrl: text('source_url'),
+  sourceWineId: text('source_wine_id'),
+  sourceName: text('source_name'),
+
+  status: valuationStatusEnum('status').default('pending').notNull(),
+  confidence: decimal('confidence', { precision: 3, scale: 2 }),
+
+  fetchedAt: timestamp('fetched_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  uniqueWineVintage: unique().on(table.wineId, table.vintage),
+  wineIdx: index('valuations_wine_idx').on(table.wineId),
+  statusIdx: index('valuations_status_idx').on(table.status),
+}))
+
 // Type exports for use throughout the app (only Select types - Insert types are inferred automatically)
 export type Cellar = typeof cellars.$inferSelect
 export type Region = typeof regions.$inferSelect
@@ -354,3 +390,4 @@ export type Session = typeof sessions.$inferSelect
 export type Invitation = typeof invitations.$inferSelect
 export type Allocation = typeof allocations.$inferSelect
 export type AllocationItem = typeof allocationItems.$inferSelect
+export type WineValuation = typeof wineValuations.$inferSelect

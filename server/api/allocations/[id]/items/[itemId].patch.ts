@@ -4,6 +4,7 @@ import { db } from '~/server/utils/db'
 import { allocationItems, allocations } from '~/server/db/schema'
 
 const updateSchema = z.object({
+  vintage: z.number().int().min(1900).max(2100).nullable().optional(),
   quantityAvailable: z.number().int().min(0).nullable().optional(),
   quantityClaimed: z.number().int().min(0).optional(),
   pricePerBottle: z.string().or(z.number()).nullable().optional(),
@@ -89,6 +90,10 @@ export default defineEventHandler(async (event) => {
 
   if (parsed.data.notes !== undefined) {
     updates.notes = parsed.data.notes
+  }
+
+  if (parsed.data.vintage !== undefined) {
+    updates.vintage = parsed.data.vintage
   }
 
   const [updated] = await db

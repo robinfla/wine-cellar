@@ -43,6 +43,13 @@
       "when": 1769345222225,
       "tag": "0006_aspiring_jubilee",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1769700451648,
+      "tag": "0007_living_deadpool",
+      "breakpoints": true
     }
   ]
 }

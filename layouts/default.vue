@@ -8,6 +8,7 @@ const navigation = [
   { name: 'Producers', path: '/producers', icon: 'building' },
   { name: 'Cellars', path: '/cellars', icon: 'warehouse' },
   { name: 'Allocations', path: '/allocations', icon: 'calendar' },
+  { name: 'Valuation', path: '/valuation', icon: 'currency' },
 ]
 
 const isActive = (path: string) => {
@@ -96,7 +97,7 @@ const isActive = (path: string) => {
 
     <!-- Mobile bottom navigation -->
     <nav class="fixed bottom-0 left-0 right-0 z-10 bg-white border-t-2 border-muted-200 lg:hidden">
-      <div class="grid h-16 grid-cols-5">
+      <div class="grid h-16 grid-cols-6">
         <NuxtLink
           v-for="item in navigation"
           :key="item.path"

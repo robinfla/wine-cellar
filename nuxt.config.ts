@@ -28,6 +28,15 @@ export default defineNuxtConfig({
     dirs: ['composables', 'stores'],
   },
 
+  nitro: {
+    experimental: {
+      tasks: true,
+    },
+    scheduledTasks: {
+      '0 3 * * 0': ['valuations:update'],
+    },
+  },
+
   // App configuration
   app: {
     head: {
