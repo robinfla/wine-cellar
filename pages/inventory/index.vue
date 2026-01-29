@@ -334,6 +334,21 @@ async function saveManualPrice() {
   }
 }
 
+const wineSearchQuery = computed(() => {
+  if (!selectedLot.value) return ''
+  const parts = [selectedLot.value.producerName, selectedLot.value.wineName]
+  if (selectedLot.value.vintage) parts.push(selectedLot.value.vintage.toString())
+  return encodeURIComponent(parts.join(' '))
+})
+
+const cellarTrackerUrl = computed(() =>
+  `https://www.cellartracker.com/list.asp?fInStock=0&Table=List&szSearch=${wineSearchQuery.value}`
+)
+
+const vivinoUrl = computed(() =>
+  `https://www.vivino.com/search/wines?q=${wineSearchQuery.value}`
+)
+
 // Check if any filters are active
 const hasActiveFilters = computed(() =>
   producerId.value || regionId.value || color.value || vintage.value || cellarId.value,
@@ -1608,9 +1623,29 @@ onMounted(() => {
           </div>
 
           <div v-else-if="valuation && (valuation.status === 'no_match' || valuation.status === 'pending')" class="p-4 bg-white rounded-xl border-2 border-muted-200">
-            <p class="text-sm text-muted-500 text-center mb-3">
-              {{ valuation.status === 'no_match' ? 'No match found.' : 'Enter price manually' }}
-            </p>
+            <p class="text-sm text-muted-500 text-center mb-2">Look up price and enter below</p>
+            <div class="flex justify-center gap-4 mb-3">
+              <a
+                :href="cellarTrackerUrl"
+                target="_blank"
+                class="inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 hover:text-primary-700"
+              >
+                <span>CellarTracker</span>
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+              <a
+                :href="vivinoUrl"
+                target="_blank"
+                class="inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 hover:text-primary-700"
+              >
+                <span>Vivino</span>
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            </div>
             <div class="flex gap-2">
               <div class="relative flex-1">
                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-400 text-sm">€</span>
@@ -1634,7 +1669,29 @@ onMounted(() => {
           </div>
 
           <div v-else class="p-4 bg-white rounded-xl border-2 border-dashed border-muted-200">
-            <p class="text-sm text-muted-500 mb-3 text-center">No valuation yet</p>
+            <p class="text-sm text-muted-500 text-center mb-2">Look up price and enter below</p>
+            <div class="flex justify-center gap-4 mb-3">
+              <a
+                :href="cellarTrackerUrl"
+                target="_blank"
+                class="inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 hover:text-primary-700"
+              >
+                <span>CellarTracker</span>
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+              <a
+                :href="vivinoUrl"
+                target="_blank"
+                class="inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 hover:text-primary-700"
+              >
+                <span>Vivino</span>
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            </div>
             <div class="flex gap-2">
               <div class="relative flex-1">
                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-400 text-sm">€</span>
