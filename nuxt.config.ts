@@ -8,7 +8,23 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     '@vueuse/nuxt',
     '@nuxt/eslint',
+    '@nuxtjs/i18n',
   ],
+
+  i18n: {
+    locales: [
+      { code: 'en', name: 'English', file: 'en.json' },
+      { code: 'fr', name: 'Francais', file: 'fr.json' },
+    ],
+    defaultLocale: 'en',
+    langDir: '../locales/',
+    strategy: 'no_prefix',
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'i18n_locale',
+      fallbackLocale: 'en',
+    },
+  },
 
   runtimeConfig: {
     databaseUrl: process.env.DATABASE_URL || 'postgresql://wine:password@localhost:5432/wine_cellar',
