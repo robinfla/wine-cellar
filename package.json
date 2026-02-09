@@ -6,6 +6,8 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "clean": "rm -rf .nuxt .output",
+    "prebuild": "rm -rf .nuxt .output",
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",

@@ -74,5 +74,12 @@ describe('SSR smoke tests', async () => {
       const html = await $fetch<string>('/login')
       expect(html).not.toContain('hasOwnProperty is not a function')
     })
+
+    it('i18n translations resolve (no raw keys rendered)', async () => {
+      const html = await $fetch<string>('/login')
+      expect(html).not.toContain('common.appName')
+      expect(html).not.toContain('nav.home')
+      expect(html).toContain('Wine Cellar')
+    })
   })
 })
