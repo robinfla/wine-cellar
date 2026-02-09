@@ -4,6 +4,7 @@ definePageMeta({
 })
 
 const { user } = useAuth()
+const { t } = useI18n()
 
 const { data: statsData, pending, refresh: refreshStats } = await useFetch('/api/reports/stats')
 
@@ -156,8 +157,40 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleConsumeKeydown)
+   window.removeEventListener('keydown', handleConsumeKeydown)
 })
+
+const aiInput = ref('')
+const aiParsing = ref(false)
+const aiError = ref('')
+
+const handleAiAdd = async () => {
+  if (!aiInput.value.trim()) return
+  aiParsing.value = true
+  aiError.value = ''
+  try {
+    const result = await $fetch('/api/wines/parse', {
+      method: 'POST',
+      body: { description: aiInput.value },
+    })
+    if (result?.wineId) {
+      navigateTo(`/inventory/add?wineId=${result.wineId}`)
+    } else if (result?.parsed) {
+      const params = new URLSearchParams()
+      if (result.parsed.name) params.set('name', result.parsed.name)
+      if (result.parsed.producer) params.set('producer', result.parsed.producer)
+      if (result.parsed.vintage) params.set('vintage', String(result.parsed.vintage))
+      if (result.parsed.color) params.set('color', result.parsed.color)
+      if (result.parsed.region) params.set('region', result.parsed.region)
+      if (result.parsed.appellation) params.set('appellation', result.parsed.appellation)
+      navigateTo(`/inventory/add?${params.toString()}`)
+    }
+  } catch (e: any) {
+    aiError.value = e?.data?.message || t('home.aiParseFailed')
+  } finally {
+    aiParsing.value = false
+  }
+}
 
 const getColorLabel = (color: string) => {
   const labels: Record<string, string> = {
@@ -270,16 +303,16 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
   <div>
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-muted-900">
-        Welcome back{{ user?.name ? `, ${user.name}` : '' }}
+        {{ $t('home.welcome') }}{{ user?.name ? `, ${user.name}` : '' }}
       </h1>
       <p class="mt-1 text-muted-600">
-        Here's an overview of your wine cellar
+        {{ $t('home.overview') }}
       </p>
     </div>
 
     <!-- Loading state -->
     <div v-if="pending" class="text-center py-12">
-      <p class="text-muted-500 font-medium">Loading stats...</p>
+      <p class="text-muted-500 font-medium">{{ $t('home.loadingStats') }}</p>
     </div>
 
     <!-- Empty state -->
@@ -287,16 +320,16 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
       <svg class="mx-auto h-12 w-12 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
       </svg>
-      <h3 class="mt-4 text-lg font-semibold text-muted-900">No wines yet</h3>
+      <h3 class="mt-4 text-lg font-semibold text-muted-900">{{ $t('home.noWinesYet') }}</h3>
       <p class="mt-2 text-sm text-muted-500">
-        Get started by adding wines to your cellar or importing from a CSV file.
+        {{ $t('home.noWinesDesc') }}
       </p>
       <div class="mt-6 flex justify-center gap-4">
         <NuxtLink to="/inventory/add" class="btn-primary">
-          Add Wine
+          {{ $t('home.addWine') }}
         </NuxtLink>
         <NuxtLink to="/inventory/import" class="btn-secondary">
-          Import CSV
+          {{ $t('home.importCsv') }}
         </NuxtLink>
       </div>
     </div>
@@ -307,8 +340,8 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
       <div class="card mb-8 p-6 bg-gradient-to-r from-primary-50 to-secondary-50 border-primary-200">
         <div class="flex flex-col sm:flex-row sm:items-center gap-4">
           <div class="flex-1">
-            <h2 class="text-lg font-bold text-muted-900">Open a bottle tonight?</h2>
-            <p class="mt-1 text-sm text-muted-600">Search your cellar and record your tasting experience</p>
+            <h2 class="text-lg font-bold text-muted-900">{{ $t('home.openBottle') }}</h2>
+            <p class="mt-1 text-sm text-muted-600">{{ $t('home.openBottleDesc') }}</p>
           </div>
           <div class="relative w-full sm:w-80">
             <div class="relative">
@@ -318,7 +351,7 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
               <input
                 type="text"
                 :value="consumeSearchQuery"
-                placeholder="Search wine, producer, vintage..."
+                :placeholder="$t('home.searchPlaceholder')"
                 class="input pl-10 pr-4"
                 @input="handleConsumeSearchInput(($event.target as HTMLInputElement).value)"
                 @focus="consumeSearchResults.length > 0 && (showConsumeDropdown = true)"
@@ -346,8 +379,8 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
                 class="absolute z-20 mt-1 w-full bg-white rounded-xl border-2 border-muted-200 max-h-64 overflow-y-auto"
               >
                 <div v-if="consumeSearchResults.length === 0 && !isSearching" class="p-4 text-center text-sm text-muted-500">
-                  No wines found
-                </div>
+                   {{ $t('home.noWinesFound') }}
+                 </div>
                 <button
                   v-for="lot in consumeSearchResults"
                   :key="lot.id"
@@ -370,22 +403,55 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
         </div>
       </div>
 
+      <!-- Add a Wine CTA -->
+      <div class="card mb-8 p-6 bg-gradient-to-r from-secondary-50 to-accent-50 border-secondary-200">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div class="flex-1">
+            <h2 class="text-lg font-bold text-muted-900">{{ $t('home.addAWine') }}</h2>
+            <p class="mt-1 text-sm text-muted-600">{{ $t('home.addAWineDesc') }}</p>
+          </div>
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <div class="relative flex-1 sm:w-72">
+              <input
+                v-model="aiInput"
+                type="text"
+                :placeholder="$t('home.aiPlaceholder')"
+                class="input pr-4"
+                @keydown.enter="handleAiAdd"
+              />
+            </div>
+            <button
+              type="button"
+              class="btn-primary whitespace-nowrap"
+              :disabled="aiParsing || !aiInput.trim()"
+              @click="handleAiAdd"
+            >
+              {{ aiParsing ? $t('home.parsing') : $t('home.addWithAi') }}
+            </button>
+            <NuxtLink to="/inventory/add" class="btn-secondary whitespace-nowrap">
+              {{ $t('home.manualInput') }}
+            </NuxtLink>
+          </div>
+        </div>
+        <p v-if="aiError" class="mt-2 text-sm text-red-600">{{ aiError }}</p>
+      </div>
+
       <!-- Stats grid -->
       <div class="grid gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-4">
         <div class="card">
-          <p class="text-sm font-semibold text-muted-500">Total Bottles</p>
+          <p class="text-sm font-semibold text-muted-500">{{ $t('home.totalBottles') }}</p>
           <p class="mt-1 text-3xl font-bold text-muted-900">{{ statsData?.totals?.bottles || 0 }}</p>
         </div>
         <div class="card">
-          <p class="text-sm font-semibold text-muted-500">Total Lots</p>
+          <p class="text-sm font-semibold text-muted-500">{{ $t('home.totalLots') }}</p>
           <p class="mt-1 text-3xl font-bold text-muted-900">{{ statsData?.totals?.lots || 0 }}</p>
         </div>
         <div class="card">
-          <p class="text-sm font-semibold text-muted-500">Ready to Drink</p>
+          <p class="text-sm font-semibold text-muted-500">{{ $t('home.readyToDrink') }}</p>
           <p class="mt-1 text-3xl font-bold text-secondary">{{ statsData?.readyToDrink || 0 }}</p>
         </div>
         <div class="card">
-          <p class="text-sm font-semibold text-muted-500">Purchase Value</p>
+          <p class="text-sm font-semibold text-muted-500">{{ $t('home.purchaseValue') }}</p>
           <p class="mt-1 text-3xl font-bold text-primary">{{ formatCurrency(statsData?.totals?.estimatedValue || 0) }}</p>
         </div>
       </div>
@@ -394,7 +460,7 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <!-- By Cellar -->
         <div class="card p-4">
-          <h3 class="text-sm font-semibold text-muted-500 mb-3">By Cellar</h3>
+          <h3 class="text-sm font-semibold text-muted-500 mb-3">{{ $t('home.byCellar') }}</h3>
           <div class="space-y-2">
             <div v-for="item in cellarChartData" :key="item.label" class="group">
               <div class="flex justify-between text-xs mb-1">
@@ -410,7 +476,7 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
 
         <!-- By Color -->
         <div class="card p-4">
-          <h3 class="text-sm font-semibold text-muted-500 mb-3">By Color</h3>
+          <h3 class="text-sm font-semibold text-muted-500 mb-3">{{ $t('home.byColor') }}</h3>
           <div class="space-y-2">
             <div v-for="item in colorChartData" :key="item.label" class="group">
               <div class="flex justify-between text-xs mb-1">
@@ -426,7 +492,7 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
 
         <!-- By Region -->
         <div class="card p-4">
-          <h3 class="text-sm font-semibold text-muted-500 mb-3">Top Regions</h3>
+          <h3 class="text-sm font-semibold text-muted-500 mb-3">{{ $t('home.topRegions') }}</h3>
           <div class="space-y-2">
             <div v-for="item in regionChartData" :key="item.label" class="group">
               <div class="flex justify-between text-xs mb-1">
@@ -438,18 +504,18 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
               </div>
             </div>
           </div>
-          <button
-            v-if="hasMoreRegions"
-            class="mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium"
-            @click="showAllRegions = !showAllRegions"
-          >
-            {{ showAllRegions ? 'Show less' : 'See all regions' }}
-          </button>
+           <button
+             v-if="hasMoreRegions"
+             class="mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium"
+             @click="showAllRegions = !showAllRegions"
+           >
+             {{ showAllRegions ? $t('home.showLess') : $t('home.seeAllRegions') }}
+           </button>
         </div>
 
         <!-- By Vintage -->
         <div v-if="vintageChartData.length > 0" class="card p-4">
-          <h3 class="text-sm font-semibold text-muted-500 mb-3">Top Vintages</h3>
+          <h3 class="text-sm font-semibold text-muted-500 mb-3">{{ $t('home.topVintages') }}</h3>
           <div class="space-y-2">
             <div v-for="item in vintageChartData" :key="item.label" class="group">
               <div class="flex justify-between text-xs mb-1">
@@ -461,19 +527,19 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
               </div>
             </div>
           </div>
-          <button
-            v-if="hasMoreVintages"
-            class="mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium"
-            @click="showAllVintages = !showAllVintages"
-          >
-            {{ showAllVintages ? 'Show less' : 'See all vintages' }}
-          </button>
+           <button
+             v-if="hasMoreVintages"
+             class="mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium"
+             @click="showAllVintages = !showAllVintages"
+           >
+             {{ showAllVintages ? $t('home.showLess') : $t('home.seeAllVintages') }}
+           </button>
         </div>
       </div>
 
       <!-- By Grape (separate row if exists) -->
       <div v-if="grapeChartData.length > 0" class="card p-4 mt-4">
-        <h3 class="text-sm font-semibold text-muted-500 mb-3">Top Grape Varieties</h3>
+        <h3 class="text-sm font-semibold text-muted-500 mb-3">{{ $t('home.topGrapes') }}</h3>
         <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
           <div v-for="item in grapeChartData" :key="item.label" class="group">
             <div class="flex justify-between text-xs mb-1">
@@ -485,13 +551,13 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
             </div>
           </div>
         </div>
-        <button
-          v-if="hasMoreGrapes"
-          class="mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium"
-          @click="showAllGrapes = !showAllGrapes"
-        >
-          {{ showAllGrapes ? 'Show less' : 'See all varieties' }}
-        </button>
+         <button
+           v-if="hasMoreGrapes"
+           class="mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium"
+           @click="showAllGrapes = !showAllGrapes"
+         >
+           {{ showAllGrapes ? $t('home.showLess') : $t('home.seeAllVarieties') }}
+         </button>
       </div>
     </template>
 
@@ -532,7 +598,7 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
               >
                 <!-- Header -->
                 <div class="bg-white border-b border-muted-200 px-6 py-4 flex items-center justify-between">
-                  <h2 class="text-xl font-semibold text-muted-900">Consume Wine</h2>
+                  <h2 class="text-xl font-semibold text-muted-900">{{ $t('home.consumeWine') }}</h2>
                   <button
                     type="button"
                     class="text-muted-400 hover:text-muted-600 transition-transform hover:scale-105"
@@ -546,13 +612,13 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
 
                 <!-- Content -->
                 <div class="p-6 space-y-6">
-                  <!-- Success Message -->
-                  <div v-if="consumeSuccess" class="p-4 bg-secondary-50 border-2 border-secondary-200 rounded-lg text-center">
-                    <svg class="mx-auto h-10 w-10 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <p class="mt-2 font-semibold text-secondary-700">Wine consumed successfully!</p>
-                  </div>
+                   <!-- Success Message -->
+                   <div v-if="consumeSuccess" class="p-4 bg-secondary-50 border-2 border-secondary-200 rounded-lg text-center">
+                     <svg class="mx-auto h-10 w-10 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                     </svg>
+                     <p class="mt-2 font-semibold text-secondary-700">{{ $t('home.consumeSuccess') }}</p>
+                   </div>
 
                   <template v-else>
                     <!-- Error Message -->
@@ -571,9 +637,9 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
                       </div>
                     </div>
 
-                    <!-- Quantity -->
-                    <div>
-                      <label class="label font-semibold">Bottles to consume</label>
+                     <!-- Quantity -->
+                     <div>
+                       <label class="label font-semibold">{{ $t('home.bottlesToConsume') }}</label>
                       <div class="flex items-center gap-3">
                         <button
                           type="button"
@@ -605,12 +671,12 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
                       </div>
                     </div>
 
-                    <!-- Tasting Notes -->
-                    <div class="space-y-4">
-                      <h3 class="text-sm font-semibold text-muted-900">Tasting Notes (optional)</h3>
+                     <!-- Tasting Notes -->
+                     <div class="space-y-4">
+                       <h3 class="text-sm font-semibold text-muted-900">{{ $t('home.tastingNotesOptional') }}</h3>
 
-                      <div>
-                        <label class="label font-semibold">Score (0-100)</label>
+                       <div>
+                         <label class="label font-semibold">{{ $t('home.score') }}</label>
                         <input
                           v-model.number="consumeTastingNote.score"
                           type="number"
@@ -621,18 +687,18 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
                         >
                       </div>
 
-                      <div>
-                        <label class="label font-semibold">Comment</label>
-                        <textarea
-                          v-model="consumeTastingNote.comment"
-                          rows="3"
-                          class="input"
-                          placeholder="Describe your tasting experience..."
-                        />
-                      </div>
+                       <div>
+                         <label class="label font-semibold">{{ $t('home.comment') }}</label>
+                         <textarea
+                           v-model="consumeTastingNote.comment"
+                           rows="3"
+                           class="input"
+                           placeholder="Describe your tasting experience..."
+                         />
+                       </div>
 
-                      <div>
-                        <label class="label font-semibold">Pairing</label>
+                       <div>
+                         <label class="label font-semibold">{{ $t('home.pairing') }}</label>
                         <input
                           v-model="consumeTastingNote.pairing"
                           type="text"
@@ -642,24 +708,24 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
                       </div>
                     </div>
 
-                    <!-- Actions -->
-                    <div class="flex justify-end gap-3 pt-4 border-t border-muted-200">
-                      <button
-                        type="button"
-                        class="btn-secondary transition-transform hover:scale-105"
-                        @click="closeConsumeModal"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        :disabled="isConsuming || consumeQuantity < 1 || consumeQuantity > maxConsumeQuantity"
-                        class="btn-primary transition-transform hover:scale-105"
-                        @click="handleConsume"
-                      >
-                        {{ isConsuming ? 'Consuming...' : 'Consume' }}
-                      </button>
-                    </div>
+                     <!-- Actions -->
+                     <div class="flex justify-end gap-3 pt-4 border-t border-muted-200">
+                       <button
+                         type="button"
+                         class="btn-secondary transition-transform hover:scale-105"
+                         @click="closeConsumeModal"
+                       >
+                         {{ $t('common.cancel') }}
+                       </button>
+                       <button
+                         type="button"
+                         :disabled="isConsuming || consumeQuantity < 1 || consumeQuantity > maxConsumeQuantity"
+                         class="btn-primary transition-transform hover:scale-105"
+                         @click="handleConsume"
+                       >
+                         {{ isConsuming ? $t('home.consuming') : $t('home.consume') }}
+                       </button>
+                     </div>
                   </template>
                 </div>
               </div>
