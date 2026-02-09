@@ -48,6 +48,22 @@ export const allocationStatusEnum = pgEnum('allocation_status', [
   'cancelled',
 ])
 
+export const criticEnum = pgEnum('critic', [
+  'robert_parker',
+  'wine_spectator',
+  'james_suckling',
+  'decanter',
+  'jancis_robinson',
+  'wine_enthusiast',
+  'vinous',
+  'other',
+])
+
+export const wishlistItemTypeEnum = pgEnum('wishlist_item_type', [
+  'wine',
+  'producer',
+])
+
 export const valuationStatusEnum = pgEnum('valuation_status', [
   'pending',      // Not yet fetched
   'matched',      // Auto-matched with high confidence
@@ -373,6 +389,45 @@ export const wineValuations = pgTable('wine_valuations', {
   statusIdx: index('valuations_status_idx').on(table.status),
 }))
 
+// Wine critic scores (external/manual ratings)
+export const wineCriticScores = pgTable('wine_critic_scores', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  wineId: integer('wine_id').references(() => wines.id, { onDelete: 'cascade' }).notNull(),
+  vintage: integer('vintage'),
+  critic: criticEnum('critic').notNull(),
+  score: integer('score').notNull(),
+  note: text('note'),
+  sourceUrl: text('source_url'),
+  source: text('source').default('manual').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  uniqueWineVintageCritic: unique().on(table.wineId, table.vintage, table.critic),
+  wineIdx: index('critic_scores_wine_idx').on(table.wineId),
+}))
+
+// Wishlist items (wines and producers to explore)
+export const wishlistItems = pgTable('wishlist_items', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  itemType: wishlistItemTypeEnum('item_type').notNull(),
+  name: text('name').notNull(),
+  wineId: integer('wine_id').references(() => wines.id, { onDelete: 'set null' }),
+  producerId: integer('producer_id').references(() => producers.id, { onDelete: 'set null' }),
+  regionId: integer('region_id').references(() => regions.id, { onDelete: 'set null' }),
+  vintage: integer('vintage'),
+  notes: text('notes'),
+  winesOfInterest: text('wines_of_interest'),
+  priceTarget: decimal('price_target', { precision: 10, scale: 2 }),
+  priceCurrency: currencyEnum('price_currency').default('EUR'),
+  url: text('url'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  userIdx: index('wishlist_user_idx').on(table.userId),
+  itemTypeIdx: index('wishlist_item_type_idx').on(table.itemType),
+}))
+
 // Type exports for use throughout the app (only Select types - Insert types are inferred automatically)
 export type Cellar = typeof cellars.$inferSelect
 export type Region = typeof regions.$inferSelect
@@ -393,3 +448,5 @@ export type Invitation = typeof invitations.$inferSelect
 export type Allocation = typeof allocations.$inferSelect
 export type AllocationItem = typeof allocationItems.$inferSelect
 export type WineValuation = typeof wineValuations.$inferSelect
+export type WineCriticScore = typeof wineCriticScores.$inferSelect
+export type WishlistItem = typeof wishlistItems.$inferSelect

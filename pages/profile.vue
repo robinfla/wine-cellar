@@ -3,6 +3,7 @@ definePageMeta({
   middleware: 'auth',
 })
 
+const { t } = useI18n()
 const { user, isAdmin, fetchUser } = useAuth()
 
 const name = ref(user.value?.name || '')
@@ -19,11 +20,11 @@ watch(user, (newUser) => {
 }, { immediate: true })
 
 const currencies = [
-  { value: 'EUR', label: 'Euro (EUR)' },
-  { value: 'USD', label: 'US Dollar (USD)' },
-  { value: 'GBP', label: 'British Pound (GBP)' },
-  { value: 'ZAR', label: 'South African Rand (ZAR)' },
-  { value: 'CHF', label: 'Swiss Franc (CHF)' },
+  { value: 'EUR', label: t('profile.euroEUR') }, // TODO: add i18n key
+  { value: 'USD', label: t('profile.usDollarUSD') }, // TODO: add i18n key
+  { value: 'GBP', label: t('profile.britishPoundGBP') }, // TODO: add i18n key
+  { value: 'ZAR', label: t('profile.southAfricanRandZAR') }, // TODO: add i18n key
+  { value: 'CHF', label: t('profile.swissFrancCHF') }, // TODO: add i18n key
 ]
 
 async function handleSubmit() {
@@ -40,9 +41,9 @@ async function handleSubmit() {
       },
     })
     await fetchUser()
-    success.value = 'Profile updated successfully'
+    success.value = t('profile.updateSuccess') // TODO: add i18n key
   } catch (e: any) {
-    error.value = e.data?.message || 'Failed to update profile'
+    error.value = e.data?.message || t('profile.updateFailed') // TODO: add i18n key
   } finally {
     isLoading.value = false
   }
@@ -51,7 +52,7 @@ async function handleSubmit() {
 
 <template>
   <div class="max-w-2xl mx-auto py-8 px-4">
-    <h1 class="text-2xl font-display font-bold mb-8">Profile Settings</h1>
+    <h1 class="text-2xl font-display font-bold mb-8">{{ $t('profile.settings') }}</h1><!-- TODO: add i18n key -->
 
     <div class="card">
       <form class="space-y-6" @submit.prevent="handleSubmit">
@@ -64,7 +65,7 @@ async function handleSubmit() {
         </div>
 
         <div>
-          <label for="email" class="label">Email</label>
+          <label for="email" class="label">{{ $t('auth.email') }}</label>
           <input
             id="email"
             :value="user?.email"
@@ -72,22 +73,22 @@ async function handleSubmit() {
             disabled
             class="input bg-muted/50 cursor-not-allowed"
           >
-          <p class="mt-1 text-sm text-muted-foreground">Email cannot be changed</p>
+          <p class="mt-1 text-sm text-muted-foreground">{{ $t('profile.emailCannotChange') }}</p><!-- TODO: add i18n key -->
         </div>
 
         <div>
-          <label for="name" class="label">Name</label>
+          <label for="name" class="label">{{ $t('auth.name') }}</label>
           <input
             id="name"
             v-model="name"
             type="text"
             class="input"
-            placeholder="Your name"
-          >
+            :placeholder="$t('profile.yourName')"
+          ><!-- TODO: add i18n key -->
         </div>
 
         <div>
-          <label for="currency" class="label">Preferred Currency</label>
+          <label for="currency" class="label">{{ $t('profile.preferredCurrency') }}</label><!-- TODO: add i18n key -->
           <select
             id="currency"
             v-model="preferredCurrency"
@@ -97,7 +98,7 @@ async function handleSubmit() {
               {{ currency.label }}
             </option>
           </select>
-          <p class="mt-1 text-sm text-muted-foreground">Used for displaying prices in reports</p>
+          <p class="mt-1 text-sm text-muted-foreground">{{ $t('profile.currencyDescription') }}</p><!-- TODO: add i18n key -->
         </div>
 
         <div class="flex gap-4">
@@ -106,12 +107,12 @@ async function handleSubmit() {
             :disabled="isLoading"
             class="btn-primary"
           >
-            <span v-if="isLoading">Saving...</span>
-            <span v-else>Save Changes</span>
+            <span v-if="isLoading">{{ $t('inventory.saving') }}...</span>
+            <span v-else>{{ $t('profile.saveChanges') }}</span><!-- TODO: add i18n key -->
           </button>
 
           <NuxtLink to="/" class="btn-secondary">
-            Cancel
+            {{ $t('common.cancel') }}
           </NuxtLink>
         </div>
       </form>
@@ -119,12 +120,12 @@ async function handleSubmit() {
 
     <!-- Admin Section -->
     <div v-if="isAdmin" class="card mt-8">
-      <h2 class="text-lg font-semibold mb-4">Administration</h2>
+      <h2 class="text-lg font-semibold mb-4">{{ $t('profile.administration') }}</h2><!-- TODO: add i18n key -->
       <p class="text-sm text-muted-600 mb-4">
-        You have admin privileges. Access the admin dashboard to manage users and invitations.
+        {{ $t('profile.adminPrivileges') }}<!-- TODO: add i18n key -->
       </p>
       <NuxtLink to="/admin" class="btn-primary">
-        Open Admin Dashboard
+        {{ $t('profile.openAdminDashboard') }}<!-- TODO: add i18n key -->
       </NuxtLink>
     </div>
   </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n()
 interface TimelineAllocation {
   id: number
   producerName: string
@@ -108,14 +109,14 @@ const getStatusColor = (status: string) => {
 }
 
 const getStatusLabel = (status: string) => {
-  const labels: Record<string, string> = {
-    upcoming: 'Upcoming',
-    to_claim: 'To Claim',
-    on_the_way: 'On the Way',
-    received: 'Received',
-    cancelled: 'Cancelled',
+  const labels: Record<string, () => string> = {
+    upcoming: () => t('allocations.upcoming'), // TODO: add i18n key
+    to_claim: () => t('allocations.toClaim'), // TODO: add i18n key
+    on_the_way: () => t('allocations.onTheWay'), // TODO: add i18n key
+    received: () => t('allocations.received'), // TODO: add i18n key
+    cancelled: () => t('allocations.cancelled'), // TODO: add i18n key
   }
-  return labels[status] || status
+  return labels[status]?.() || status
 }
 
 const formatCurrency = (value: number) => {
@@ -138,7 +139,7 @@ function selectAllocation(allocation: TimelineAllocation) {
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6">
       <div class="flex items-center gap-3 sm:gap-4">
         <h2 class="text-lg sm:text-xl font-display font-bold text-muted-900">
-          {{ selectedYear }} Timeline
+          {{ selectedYear }} {{ $t('allocations.timeline') }}
         </h2>
         <select
           v-model="selectedYear"
@@ -158,14 +159,14 @@ function selectAllocation(allocation: TimelineAllocation) {
       <div v-if="timelineData?.yearTotals" class="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-muted-600">
         <span>
           <span class="font-semibold text-muted-900">{{ timelineData.yearTotals.allocationCount }}</span>
-          <span class="hidden sm:inline"> allocation{{ timelineData.yearTotals.allocationCount === 1 ? '' : 's' }}</span>
-          <span class="sm:hidden"> alloc.</span>
+          <span class="hidden sm:inline"> {{ $t('allocations.allocationCount', { count: timelineData.yearTotals.allocationCount }) }}</span>
+          <span class="sm:hidden"> {{ $t('allocations.allocShort') }}</span>
         </span>
         <span class="text-muted-300">|</span>
         <span>
           <span class="font-semibold text-muted-900">{{ timelineData.yearTotals.totalBottles }}</span>
-          <span class="hidden sm:inline"> bottle{{ timelineData.yearTotals.totalBottles === 1 ? '' : 's' }}</span>
-          <span class="sm:hidden"> btl</span>
+          <span class="hidden sm:inline"> {{ $t('allocations.bottleCount', { count: timelineData.yearTotals.totalBottles }) }}</span>
+          <span class="sm:hidden"> {{ $t('common.btl') }}</span>
         </span>
         <span class="text-muted-300">|</span>
         <span class="font-semibold text-muted-900">
@@ -177,13 +178,13 @@ function selectAllocation(allocation: TimelineAllocation) {
             class="text-primary-600 hover:text-primary-700 font-medium text-xs sm:text-sm"
             @click="expandAll"
           >
-            Expand all
+            {{ $t('allocations.expandAll') }}
           </button>
           <button
             class="text-primary-600 hover:text-primary-700 font-medium text-xs sm:text-sm"
             @click="collapseAll"
           >
-            Collapse all
+            {{ $t('allocations.collapseAll') }}
           </button>
         </div>
       </div>
@@ -191,7 +192,7 @@ function selectAllocation(allocation: TimelineAllocation) {
 
     <!-- Loading state -->
     <div v-if="pending" class="text-center py-12">
-      <p class="text-muted-500">Loading timeline...</p>
+      <p class="text-muted-500">{{ $t('allocations.loadingTimeline') }}</p>
     </div>
 
     <!-- Month cards -->
@@ -234,13 +235,13 @@ function selectAllocation(allocation: TimelineAllocation) {
           </div>
           <div v-if="month.allocations.length > 0" class="text-xs sm:text-sm text-muted-600">
             <span class="font-semibold text-muted-900">{{ month.totals.totalBottles }}</span>
-            <span class="hidden sm:inline"> bottles</span>
-            <span class="sm:hidden"> btl</span>
+            <span class="hidden sm:inline"> {{ $t('common.bottles') }}</span>
+            <span class="sm:hidden"> {{ $t('common.btl') }}</span>
             <span class="mx-1 sm:mx-2 text-muted-300">|</span>
             <span class="font-semibold text-muted-900">{{ formatCurrency(month.totals.totalValueEur) }}</span>
           </div>
           <div v-else class="text-xs sm:text-sm text-muted-400">
-            <span class="hidden sm:inline">No allocations</span>
+            <span class="hidden sm:inline">{{ $t('allocations.noAllocations') }}</span>
             <span class="sm:hidden">-</span>
           </div>
         </button>
@@ -276,7 +277,7 @@ function selectAllocation(allocation: TimelineAllocation) {
                 </div>
               </div>
               <div class="text-right text-xs sm:text-sm flex-shrink-0 ml-auto sm:ml-0">
-                <span class="text-muted-600">{{ allocation.totalBottles }} btl</span>
+                <span class="text-muted-600">{{ allocation.totalBottles }} {{ $t('common.btl') }}</span>
                 <span class="font-semibold text-muted-900 ml-2 sm:ml-3">
                   {{ formatCurrency(allocation.totalValueEur) }}
                 </span>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { t } = useI18n()
+
 definePageMeta({
   layout: 'auth',
 })
@@ -25,12 +27,12 @@ async function handleSubmit() {
   error.value = ''
 
   if (password.value !== confirmPassword.value) {
-    error.value = 'Passwords do not match'
+    error.value = t('auth.passwordsMismatch') // TODO: add i18n key for 'auth.passwordsMismatch'
     return
   }
 
   if (password.value.length < 8) {
-    error.value = 'Password must be at least 8 characters'
+    error.value = t('auth.passwordTooShort') // TODO: add i18n key for 'auth.passwordTooShort'
     return
   }
 
@@ -49,7 +51,7 @@ async function handleSubmit() {
     await fetchUser()
     router.push('/')
   } catch (e: any) {
-    error.value = e.data?.message || 'Registration failed. Please try again.'
+    error.value = e.data?.message || t('auth.registerFailed') // TODO: add i18n key for 'auth.registerFailed'
   } finally {
     isLoading.value = false
   }
@@ -64,19 +66,19 @@ async function handleSubmit() {
       </div>
 
       <div>
-        <label for="inviteCode" class="label">Invitation Code</label>
+        <label for="inviteCode" class="label">{{ $t('auth.invitationCode') }}</label>
         <input
           id="inviteCode"
           v-model="inviteCode"
           type="text"
           required
           class="input"
-          placeholder="Enter your invitation code"
+          :placeholder="$t('auth.invitationCodePlaceholder')"
         >
       </div>
 
       <div>
-        <label for="email" class="label">Email</label>
+        <label for="email" class="label">{{ $t('auth.email') }}</label>
         <input
           id="email"
           v-model="email"
@@ -89,19 +91,19 @@ async function handleSubmit() {
       </div>
 
       <div>
-        <label for="name" class="label">Name (optional)</label>
+        <label for="name" class="label">{{ $t('auth.name') }} ({{ $t('auth.optional') }})</label>
         <input
           id="name"
           v-model="name"
           type="text"
           autocomplete="name"
           class="input"
-          placeholder="Your name"
+          :placeholder="$t('auth.namePlaceholder')"
         >
       </div>
 
       <div>
-        <label for="password" class="label">Password</label>
+        <label for="password" class="label">{{ $t('auth.password') }}</label>
         <input
           id="password"
           v-model="password"
@@ -109,12 +111,12 @@ async function handleSubmit() {
           required
           autocomplete="new-password"
           class="input"
-          placeholder="At least 8 characters"
+          :placeholder="$t('auth.passwordMinLength')"
         >
       </div>
 
       <div>
-        <label for="confirmPassword" class="label">Confirm Password</label>
+        <label for="confirmPassword" class="label">{{ $t('auth.confirmPassword') }}</label>
         <input
           id="confirmPassword"
           v-model="confirmPassword"
@@ -122,7 +124,7 @@ async function handleSubmit() {
           required
           autocomplete="new-password"
           class="input"
-          placeholder="Confirm your password"
+          :placeholder="$t('auth.confirmPasswordPlaceholder')"
         >
       </div>
 
@@ -141,14 +143,14 @@ async function handleSubmit() {
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
         </svg>
-        <span v-if="isLoading">Creating account...</span>
-        <span v-else>Create account</span>
+        <span v-if="isLoading">{{ $t('auth.registering') }}</span>
+        <span v-else>{{ $t('auth.register') }}</span>
       </button>
 
       <p class="text-center text-sm text-muted-foreground">
-        Already have an account?
+        {{ $t('auth.hasAccount') }}
         <NuxtLink to="/login" class="text-primary font-semibold hover:underline">
-          Sign in
+          {{ $t('auth.signIn') }}
         </NuxtLink>
       </p>
     </form>

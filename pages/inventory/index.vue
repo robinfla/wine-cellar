@@ -3,6 +3,7 @@ definePageMeta({
   middleware: 'auth',
 })
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 
@@ -91,10 +92,10 @@ const drinkUntilYear = ref<number | null>(null)
 const isSavingDrinkWindow = ref(false)
 
 // Format options
-const formatOptions = [
-  { id: 1, name: 'Bottle', volumeMl: 750 },
-  { id: 2, name: 'Magnum', volumeMl: 1500 },
-]
+const formatOptions = computed(() => [ // TODO: add i18n key inventory.formatBottle, inventory.formatMagnum
+  { id: 1, name: t('inventory.formatBottle'), volumeMl: 750 },
+  { id: 2, name: t('inventory.formatMagnum'), volumeMl: 1500 },
+])
 
 // Filter state
 const maturityFilter = ref(route.query.maturity as string || '')
@@ -158,23 +159,23 @@ watch(
 )
 
 // Maturity tabs
-const maturityTabs = [
-  { value: '', label: 'All' },
-  { value: 'ready', label: 'Ready to Drink' },
-  { value: 'past', label: 'Past Prime' },
-  { value: 'young', label: 'To Age' },
-]
+const maturityTabs = computed(() => [ // TODO: add i18n key inventory.allMaturity, inventory.readyToDrink, inventory.pastPrime, inventory.toAge
+  { value: '', label: t('inventory.allMaturity') },
+  { value: 'ready', label: t('inventory.readyToDrink') },
+  { value: 'past', label: t('inventory.pastPrime') },
+  { value: 'young', label: t('inventory.toAge') },
+])
 
 // Color options
-const colorOptions = [
-  { value: '', label: 'All colors' },
-  { value: 'red', label: 'Red' },
-  { value: 'white', label: 'White' },
-  { value: 'rose', label: 'Rosé' },
-  { value: 'sparkling', label: 'Sparkling' },
-  { value: 'dessert', label: 'Dessert' },
-  { value: 'fortified', label: 'Fortified' },
-]
+const colorOptions = computed(() => [
+  { value: '', label: t('inventory.allColors') },
+  { value: 'red', label: t('colors.red') },
+  { value: 'white', label: t('colors.white') },
+  { value: 'rose', label: t('colors.rose') },
+  { value: 'sparkling', label: t('colors.sparkling') },
+  { value: 'dessert', label: t('colors.dessert') },
+  { value: 'fortified', label: t('colors.fortified') },
+])
 
 const getColorDot = (c: string) => {
   const colors: Record<string, string> = {
@@ -188,17 +189,7 @@ const getColorDot = (c: string) => {
   return colors[c] || 'bg-muted-400'
 }
 
-const _getColorLabel = (c: string) => {
-  const labels: Record<string, string> = {
-    red: 'Red',
-    white: 'White',
-    rose: 'Rosé',
-    sparkling: 'Sparkling',
-    dessert: 'Dessert',
-    fortified: 'Fortified',
-  }
-  return labels[c] || c
-}
+const _getColorLabel = (c: string) => t(`colors.${c}`)
 
 const getMaturityStatusColor = (status: string) => {
   const colors: Record<string, string> = {
@@ -213,15 +204,15 @@ const getMaturityStatusColor = (status: string) => {
   return colors[status] || colors.unknown
 }
 
-const getMaturityStatusLabel = (status: string) => {
+const getMaturityStatusLabel = (status: string) => { // TODO: add i18n key inventory.maturityPeak, inventory.maturityReady, inventory.maturityApproaching, inventory.maturityDeclining, inventory.maturityTooEarly, inventory.maturityPast, inventory.maturityUnknown
   const labels: Record<string, string> = {
-    peak: 'At Peak',
-    ready: 'Ready',
-    approaching: 'Approaching',
-    declining: 'Declining',
-    too_early: 'Too Early',
-    past: 'Past Prime',
-    unknown: 'Unknown',
+    peak: t('inventory.maturityPeak'),
+    ready: t('inventory.maturityReady'),
+    approaching: t('inventory.maturityApproaching'),
+    declining: t('inventory.maturityDeclining'),
+    too_early: t('inventory.maturityTooEarly'),
+    past: t('inventory.maturityPast'),
+    unknown: t('inventory.maturityUnknown'),
   }
   return labels[status] || status
 }
@@ -551,7 +542,7 @@ async function saveFormat(event: Event) {
   if (!selectedLot.value) return
   const select = event.target as HTMLSelectElement
   const newFormatId = Number(select.value)
-  const format = formatOptions.find(f => f.id === newFormatId)
+  const format = formatOptions.value.find(f => f.id === newFormatId)
   if (!format) return
 
   isUpdating.value = true
@@ -721,11 +712,11 @@ async function saveField(field: string) {
     editingField.value = null
   } catch (e: any) {
     console.error('Failed to save field', e)
-    const message = e?.data?.message || e?.message || 'Unknown error'
+    const message = e?.data?.message || e?.message || t('inventory.unknownError') // TODO: add i18n key inventory.unknownError
     if (message.includes('already exists')) {
-      alert(`Cannot update: A wine with this combination already exists. You may need to merge wines or rename the duplicate.`)
+      alert(t('inventory.cannotUpdateDuplicate')) // TODO: add i18n key inventory.cannotUpdateDuplicate
     } else {
-      alert(`Failed to save: ${message}`)
+      alert(`${t('inventory.failedToSave')}: ${message}`) // TODO: add i18n key inventory.failedToSave
     }
   } finally {
     isUpdating.value = false
@@ -808,7 +799,7 @@ onMounted(() => {
             <input
               :value="searchQuery"
               type="text"
-              placeholder="Search wines..."
+              :placeholder="$t('inventory.searchPlaceholder')"
               class="pl-9 pr-4 py-2 w-full sm:w-64 text-sm border border-muted-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary-500"
               @input="handleSearchInput(($event.target as HTMLInputElement).value)"
             >
@@ -822,7 +813,7 @@ onMounted(() => {
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
-            <span class="hidden sm:inline">Filters</span>
+            <span class="hidden sm:inline">{{ $t('inventory.filters') }}</span>
             <span v-if="hasActiveFilters" class="w-2 h-2 bg-primary-500 rounded-full" />
           </button>
         </div>
@@ -852,7 +843,7 @@ onMounted(() => {
                   <path v-if="showEmptyLots" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                 </svg>
-                {{ showEmptyLots ? 'Hide empty lots' : 'Show empty lots' }}
+                {{ showEmptyLots ? $t('inventory.hideEmptyLots') : $t('inventory.showEmptyLots') }}
               </button>
               <a
                 href="/api/inventory/export"
@@ -863,7 +854,7 @@ onMounted(() => {
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                Export CSV
+                {{ $t('inventory.exportCsv') }}
               </a>
               <button
                 v-if="inventory?.total && inventory.total > 0"
@@ -873,7 +864,7 @@ onMounted(() => {
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                {{ hasAnyFilter ? 'Delete Filtered' : 'Delete All' }}
+                {{ hasAnyFilter ? $t('inventory.deleteFiltered') : $t('inventory.deleteAll') }}
               </button>
             </div>
           </div>
@@ -884,8 +875,8 @@ onMounted(() => {
               class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 hover:scale-105 transition-transform"
               @click.stop="showAddMenu = !showAddMenu; showMoreMenu = false"
             >
-              <span class="hidden sm:inline">Add Wine</span>
-              <span class="sm:hidden">Add</span>
+              <span class="hidden sm:inline">{{ $t('inventory.addWine') }}</span>
+              <span class="sm:hidden">{{ $t('common.add') }}</span>
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
@@ -898,13 +889,13 @@ onMounted(() => {
                 class="block w-full text-left px-4 py-2 text-sm text-muted-700 hover:bg-muted-100"
                 @click="handleAddWineClick"
               >
-                Add Wine
+                {{ $t('inventory.addWine') }}
               </button>
               <button
                 class="block w-full text-left px-4 py-2 text-sm text-muted-700 hover:bg-muted-100"
                 @click="handleImportClick"
               >
-                Import File
+                {{ $t('inventory.import') }}
               </button>
             </div>
           </div>
@@ -932,9 +923,9 @@ onMounted(() => {
         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 p-3 sm:p-4 bg-muted-50 rounded-lg border border-muted-200"
       >
         <div>
-          <label class="block text-xs font-semibold text-muted-500 mb-1">Producer</label>
+          <label class="block text-xs font-semibold text-muted-500 mb-1">{{ $t('inventory.producer') }}</label>
           <select v-model="producerId" class="input text-sm" @change="page = 1">
-            <option :value="undefined">All producers</option>
+            <option :value="undefined">{{ $t('inventory.allProducers') }}</option><!-- TODO: add i18n key inventory.allProducers -->
             <option v-for="p in filterOptions?.producers" :key="p.id" :value="p.id">
               {{ p.name }}
             </option>
@@ -942,9 +933,9 @@ onMounted(() => {
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-muted-500 mb-1">Region</label>
+          <label class="block text-xs font-semibold text-muted-500 mb-1">{{ $t('inventory.region') }}</label>
           <select v-model="regionId" class="input text-sm" @change="page = 1">
-            <option :value="undefined">All regions</option>
+            <option :value="undefined">{{ $t('inventory.allRegions') }}</option>
             <option v-for="r in filterOptions?.regions" :key="r.id" :value="r.id">
               {{ r.name }}
             </option>
@@ -952,7 +943,7 @@ onMounted(() => {
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-muted-500 mb-1">Color</label>
+          <label class="block text-xs font-semibold text-muted-500 mb-1">{{ $t('inventory.color') }}</label>
           <select v-model="color" class="input text-sm" @change="page = 1">
             <option v-for="opt in colorOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
@@ -961,9 +952,9 @@ onMounted(() => {
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-muted-500 mb-1">Vintage</label>
+          <label class="block text-xs font-semibold text-muted-500 mb-1">{{ $t('inventory.vintage') }}</label>
           <select v-model="vintage" class="input text-sm" @change="page = 1">
-            <option :value="undefined">All vintages</option>
+            <option :value="undefined">{{ $t('inventory.allVintages') }}</option>
             <option v-for="v in filterOptions?.vintages" :key="v" :value="v">
               {{ v }}
             </option>
@@ -971,9 +962,9 @@ onMounted(() => {
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-muted-500 mb-1">Cellar</label>
+          <label class="block text-xs font-semibold text-muted-500 mb-1">{{ $t('inventory.cellar') }}</label>
           <select v-model="cellarId" class="input text-sm" @change="page = 1">
-            <option :value="undefined">All cellars</option>
+            <option :value="undefined">{{ $t('inventory.allCellars') }}</option>
             <option v-for="c in filterOptions?.cellars" :key="c.id" :value="c.id">
               {{ c.name }}
             </option>
@@ -985,14 +976,14 @@ onMounted(() => {
             class="text-sm text-primary-600 hover:text-primary-700 hover:scale-102 transition-transform"
             @click="clearFilters"
           >
-            Clear all filters
+            {{ $t('inventory.clearFilters') }}
           </button>
         </div>
       </div>
 
       <!-- Loading state -->
       <div v-if="pending" class="text-center py-12">
-        <p class="text-muted-500">Loading inventory...</p>
+        <p class="text-muted-500">{{ $t('common.loading') }}</p>
       </div>
 
       <!-- Empty state -->
@@ -1000,9 +991,9 @@ onMounted(() => {
         <svg class="mx-auto h-12 w-12 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
-        <h3 class="mt-4 text-lg font-semibold text-muted-900">No wines found</h3>
+        <h3 class="mt-4 text-lg font-semibold text-muted-900">{{ $t('inventory.noWines') }}</h3>
         <p class="mt-2 text-sm text-muted-500">
-          {{ hasActiveFilters || maturityFilter ? 'Try adjusting your filters.' : 'Get started by adding wines to your cellar.' }}
+          {{ hasActiveFilters || maturityFilter ? $t('inventory.noWinesFilter') : $t('inventory.noWinesDesc') }}
         </p>
       </div>
 
@@ -1011,12 +1002,12 @@ onMounted(() => {
         <table class="w-full min-w-[400px]">
           <thead>
             <tr class="border-b border-muted-200">
-              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Name</th>
-              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider hidden sm:table-cell">Producer</th>
-              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider hidden md:table-cell">Region</th>
-              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Vintage</th>
-              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider hidden sm:table-cell">Color</th>
-              <th class="px-3 sm:px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider">Qty</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">{{ $t('addWineModal.wineName') }}</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider hidden sm:table-cell">{{ $t('inventory.producer') }}</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider hidden md:table-cell">{{ $t('inventory.region') }}</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">{{ $t('inventory.vintage') }}</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider hidden sm:table-cell">{{ $t('inventory.color') }}</th>
+              <th class="px-3 sm:px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider">{{ $t('inventory.quantity') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-muted-100">
@@ -1032,12 +1023,12 @@ onMounted(() => {
             >
               <td class="px-3 sm:px-4 py-3 text-sm font-semibold text-muted-900">
                 {{ lot.wineName }}
-                <span v-if="lot.quantity === 0" class="text-xs font-normal text-muted-400 ml-1">(finished)</span>
+                <span v-if="lot.quantity === 0" class="text-xs font-normal text-muted-400 ml-1">({{ $t('inventory.finished') }})</span><!-- TODO: add i18n key inventory.finished -->
                 <span class="sm:hidden text-xs font-normal text-muted-500 block">{{ lot.producerName }}</span>
               </td>
               <td class="px-3 sm:px-4 py-3 text-sm text-muted-600 hidden sm:table-cell">{{ lot.producerName }}</td>
               <td class="px-3 sm:px-4 py-3 text-sm text-muted-600 hidden md:table-cell">{{ lot.regionName || lot.appellationName || '-' }}</td>
-              <td class="px-3 sm:px-4 py-3 text-sm text-muted-600">{{ lot.vintage || 'NV' }}</td>
+              <td class="px-3 sm:px-4 py-3 text-sm text-muted-600">{{ lot.vintage || $t('common.nv') }}</td>
               <td class="px-3 sm:px-4 py-3 hidden sm:table-cell">
                 <span
                   class="inline-block w-3 h-3 rounded-full"
@@ -1062,14 +1053,14 @@ onMounted(() => {
             :disabled="!canPrev"
             @click="page--"
           >
-            Prev
+            {{ $t('common.prev') }}
           </button>
           <button
             class="px-3 py-1.5 text-sm font-semibold text-muted-700 bg-white border border-muted-300 rounded-md hover:bg-muted-50 hover:scale-102 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="!canNext"
             @click="page++"
           >
-            Next
+            {{ $t('common.next') }}
           </button>
         </div>
       </div>
@@ -1100,12 +1091,12 @@ onMounted(() => {
                     v-model="editValues.color"
                     class="input text-sm py-1 w-24"
                   >
-                    <option value="red">Red</option>
-                    <option value="white">White</option>
-                    <option value="rose">Rosé</option>
-                    <option value="sparkling">Sparkling</option>
-                    <option value="dessert">Dessert</option>
-                    <option value="fortified">Fortified</option>
+                    <option value="red">{{ $t('colors.red') }}</option>
+                    <option value="white">{{ $t('colors.white') }}</option>
+                    <option value="rose">{{ $t('colors.rose') }}</option>
+                    <option value="sparkling">{{ $t('colors.sparkling') }}</option>
+                    <option value="dessert">{{ $t('colors.dessert') }}</option>
+                    <option value="fortified">{{ $t('colors.fortified') }}</option>
                   </select>
                   <button
                     type="button"
@@ -1241,12 +1232,12 @@ onMounted(() => {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <h3 class="font-display font-bold text-muted-900">Details</h3>
+            <h3 class="font-display font-bold text-muted-900">{{ $t('inventory.details') }}</h3>
           </div>
           <dl class="space-y-3">
             <!-- Vintage - Editable -->
             <div class="flex justify-between items-center">
-              <dt class="text-sm text-muted-500">Vintage</dt>
+              <dt class="text-sm text-muted-500">{{ $t('inventory.vintage') }}</dt>
               <dd v-if="editingField === 'vintage'" class="flex items-center gap-1">
                 <input
                   v-model.number="editValues.vintage"
@@ -1254,7 +1245,7 @@ onMounted(() => {
                   min="1900"
                   max="2100"
                   class="input w-16 sm:w-20 text-sm text-center py-1"
-                  placeholder="NV"
+                  :placeholder="$t('common.nv')"
                   @keydown.enter="saveField('vintage')"
                   @keydown.escape="cancelEditing"
                 >
@@ -1282,18 +1273,18 @@ onMounted(() => {
                 class="text-sm font-semibold text-muted-900 cursor-pointer hover:text-primary-600 transition-colors"
                 @click="startEditing('vintage')"
               >
-                {{ selectedLot.vintage || 'NV' }}
+                {{ selectedLot.vintage || $t('common.nv') }}
               </dd>
             </div>
             <!-- Appellation - Editable -->
             <div class="flex justify-between items-center">
-              <dt class="text-sm text-muted-500">Appellation</dt>
+              <dt class="text-sm text-muted-500">{{ $t('inventory.appellation') }}</dt>
               <dd v-if="editingField === 'appellation'" class="flex items-center gap-1">
                 <select
                   v-model="editValues.appellationId"
                   class="input text-sm py-1 w-32 sm:w-40"
                 >
-                  <option :value="null">None</option>
+                  <option :value="null">{{ $t('common.none') }}</option>
                   <option v-for="a in appellations" :key="a.id" :value="a.id">
                     {{ a.name }}
                   </option>
@@ -1327,13 +1318,13 @@ onMounted(() => {
             </div>
             <!-- Region - Editable -->
             <div class="flex justify-between items-center">
-              <dt class="text-sm text-muted-500">Region</dt>
+              <dt class="text-sm text-muted-500">{{ $t('inventory.region') }}</dt>
               <dd v-if="editingField === 'region'" class="flex items-center gap-1">
                 <select
                   v-model="editValues.regionId"
                   class="input text-sm py-1 w-32 sm:w-40"
                 >
-                  <option :value="null">None</option>
+                  <option :value="null">{{ $t('common.none') }}</option>
                   <option v-for="r in regionsData" :key="r.id" :value="r.id">
                     {{ r.name }}
                   </option>
@@ -1367,7 +1358,7 @@ onMounted(() => {
             </div>
             <!-- Drinking Window - Editable -->
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <dt class="text-sm text-muted-500">Drinking Window</dt>
+              <dt class="text-sm text-muted-500">{{ $t('inventory.drinkingWindow') }}</dt><!-- TODO: add i18n key inventory.drinkingWindow -->
               <dd class="flex items-center gap-2">
                 <input
                   v-model.number="drinkFromYear"
@@ -1375,7 +1366,7 @@ onMounted(() => {
                   min="1900"
                   max="2100"
                   class="input w-16 sm:w-20 text-sm text-center py-1.5"
-                  placeholder="From"
+                  :placeholder="$t('inventory.drinkFrom')"<!-- TODO: add i18n key inventory.drinkFrom -->
                   :disabled="isSavingDrinkWindow"
                   @change="saveDrinkingWindow"
                 >
@@ -1386,7 +1377,7 @@ onMounted(() => {
                   min="1900"
                   max="2100"
                   class="input w-16 sm:w-20 text-sm text-center py-1.5"
-                  placeholder="Until"
+                  :placeholder="$t('inventory.drinkUntil')"<!-- TODO: add i18n key inventory.drinkUntil -->
                   :disabled="isSavingDrinkWindow"
                   @change="saveDrinkingWindow"
                 >
@@ -1403,13 +1394,13 @@ onMounted(() => {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
             </div>
-            <h3 class="font-display font-bold text-muted-900">Inventory</h3>
+            <h3 class="font-display font-bold text-muted-900">{{ $t('addWineModal.inventorySection') }}</h3>
           </div>
 
           <dl class="space-y-3">
             <!-- Quantity with format selector -->
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <dt class="text-sm text-muted-500">Quantity</dt>
+              <dt class="text-sm text-muted-500">{{ $t('inventory.quantity') }}</dt>
               <dd class="flex items-center gap-2">
                 <input
                   v-model.number="selectedLot.quantity"
@@ -1432,11 +1423,11 @@ onMounted(() => {
               </dd>
             </div>
             <div class="flex justify-between items-center">
-              <dt class="text-sm text-muted-500">Cellar</dt>
+              <dt class="text-sm text-muted-500">{{ $t('inventory.cellar') }}</dt>
               <dd class="text-sm font-semibold text-muted-900">{{ selectedLot.cellarName }}</dd>
             </div>
             <div v-if="selectedLot.binLocation" class="flex justify-between items-center">
-              <dt class="text-sm text-muted-500">Bin Location</dt>
+              <dt class="text-sm text-muted-500">{{ $t('inventory.binLocation') }}</dt><!-- TODO: add i18n key inventory.binLocation -->
               <dd class="text-sm font-semibold text-muted-900">{{ selectedLot.binLocation }}</dd>
             </div>
           </dl>
@@ -1450,12 +1441,12 @@ onMounted(() => {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
               </svg>
             </div>
-            <h3 class="font-display font-bold text-muted-900">Purchase</h3>
+            <h3 class="font-display font-bold text-muted-900">{{ $t('addWineModal.purchaseInfo') }}</h3>
           </div>
           <dl class="space-y-3">
             <!-- Purchase Date - Editable -->
             <div class="flex justify-between items-center">
-              <dt class="text-sm text-muted-500">Date</dt>
+              <dt class="text-sm text-muted-500">{{ $t('inventory.purchaseDate') }}</dt>
               <dd v-if="editingField === 'purchaseDate'" class="flex items-center gap-1">
                 <input
                   v-model="editValues.purchaseDate"
@@ -1494,7 +1485,7 @@ onMounted(() => {
 
             <!-- Price per bottle - Editable -->
             <div class="flex justify-between items-center">
-              <dt class="text-sm text-muted-500">Price per bottle</dt>
+              <dt class="text-sm text-muted-500">{{ $t('inventory.pricePerBottle') }}</dt>
               <dd v-if="editingField === 'purchasePricePerBottle'" class="flex items-center gap-1">
                 <input
                   v-model="editValues.purchasePricePerBottle"
@@ -1534,14 +1525,14 @@ onMounted(() => {
             </div>
 
             <div v-if="selectedLot.purchaseSource" class="flex justify-between items-center">
-              <dt class="text-sm text-muted-500">Source</dt>
+              <dt class="text-sm text-muted-500">{{ $t('inventory.purchaseSource') }}</dt>
               <dd class="text-sm font-semibold text-muted-900">{{ selectedLot.purchaseSource }}</dd>
             </div>
           </dl>
 
           <!-- Notes (within purchase section if present) -->
           <div v-if="selectedLot.notes" class="mt-4 pt-4 border-t border-muted-200">
-            <p class="text-xs font-semibold text-muted-500 uppercase tracking-wide mb-2">Notes</p>
+            <p class="text-xs font-semibold text-muted-500 uppercase tracking-wide mb-2">{{ $t('inventory.notes') }}</p>
             <p class="text-sm text-muted-600">{{ selectedLot.notes }}</p>
           </div>
         </div>
@@ -1555,7 +1546,7 @@ onMounted(() => {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 class="font-display font-bold text-muted-900">Market Value</h3>
+              <h3 class="font-display font-bold text-muted-900">{{ $t('inventory.marketValue') }}</h3>
             </div>
             <button
               class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
@@ -1569,7 +1560,7 @@ onMounted(() => {
               <svg v-else class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              {{ isFetchingValuation ? 'Fetching...' : 'Refresh' }}
+              {{ isFetchingValuation ? $t('inventory.fetchingPrice') : $t('inventory.latestPrice') }}
             </button>
           </div>
 
@@ -1586,7 +1577,7 @@ onMounted(() => {
                 v-else-if="valuation.status === 'matched' || valuation.status === 'confirmed'"
                 class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium"
               >
-                {{ valuation.status === 'confirmed' ? 'Confirmed' : 'Matched' }}
+                {{ valuation.status === 'confirmed' ? $t('inventory.confirmed') : $t('inventory.matched') }}
               </span>
             </div>
             <div v-if="valuation.rating" class="flex items-center gap-1.5 mb-2">
@@ -1596,10 +1587,10 @@ onMounted(() => {
                 </svg>
                 <span class="text-sm font-semibold text-muted-800">{{ Number(valuation.rating).toFixed(1) }}</span>
               </div>
-              <span v-if="valuation.ratingsCount" class="text-xs text-muted-400">({{ valuation.ratingsCount.toLocaleString() }} ratings)</span>
+              <span v-if="valuation.ratingsCount" class="text-xs text-muted-400">({{ valuation.ratingsCount.toLocaleString() }} {{ $t('inventory.ratings') }})</span><!-- TODO: add i18n key inventory.ratings -->
             </div>
             <div v-if="valuation.priceLow || valuation.priceHigh" class="text-xs text-muted-500 mb-3">
-              Range: €{{ Number(valuation.priceLow || valuation.priceEstimate).toFixed(0) }} - €{{ Number(valuation.priceHigh || valuation.priceEstimate).toFixed(0) }}
+              {{ $t('inventory.priceRange') }}: €{{ Number(valuation.priceLow || valuation.priceEstimate).toFixed(0) }} - €{{ Number(valuation.priceHigh || valuation.priceEstimate).toFixed(0) }}<!-- TODO: add i18n key inventory.priceRange -->
             </div>
             <div class="flex items-center justify-between text-xs text-muted-500">
               <a
@@ -1608,31 +1599,31 @@ onMounted(() => {
                 target="_blank"
                 class="flex items-center gap-1 hover:text-primary-600"
               >
-                <span>{{ valuation.source === 'vivino' ? 'Vivino' : valuation.source }}</span>
+                <span>{{ valuation.source === 'vivino' ? 'Vivino' : valuation.source }}</span><!-- Vivino is a brand name -->
                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
               </a>
-              <span v-else>{{ valuation.source || 'Unknown' }}</span>
+              <span v-else>{{ valuation.source || $t('inventory.unknownSource') }}</span>
               <span v-if="valuation.fetchedAt">
                 {{ formatDate(valuation.fetchedAt) }}
               </span>
             </div>
             <div v-if="valuation.status === 'needs_review'" class="mt-3 pt-3 border-t border-muted-100">
               <p class="text-xs text-muted-600 mb-2">
-                Match: {{ valuation.sourceName }} ({{ Math.round(valuation.confidence * 100) }}% confidence)
+                {{ $t('inventory.matchLabel') }}: {{ valuation.sourceName }} ({{ Math.round(valuation.confidence * 100) }}% {{ $t('inventory.confidence') }})<!-- TODO: add i18n key inventory.matchLabel, inventory.confidence -->
               </p>
               <button
                 class="text-xs text-secondary-600 hover:text-secondary-700 font-medium"
                 @click="confirmValuation"
               >
-                Confirm this match
+                {{ $t('inventory.confirmMatch') }}<!-- TODO: add i18n key inventory.confirmMatch -->
               </button>
             </div>
           </div>
 
           <div v-else-if="valuation && (valuation.status === 'no_match' || valuation.status === 'pending')" class="p-4 bg-white rounded-xl border-2 border-muted-200">
-            <p class="text-sm text-muted-500 text-center mb-2">Look up price and enter below</p>
+            <p class="text-sm text-muted-500 text-center mb-2">{{ $t('inventory.lookUpPrice') }}</p><!-- TODO: add i18n key inventory.lookUpPrice -->
             <div class="flex justify-center gap-4 mb-3">
               <a
                 :href="cellarTrackerUrl"
@@ -1672,13 +1663,13 @@ onMounted(() => {
                 :disabled="isSavingManualPrice || !manualPriceInput"
                 @click="saveManualPrice"
               >
-                {{ isSavingManualPrice ? 'Saving...' : 'Save' }}
+                {{ isSavingManualPrice ? $t('inventory.saving') : $t('common.save') }}
               </button>
             </div>
           </div>
 
           <div v-else class="p-4 bg-white rounded-xl border-2 border-dashed border-muted-200">
-            <p class="text-sm text-muted-500 text-center mb-2">Look up price and enter below</p>
+            <p class="text-sm text-muted-500 text-center mb-2">{{ $t('inventory.lookUpPrice') }}</p><!-- TODO: add i18n key inventory.lookUpPrice -->
             <div class="flex justify-center gap-4 mb-3">
               <a
                 :href="cellarTrackerUrl"
@@ -1718,7 +1709,7 @@ onMounted(() => {
                 :disabled="isSavingManualPrice || !manualPriceInput"
                 @click="saveManualPrice"
               >
-                {{ isSavingManualPrice ? 'Saving...' : 'Save' }}
+                {{ isSavingManualPrice ? $t('inventory.saving') : $t('common.save') }}
               </button>
             </div>
           </div>
@@ -1732,14 +1723,14 @@ onMounted(() => {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             </div>
-            <h3 class="font-display font-bold text-muted-900">Tasting Notes</h3>
+            <h3 class="font-display font-bold text-muted-900">{{ $t('inventory.tastingNotes') }}</h3>
           </div>
 
           <!-- Add new note form -->
           <div class="p-3 sm:p-4 bg-white rounded-xl border-2 border-muted-200 mb-4">
             <div class="flex flex-col sm:flex-row gap-3 mb-3">
               <div class="flex-shrink-0">
-                <label class="block text-xs font-medium text-muted-500 mb-1.5">Score</label>
+                <label class="block text-xs font-medium text-muted-500 mb-1.5">{{ $t('inventory.scoreValue') }}</label>
                 <div class="flex items-center gap-1">
                   <input
                     v-model="newTastingNote.score"
@@ -1753,22 +1744,22 @@ onMounted(() => {
                 </div>
               </div>
               <div class="flex-1">
-                <label class="block text-xs font-medium text-muted-500 mb-1.5">Comment</label>
+                <label class="block text-xs font-medium text-muted-500 mb-1.5">{{ $t('consume.comment') }}</label>
                 <textarea
                   v-model="newTastingNote.comment"
                   rows="2"
                   class="input text-sm w-full resize-none"
-                  placeholder="Your tasting notes..."
+                  :placeholder="$t('inventory.tastingNotesPlaceholder')"
                 />
               </div>
             </div>
             <div class="mb-3">
-              <label class="block text-xs font-medium text-muted-500 mb-1.5">Food Pairing</label>
+              <label class="block text-xs font-medium text-muted-500 mb-1.5">{{ $t('consume.pairing') }}</label>
               <input
                 v-model="newTastingNote.pairing"
                 type="text"
                 class="input text-sm w-full"
-                placeholder="e.g., Grilled steak, aged cheese..."
+                :placeholder="$t('consume.pairingPlaceholder')"
               >
             </div>
             <button
@@ -1777,7 +1768,7 @@ onMounted(() => {
               :disabled="isAddingNote || (!newTastingNote.score && !newTastingNote.comment && !newTastingNote.pairing)"
               @click="addTastingNote"
             >
-              {{ isAddingNote ? 'Adding...' : 'Add Note' }}
+              {{ isAddingNote ? $t('inventory.addingNote') : $t('inventory.addNote') }}
             </button>
           </div>
 
@@ -1812,12 +1803,12 @@ onMounted(() => {
                 <svg class="w-4 h-4 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
-                <span class="font-medium">Pairs with:</span> {{ note.pairing }}
+                <span class="font-medium">{{ $t('inventory.pairsWith') }}:</span> {{ note.pairing }}<!-- TODO: add i18n key inventory.pairsWith -->
               </p>
             </div>
           </div>
           <p v-else class="text-sm text-muted-500 text-center py-4">
-            No tasting notes yet
+            {{ $t('inventory.noTastingNotes') }}
           </p>
         </div>
 
@@ -1829,18 +1820,18 @@ onMounted(() => {
               class="w-full px-4 py-2.5 text-sm font-semibold text-red-600 bg-red-50 rounded-xl border-2 border-red-200 hover:bg-red-100 hover:scale-102 transition-all"
               @click="showDeleteConfirm = true"
             >
-              Delete Lot
+              {{ $t('inventory.deleteLot') }}
             </button>
           </div>
           <div v-else class="p-4 bg-red-50 rounded-xl border-2 border-red-200">
-            <p class="text-sm text-red-700 mb-3">Are you sure you want to delete this lot?</p>
+            <p class="text-sm text-red-700 mb-3">{{ $t('inventory.deleteConfirm') }}</p>
             <div class="flex gap-2">
               <button
                 type="button"
                 class="flex-1 px-3 py-2 text-sm font-semibold text-muted-700 bg-white border-2 border-muted-300 rounded-xl hover:bg-muted-50 hover:scale-102 transition-all"
                 @click="showDeleteConfirm = false"
               >
-                Cancel
+                {{ $t('common.cancel') }}
               </button>
               <button
                 type="button"
@@ -1848,7 +1839,7 @@ onMounted(() => {
                 :disabled="isUpdating"
                 @click="deleteLot"
               >
-                {{ isUpdating ? 'Deleting...' : 'Confirm' }}
+                {{ isUpdating ? $t('inventory.deleting') : $t('common.confirm') }}
               </button>
             </div>
           </div>
@@ -1898,17 +1889,17 @@ onMounted(() => {
                 </svg>
               </div>
               <div>
-                <h3 class="text-lg font-display font-bold text-muted-900">{{ hasAnyFilter ? 'Delete Filtered Wines' : 'Delete All Wines' }}</h3>
-                <p class="text-sm text-muted-500">This action cannot be undone</p>
+                <h3 class="text-lg font-display font-bold text-muted-900">{{ hasAnyFilter ? $t('inventory.deleteFilteredTitle') : $t('inventory.deleteAllTitle') }}</h3>
+                <p class="text-sm text-muted-500">{{ $t('inventory.deleteAllWarning') }}</p>
               </div>
             </div>
 
             <p class="text-sm text-muted-700 mb-6">
               <template v-if="hasAnyFilter">
-                This will permanently delete <strong>{{ inventory?.total || 0 }}</strong> wines matching your current filters, including all associated tasting notes and history.
+                {{ $t('inventory.deleteFilteredWarning', { count: inventory?.total || 0 }) }}<!-- TODO: add i18n key inventory.deleteFilteredWarning -->
               </template>
               <template v-else>
-                This will permanently delete all <strong>{{ inventory?.total || 0 }}</strong> wines from your inventory, including all associated tasting notes and history.
+                {{ $t('inventory.deleteAllWarning', { count: inventory?.total || 0 }) }}<!-- TODO: add i18n key inventory.deleteAllWarning -->
               </template>
             </p>
 
@@ -1919,7 +1910,7 @@ onMounted(() => {
                 :disabled="isDeletingAll"
                 @click="showDeleteAllConfirm = false"
               >
-                Cancel
+                {{ $t('common.cancel') }}
               </button>
               <button
                 type="button"
@@ -1927,7 +1918,7 @@ onMounted(() => {
                 :disabled="isDeletingAll"
                 @click="deleteFilteredWines"
               >
-                {{ isDeletingAll ? 'Deleting...' : (hasAnyFilter ? 'Delete Filtered' : 'Delete All') }}
+                {{ isDeletingAll ? $t('inventory.deleting') : (hasAnyFilter ? $t('inventory.deleteFiltered') : $t('inventory.deleteAll')) }}
               </button>
             </div>
           </div>
@@ -1958,14 +1949,13 @@ onMounted(() => {
                 </svg>
               </div>
               <div>
-                <h3 class="text-lg font-display font-bold text-muted-900">Bottle Finished</h3>
-                <p class="text-sm text-muted-500">What would you like to do with this lot?</p>
+                <h3 class="text-lg font-display font-bold text-muted-900">{{ $t('inventory.bottleFinished') }}</h3><!-- TODO: add i18n key inventory.bottleFinished -->
+                <p class="text-sm text-muted-500">{{ $t('inventory.emptyLotQuestion') }}</p><!-- TODO: add i18n key inventory.emptyLotQuestion -->
               </div>
             </div>
 
             <p class="text-sm text-muted-700 mb-6">
-              <strong>{{ selectedLot?.wineName }}</strong> {{ selectedLot?.vintage || 'NV' }} will have 0 bottles remaining.
-              You can keep it for history or delete it permanently.
+              {{ $t('inventory.emptyLotDescription', { wine: selectedLot?.wineName, vintage: selectedLot?.vintage || 'NV' }) }}<!-- TODO: add i18n key inventory.emptyLotDescription -->
             </p>
 
             <div class="flex flex-col gap-2">
@@ -1975,7 +1965,7 @@ onMounted(() => {
                 :disabled="isUpdating"
                 @click="keepEmptyLot"
               >
-                {{ isUpdating ? 'Saving...' : 'Keep for history' }}
+                {{ isUpdating ? $t('inventory.saving') : $t('inventory.keepForHistory') }}
               </button>
               <button
                 type="button"
@@ -1983,7 +1973,7 @@ onMounted(() => {
                 :disabled="isUpdating"
                 @click="deleteEmptyLot"
               >
-                {{ isUpdating ? 'Deleting...' : 'Delete permanently' }}
+                {{ isUpdating ? $t('inventory.deleting') : $t('inventory.deletePermanently') }}
               </button>
               <button
                 type="button"
@@ -1991,7 +1981,7 @@ onMounted(() => {
                 :disabled="isUpdating"
                 @click="cancelEmptyLotPrompt"
               >
-                Cancel
+                {{ $t('common.cancel') }}
               </button>
             </div>
           </div>

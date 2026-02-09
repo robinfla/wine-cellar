@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { t } = useI18n()
+
 definePageMeta({
   middleware: 'auth',
 })
@@ -17,7 +19,7 @@ async function deleteCellar(id: number) {
     await refresh()
   } catch (e: unknown) {
     const err = e as { data?: { message?: string } }
-    deleteError.value = err.data?.message || 'Failed to delete cellar'
+    deleteError.value = err.data?.message || t('cellars.failedToLoad') // TODO: add i18n key for 'cellars.failedToDelete'
   } finally {
     deletingId.value = null
   }
@@ -32,16 +34,16 @@ async function handleCellarCreated() {
   <div>
     <div class="mb-6 flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-muted-900">Cellars</h1>
+        <h1 class="text-2xl font-bold text-muted-900">{{ $t('cellars.title') }}</h1>
         <p class="mt-1 text-sm text-muted-600">
-          Manage your wine storage locations
+          {{ $t('cellars.subtitle') }}
         </p>
       </div>
       <button
         class="btn-primary"
         @click="showCreateModal = true"
       >
-        Add Cellar
+        {{ $t('cellars.addCellar') }}
       </button>
     </div>
 
@@ -50,20 +52,20 @@ async function handleCellarCreated() {
     </div>
 
     <div v-if="pending" class="text-center py-12">
-      <p class="text-muted-500 font-medium">Loading cellars...</p>
+      <p class="text-muted-500 font-medium">{{ $t('cellars.loadingCellars') }}</p>
     </div>
 
     <div v-else-if="!cellars?.length" class="text-center py-12">
       <svg class="mx-auto h-12 w-12 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
       </svg>
-      <h3 class="mt-4 text-lg font-semibold text-muted-900">No cellars yet</h3>
-      <p class="mt-2 text-sm text-muted-500">Create your first cellar to start adding wines.</p>
+      <h3 class="mt-4 text-lg font-semibold text-muted-900">{{ $t('cellars.noCellars') }}</h3>
+      <p class="mt-2 text-sm text-muted-500">{{ $t('cellars.noCellarsDesc') }}</p>
       <button
         class="mt-4 btn-primary"
         @click="showCreateModal = true"
       >
-        Create Cellar
+        {{ $t('cellars.createCellar') }}
       </button>
     </div>
 
@@ -78,8 +80,8 @@ async function handleCellarCreated() {
             <h3 class="text-lg font-semibold text-muted-900">{{ cellar.name }}</h3>
             <p class="mt-1 text-sm text-muted-500">
               {{ cellar.countryCode }}
-              <span v-if="cellar.isVirtual" class="ml-2 text-xs font-semibold bg-muted-200 text-muted-700 px-2 py-0.5 rounded">Virtual</span>
-              <span class="ml-2 text-xs font-semibold bg-primary-100 text-primary-700 px-2 py-0.5 rounded">{{ cellar.bottleCount }} bottles</span>
+              <span v-if="cellar.isVirtual" class="ml-2 text-xs font-semibold bg-muted-200 text-muted-700 px-2 py-0.5 rounded">{{ $t('cellars.virtual') }}</span>
+              <span class="ml-2 text-xs font-semibold bg-primary-100 text-primary-700 px-2 py-0.5 rounded">{{ cellar.bottleCount }} {{ $t('common.bottles') }}</span>
             </p>
           </div>
           <div class="flex items-center gap-3">
@@ -87,7 +89,7 @@ async function handleCellarCreated() {
               :to="`/inventory?cellar=${cellar.id}`"
               class="text-sm font-semibold text-primary hover:text-primary-600 transition-colors"
             >
-              View wines
+              {{ $t('cellars.viewWines') }}
             </NuxtLink>
             <button
               class="text-muted-400 hover:text-red-500 transition-colors"

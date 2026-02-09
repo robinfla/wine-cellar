@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n()
 definePageMeta({
   middleware: 'auth',
 })
@@ -25,13 +26,13 @@ const page = ref(route.query.page ? Number(route.query.page) : 1)
 const limit = 50
 
 // Status tabs
-const statusTabs = [
-  { value: '', label: 'All' },
-  { value: 'upcoming', label: 'Upcoming' },
-  { value: 'to_claim', label: 'To Claim' },
-  { value: 'on_the_way', label: 'On the Way' },
-  { value: 'received', label: 'Received' },
-]
+const statusTabs = computed(() => [
+  { value: '', label: t('allocations.all') }, // TODO: add i18n key
+  { value: 'upcoming', label: t('allocations.upcoming') }, // TODO: add i18n key
+  { value: 'to_claim', label: t('allocations.toClaim') }, // TODO: add i18n key
+  { value: 'on_the_way', label: t('allocations.onTheWay') }, // TODO: add i18n key
+  { value: 'received', label: t('allocations.received') }, // TODO: add i18n key
+])
 
 // Fetch allocations
 const { data: allocationsData, pending, refresh: refreshAllocations } = await useFetch('/api/allocations', {
@@ -140,14 +141,14 @@ const getStatusColor = (status: string) => {
 }
 
 const getStatusLabel = (status: string) => {
-  const labels: Record<string, string> = {
-    upcoming: 'Upcoming',
-    to_claim: 'To Claim',
-    on_the_way: 'On the Way',
-    received: 'Received',
-    cancelled: 'Cancelled',
+  const labels: Record<string, () => string> = {
+    upcoming: () => t('allocations.upcoming'), // TODO: add i18n key
+    to_claim: () => t('allocations.toClaim'), // TODO: add i18n key
+    on_the_way: () => t('allocations.onTheWay'), // TODO: add i18n key
+    received: () => t('allocations.received'), // TODO: add i18n key
+    cancelled: () => t('allocations.cancelled'), // TODO: add i18n key
   }
-  return labels[status] || status
+  return labels[status]?.() || status
 }
 
 const formatCurrency = (value: string | number | null, currency = 'EUR') => {
@@ -176,14 +177,19 @@ const formatMonth = (date: string | Date | null) => {
 }
 
 // Month options for claim month dropdown
-const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+const monthNames = computed(() => [
+  t('allocations.january'), t('allocations.february'), t('allocations.march'), // TODO: add i18n key
+  t('allocations.april'), t('allocations.may'), t('allocations.june'), // TODO: add i18n key
+  t('allocations.july'), t('allocations.august'), t('allocations.september'), // TODO: add i18n key
+  t('allocations.october'), t('allocations.november'), t('allocations.december'), // TODO: add i18n key
+])
 
 const claimMonthOptions = computed(() => {
   const allocationYear = selectedAllocation.value?.year || new Date().getFullYear()
   // Include both allocation year and next year (claims often open year after allocation)
   const years = [allocationYear, allocationYear + 1]
   return years.flatMap((year) =>
-    monthNames.map((name, index) => ({
+    monthNames.value.map((name, index) => ({
       value: `${year}-${String(index + 1).padStart(2, '0')}`,
       label: `${name} ${year}`,
     })),
@@ -357,10 +363,10 @@ async function receiveAllocation() {
     const details = await $fetch(`/api/allocations/${selectedAllocation.value.id}`)
     selectedAllocation.value = formatClaimOpensAt(details)
     await refreshAllocations()
-    alert(`Received! Created ${result.createdLots} inventory lots.${result.nextYearAllocation ? ' Next year allocation created.' : ''}`)
+    alert(t('allocations.receivedAlert', { count: result.createdLots }) + (result.nextYearAllocation ? ' ' + t('allocations.nextYearCreated') : '')) // TODO: add i18n key
   } catch (e: any) {
     console.error('Failed to receive allocation', e)
-    alert(e.data?.message || 'Failed to receive allocation')
+    alert(e.data?.message || t('allocations.failedReceive')) // TODO: add i18n key
   } finally {
     isReceiving.value = false
   }
@@ -489,7 +495,7 @@ onMounted(() => {
               : 'text-muted-600 hover:text-muted-900'"
             @click="viewTab = 'list'"
           >
-            List
+            {{ $t('allocations.list') }}
           </button>
           <button
             class="px-3 sm:px-4 py-2 text-sm font-semibold rounded-md transition-colors"
@@ -498,7 +504,7 @@ onMounted(() => {
               : 'text-muted-600 hover:text-muted-900'"
             @click="viewTab = 'timeline'"
           >
-            Timeline
+            {{ $t('allocations.timeline') }}
           </button>
         </div>
 
@@ -507,8 +513,8 @@ onMounted(() => {
           class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 hover:scale-105 transition-transform"
           @click="showAddModal = true"
         >
-          <span class="hidden sm:inline">Add Allocation</span>
-          <span class="sm:hidden">Add</span>
+          <span class="hidden sm:inline">{{ $t('allocations.addAllocation') }}</span>
+          <span class="sm:hidden">{{ $t('common.add') }}</span>
         </button>
       </div>
 
@@ -529,7 +535,7 @@ onMounted(() => {
           class="input text-sm w-28 sm:w-32"
           @change="page = 1"
         >
-          <option :value="undefined">All years</option>
+          <option :value="undefined">{{ $t('allocations.allYears') }}</option>
           <option v-for="y in availableYears" :key="y" :value="y">
             {{ y }}
           </option>
@@ -553,7 +559,7 @@ onMounted(() => {
 
       <!-- Loading state -->
       <div v-if="pending" class="text-center py-12">
-        <p class="text-muted-500">Loading allocations...</p>
+        <p class="text-muted-500">{{ $t('allocations.loading') }}</p>
       </div>
 
       <!-- Empty state -->
@@ -561,9 +567,9 @@ onMounted(() => {
         <svg class="mx-auto h-12 w-12 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
-        <h3 class="mt-4 text-lg font-semibold text-muted-900">No allocations found</h3>
+        <h3 class="mt-4 text-lg font-semibold text-muted-900">{{ $t('allocations.noAllocations') }}</h3>
         <p class="mt-2 text-sm text-muted-500">
-          Get started by adding your first allocation.
+          {{ $t('allocations.noAllocationsDesc') }}
         </p>
       </div>
 
@@ -572,13 +578,13 @@ onMounted(() => {
         <table class="w-full min-w-[500px]">
           <thead>
             <tr class="border-b border-muted-200">
-              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Producer</th>
-              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Year</th>
-              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider hidden sm:table-cell">Claim Month</th>
-              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">Status</th>
-              <th class="px-3 sm:px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider hidden md:table-cell">Items</th>
-              <th class="px-3 sm:px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider">Bottles</th>
-              <th class="px-3 sm:px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider hidden sm:table-cell">Value</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">{{ $t('inventory.producer') }}</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">{{ $t('allocations.year') }}</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider hidden sm:table-cell">{{ $t('allocations.claimMonth') }}</th>
+              <th class="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-muted-500 uppercase tracking-wider">{{ $t('allocations.status') }}</th>
+              <th class="px-3 sm:px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider hidden md:table-cell">{{ $t('allocations.items') }}</th>
+              <th class="px-3 sm:px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider">{{ $t('allocations.bottles') }}</th>
+              <th class="px-3 sm:px-4 py-3 text-right text-xs font-semibold text-muted-500 uppercase tracking-wider hidden sm:table-cell">{{ $t('allocations.value') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-muted-100">
@@ -626,7 +632,7 @@ onMounted(() => {
       <!-- Pagination -->
       <div v-if="allocationsData?.total" class="flex items-center justify-between mt-4 pt-4 border-t border-muted-200">
         <span class="text-sm text-muted-600">
-          {{ allocationsData.totalAllocations }} allocation{{ allocationsData.totalAllocations === 1 ? '' : 's' }}
+          {{ allocationsData.totalAllocations }} {{ $t('allocations.allocationCount', { count: allocationsData.totalAllocations }) }}
         </span>
         <div class="flex gap-2">
           <button
@@ -634,14 +640,14 @@ onMounted(() => {
             :disabled="!canPrev"
             @click="page--"
           >
-            Prev
+            {{ $t('common.prev') }}
           </button>
           <button
             class="px-3 py-1.5 text-sm font-semibold text-muted-700 bg-white border border-muted-300 rounded-md hover:bg-muted-50 disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="!canNext"
             @click="page++"
           >
-            Next
+            {{ $t('common.next') }}
           </button>
         </div>
       </div>
@@ -702,7 +708,7 @@ onMounted(() => {
               >
                 {{ selectedAllocation.producerName }}
               </h2>
-              <p class="text-sm text-muted-500">{{ selectedAllocation.year }} Allocation</p>
+              <p class="text-sm text-muted-500">{{ selectedAllocation.year }} {{ $t('allocations.allocation') }}</p>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
               <span
@@ -750,12 +756,12 @@ onMounted(() => {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 class="font-display font-bold text-muted-900">Details</h3>
+            <h3 class="font-display font-bold text-muted-900">{{ $t('allocations.details') }}</h3>
           </div>
 
           <dl class="space-y-3">
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
-              <dt class="text-sm text-muted-500">Claim Month</dt>
+              <dt class="text-sm text-muted-500">{{ $t('allocations.claimMonth') }}</dt>
               <dd>
                 <select
                   v-model="selectedAllocation.claimOpensAt"
@@ -771,7 +777,7 @@ onMounted(() => {
               </dd>
             </div>
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
-              <dt class="text-sm text-muted-500">Status</dt>
+              <dt class="text-sm text-muted-500">{{ $t('allocations.status') }}</dt>
               <dd>
                 <select
                   v-model="selectedAllocation.status"
@@ -779,11 +785,11 @@ onMounted(() => {
                   :disabled="isUpdating"
                   @change="updateAllocationStatus(selectedAllocation.status)"
                 >
-                  <option value="upcoming">Upcoming</option>
-                  <option value="to_claim">To Claim</option>
-                  <option value="on_the_way">On the Way</option>
-                  <option value="received">Received</option>
-                  <option value="cancelled">Cancelled</option>
+                  <option value="upcoming">{{ $t('allocations.upcoming') }}</option>
+                  <option value="to_claim">{{ $t('allocations.toClaim') }}</option>
+                  <option value="on_the_way">{{ $t('allocations.onTheWay') }}</option>
+                  <option value="received">{{ $t('allocations.received') }}</option>
+                  <option value="cancelled">{{ $t('allocations.cancelled') }}</option>
                 </select>
               </dd>
             </div>
@@ -799,14 +805,14 @@ onMounted(() => {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
               </div>
-              <h3 class="font-display font-bold text-muted-900">Items</h3>
+              <h3 class="font-display font-bold text-muted-900">{{ $t('allocations.items') }}</h3>
             </div>
             <button
               v-if="selectedAllocation.status !== 'received'"
               class="text-sm text-primary-600 hover:text-primary-700 font-semibold"
               @click="fetchProducerWines(selectedAllocation.producerId); showAddItemModal = true"
             >
-              + Add Wine
+              + {{ $t('allocations.addWine') }}
             </button>
           </div>
 
@@ -833,7 +839,7 @@ onMounted(() => {
               </div>
               <div class="flex gap-2">
                 <div class="w-16 sm:w-18">
-                  <label class="block text-xs text-muted-500 mb-1">Vintage</label>
+                  <label class="block text-xs text-muted-500 mb-1">{{ $t('inventory.vintage') }}</label>
                   <input
                     v-model.number="item.vintage"
                     type="number"
@@ -846,7 +852,7 @@ onMounted(() => {
                   >
                 </div>
                 <div class="w-12 sm:w-14">
-                  <label class="block text-xs text-muted-500 mb-1">Qty</label>
+                  <label class="block text-xs text-muted-500 mb-1">{{ $t('allocations.qty') }}</label>
                   <input
                     v-model.number="item.quantityClaimed"
                     type="number"
@@ -857,7 +863,7 @@ onMounted(() => {
                   >
                 </div>
                 <div class="w-16 sm:w-20">
-                  <label class="block text-xs text-muted-500 mb-1">Price</label>
+                  <label class="block text-xs text-muted-500 mb-1">{{ $t('allocations.price') }}</label>
                   <input
                     v-model="item.pricePerBottle"
                     type="number"
@@ -887,17 +893,17 @@ onMounted(() => {
             </div>
           </div>
           <p v-else class="text-sm text-muted-500 text-center py-4">
-            No wines added yet
+            {{ $t('allocations.noWinesAdded') }}
           </p>
 
           <!-- Totals -->
           <div v-if="selectedAllocation.items?.length > 0" class="mt-4 pt-4 border-t border-muted-200">
             <div class="flex justify-between text-sm">
-              <span class="text-muted-500">Total Bottles</span>
+              <span class="text-muted-500">{{ $t('allocations.totalBottles') }}</span>
               <span class="font-semibold text-muted-900">{{ selectedAllocation.totalBottles }}</span>
             </div>
             <div v-for="total in totalsByCurrency" :key="total.currency" class="flex justify-between text-sm mt-1">
-              <span class="text-muted-500">Total Value</span>
+              <span class="text-muted-500">{{ $t('allocations.totalValue') }}</span>
               <span class="font-semibold text-muted-900">{{ formatCurrency(total.value, total.currency) }}</span>
             </div>
           </div>
@@ -912,7 +918,7 @@ onMounted(() => {
             :disabled="isReceiving || selectedAllocation.items?.length === 0"
             @click="receiveAllocation"
           >
-            {{ isReceiving ? 'Receiving...' : 'Mark as Received' }}
+            {{ isReceiving ? $t('allocations.receiving') : $t('allocations.markReceived') }}
           </button>
 
           <div v-if="!showDeleteConfirm">
@@ -921,18 +927,18 @@ onMounted(() => {
               class="w-full px-4 py-2.5 text-sm font-semibold text-red-600 bg-red-50 rounded-xl border-2 border-red-200 hover:bg-red-100"
               @click="showDeleteConfirm = true"
             >
-              Delete Allocation
+              {{ $t('allocations.deleteAllocation') }}
             </button>
           </div>
           <div v-else class="p-4 bg-red-50 rounded-xl border-2 border-red-200">
-            <p class="text-sm text-red-700 mb-3">Delete this allocation?</p>
+            <p class="text-sm text-red-700 mb-3">{{ $t('allocations.deleteConfirm') }}</p>
             <div class="flex gap-2">
               <button
                 type="button"
                 class="flex-1 px-3 py-2 text-sm font-semibold text-muted-700 bg-white border-2 border-muted-300 rounded-xl hover:bg-muted-50"
                 @click="showDeleteConfirm = false"
               >
-                Cancel
+                {{ $t('common.cancel') }}
               </button>
               <button
                 type="button"
@@ -940,7 +946,7 @@ onMounted(() => {
                 :disabled="isUpdating"
                 @click="deleteAllocation"
               >
-                {{ isUpdating ? 'Deleting...' : 'Confirm' }}
+                {{ isUpdating ? $t('allocations.deleting') : $t('common.confirm') }}
               </button>
             </div>
           </div>
@@ -973,7 +979,7 @@ onMounted(() => {
           <div class="relative bg-white rounded-2xl w-full max-w-md shadow-xl">
             <!-- Header -->
             <div class="flex items-center justify-between px-6 py-5 border-b border-muted-100">
-              <h3 class="font-display font-bold text-xl text-muted-900">New Allocation</h3>
+              <h3 class="font-display font-bold text-xl text-muted-900">{{ $t('allocations.newAllocation') }}</h3>
               <button
                 class="p-1 text-muted-400 hover:text-muted-600 rounded-lg hover:bg-muted-100 transition-colors"
                 @click="showAddModal = false; producerSearch = ''; showProducerDropdown = false"
@@ -987,13 +993,13 @@ onMounted(() => {
             <!-- Body -->
             <div class="px-6 py-5 space-y-5" @click="showProducerDropdown = false">
               <div @click.stop>
-                <label class="block text-sm font-medium text-muted-700 mb-2">Producer <span class="text-red-500">*</span></label>
+                <label class="block text-sm font-medium text-muted-700 mb-2">{{ $t('inventory.producer') }} <span class="text-red-500">*</span></label>
                 <div v-if="showNewProducer" class="flex gap-2">
                   <input
                     v-model="newProducerName"
                     type="text"
                     class="input flex-1"
-                    placeholder="New producer name"
+                    :placeholder="$t('allocations.newProducerName')"
                     @keydown.enter.prevent="createProducer"
                   >
                   <button
@@ -1026,7 +1032,7 @@ onMounted(() => {
                         v-model="producerSearch"
                         type="text"
                         class="input w-full pl-9 pr-8"
-                        placeholder="Search producers..."
+                        :placeholder="$t('allocations.searchProducers')"
                         @focus="showProducerDropdown = true"
                         @blur="setTimeout(() => showProducerDropdown = false, 150)"
                         @input="showProducerDropdown = true; newAllocation.producerId = null"
@@ -1048,7 +1054,7 @@ onMounted(() => {
                       class="absolute z-10 mt-1 w-full bg-white border border-muted-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
                     >
                       <div v-if="filteredProducers.length === 0" class="px-4 py-3 text-sm text-muted-500">
-                        No producers found
+                        {{ $t('producers.noProducers') }}
                       </div>
                       <button
                         v-for="producer in filteredProducers"
@@ -1065,7 +1071,7 @@ onMounted(() => {
                   <button
                     type="button"
                     class="px-2 text-primary-600 hover:text-primary-700 transition-transform hover:scale-105"
-                    title="Add new producer"
+                    :title="$t('allocations.addNewProducer')"
                     @click="showNewProducer = true"
                   >
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1075,7 +1081,7 @@ onMounted(() => {
                 </div>
               </div>
               <div>
-                <label class="block text-sm font-medium text-muted-700 mb-2">Year <span class="text-red-500">*</span></label>
+                <label class="block text-sm font-medium text-muted-700 mb-2">{{ $t('allocations.year') }} <span class="text-red-500">*</span></label>
                 <input
                   v-model.number="newAllocation.year"
                   type="number"
@@ -1093,14 +1099,14 @@ onMounted(() => {
                 class="px-4 py-2.5 text-sm font-semibold text-muted-600 hover:text-muted-900 rounded-xl hover:bg-muted-100 transition-colors"
                 @click="showAddModal = false; producerSearch = ''; showProducerDropdown = false"
               >
-                Cancel
+                {{ $t('common.cancel') }}
               </button>
               <button
                 class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-secondary-500 rounded-xl hover:bg-secondary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 :disabled="!newAllocation.producerId"
                 @click="createAllocation"
               >
-                Confirm
+                {{ $t('common.confirm') }}
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
@@ -1129,7 +1135,7 @@ onMounted(() => {
           <div class="relative bg-white rounded-2xl w-full max-w-md shadow-xl">
             <!-- Header -->
             <div class="flex items-center justify-between px-6 py-5 border-b border-muted-100">
-              <h3 class="font-display font-bold text-xl text-muted-900">Add Wine</h3>
+              <h3 class="font-display font-bold text-xl text-muted-900">{{ $t('allocations.addWine') }}</h3>
               <button
                 class="p-1 text-muted-400 hover:text-muted-600 rounded-lg hover:bg-muted-100 transition-colors"
                 @click="showAddItemModal = false"
@@ -1143,16 +1149,16 @@ onMounted(() => {
             <!-- Body -->
             <div class="px-6 py-5 space-y-5">
               <div>
-                <label class="block text-sm font-medium text-muted-700 mb-2">Wine <span class="text-red-500">*</span></label>
+                <label class="block text-sm font-medium text-muted-700 mb-2">{{ $t('allocations.wine') }} <span class="text-red-500">*</span></label>
                 <div class="flex gap-2">
                   <select v-model="newItem.wineId" class="input flex-1">
-                    <option :value="null" disabled>Select a wine</option>
-                    <optgroup v-if="producerWines.length > 0" :label="selectedAllocation?.producerName + ' wines'">
+                    <option :value="null" disabled>{{ $t('allocations.selectWine') }}</option>
+                    <optgroup v-if="producerWines.length > 0" :label="selectedAllocation?.producerName + ' ' + $t('allocations.wines')">
                       <option v-for="w in producerWines" :key="w.id" :value="w.id">
                         {{ w.name }}
                       </option>
                     </optgroup>
-                    <optgroup v-if="otherWines.length > 0" label="Other wines">
+                    <optgroup v-if="otherWines.length > 0" :label="$t('allocations.otherWines')">
                       <option v-for="w in otherWines" :key="w.id" :value="w.id">
                         {{ w.producerName }} - {{ w.name }}
                       </option>
@@ -1161,7 +1167,7 @@ onMounted(() => {
                   <button
                     type="button"
                     class="px-2 text-primary-600 hover:text-primary-700 transition-transform hover:scale-105"
-                    title="Add new wine"
+                    :title="$t('allocations.addNewWine')"
                     @click="showAddWineModal = true"
                   >
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1172,11 +1178,11 @@ onMounted(() => {
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-medium text-muted-700 mb-2">Vintage</label>
+                  <label class="block text-sm font-medium text-muted-700 mb-2">{{ $t('inventory.vintage') }}</label>
                   <input v-model.number="newItem.vintage" type="number" min="1900" max="2100" class="input" placeholder="e.g. 2022">
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-muted-700 mb-2">Format</label>
+                  <label class="block text-sm font-medium text-muted-700 mb-2">{{ $t('inventory.format') }}</label>
                   <select v-model="newItem.formatId" class="input">
                     <option v-for="f in formats" :key="f.id" :value="f.id">
                       {{ f.name }}
@@ -1186,11 +1192,11 @@ onMounted(() => {
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-medium text-muted-700 mb-2">Quantity</label>
+                  <label class="block text-sm font-medium text-muted-700 mb-2">{{ $t('inventory.quantity') }}</label>
                   <input v-model.number="newItem.quantityClaimed" type="number" min="0" class="input" >
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-muted-700 mb-2">Price</label>
+                  <label class="block text-sm font-medium text-muted-700 mb-2">{{ $t('allocations.price') }}</label>
                   <div class="flex gap-2">
                     <input v-model="newItem.pricePerBottle" type="number" step="0.01" min="0" class="input flex-1" placeholder="0.00" >
                     <select v-model="newItem.currency" class="input w-20">
@@ -1208,14 +1214,14 @@ onMounted(() => {
                 class="px-4 py-2.5 text-sm font-semibold text-muted-600 hover:text-muted-900 rounded-xl hover:bg-muted-100 transition-colors"
                 @click="showAddItemModal = false"
               >
-                Cancel
+                {{ $t('common.cancel') }}
               </button>
               <button
                 class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-secondary-500 rounded-xl hover:bg-secondary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 :disabled="!newItem.wineId"
                 @click="addItem"
               >
-                Confirm
+                {{ $t('common.confirm') }}
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>

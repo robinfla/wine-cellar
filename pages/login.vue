@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { t } = useI18n()
+
 definePageMeta({
   layout: 'auth',
 })
@@ -26,7 +28,7 @@ async function handleSubmit() {
     await login(email.value, password.value)
     router.push('/')
   } catch (e: any) {
-    error.value = e.data?.message || 'Login failed. Please try again.'
+    error.value = e.data?.message || t('auth.loginFailed') // TODO: add i18n key for 'auth.loginFailed'
   } finally {
     isLoading.value = false
   }
@@ -41,7 +43,7 @@ async function handleSubmit() {
       </div>
 
       <div>
-        <label for="email" class="label">Email</label>
+        <label for="email" class="label">{{ $t('auth.email') }}</label>
         <input
           id="email"
           v-model="email"
@@ -54,7 +56,7 @@ async function handleSubmit() {
       </div>
 
       <div>
-        <label for="password" class="label">Password</label>
+        <label for="password" class="label">{{ $t('auth.password') }}</label>
         <input
           id="password"
           v-model="password"
@@ -62,7 +64,7 @@ async function handleSubmit() {
           required
           autocomplete="current-password"
           class="input"
-          placeholder="Enter your password"
+          :placeholder="$t('auth.passwordPlaceholder')"
         >
       </div>
 
@@ -81,14 +83,14 @@ async function handleSubmit() {
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
         </svg>
-        <span v-if="isLoading">Signing in...</span>
-        <span v-else>Sign in</span>
+        <span v-if="isLoading">{{ $t('auth.loggingIn') }}</span>
+        <span v-else>{{ $t('auth.signIn') }}</span>
       </button>
 
       <p class="text-center text-sm text-muted-foreground">
-        Have an invitation code?
+        {{ $t('auth.noAccount') }}
         <NuxtLink to="/register" class="text-primary font-semibold hover:underline">
-          Create account
+          {{ $t('auth.signUp') }}
         </NuxtLink>
       </p>
     </form>

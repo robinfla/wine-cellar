@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n()
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 
@@ -8,12 +9,12 @@ definePageMeta({
 
 // Steps
 const currentStep = ref(1)
-const steps = [
-  { id: 1, name: 'Upload' },
-  { id: 2, name: 'Map Columns' },
-  { id: 3, name: 'Preview' },
-  { id: 4, name: 'Import' },
-]
+const steps = computed(() => [
+  { id: 1, name: t('import.stepUpload') }, // TODO: add i18n key
+  { id: 2, name: t('import.stepMapColumns') }, // TODO: add i18n key
+  { id: 3, name: t('import.stepPreview') }, // TODO: add i18n key
+  { id: 4, name: t('import.stepImport') }, // TODO: add i18n key
+])
 
 // Step 1: File upload
 const rawData = ref<string[][]>([])
@@ -81,14 +82,14 @@ async function handleCellarsCreated() {
 const _dropdownFields = ['cellar', 'region', 'appellation', 'color', 'format', 'purchaseCurrency']
 
 // Color options for dropdown
-const colorOptions = [
-  { value: 'red', label: 'Red' },
-  { value: 'white', label: 'White' },
-  { value: 'rose', label: 'Rosé' },
-  { value: 'sparkling', label: 'Sparkling' },
-  { value: 'dessert', label: 'Dessert' },
-  { value: 'fortified', label: 'Fortified' },
-]
+const colorOptions = computed(() => [
+  { value: 'red', label: t('colors.red') },
+  { value: 'white', label: t('colors.white') },
+  { value: 'rose', label: t('colors.rose') },
+  { value: 'sparkling', label: t('colors.sparkling') },
+  { value: 'dessert', label: t('colors.dessert') },
+  { value: 'fortified', label: t('colors.fortified') },
+])
 
 // Format options - fetched from API
 const { data: formatsData } = await useFetch('/api/formats')
@@ -102,23 +103,23 @@ const optionalFields = [
   'purchaseDate', 'purchasePricePerBottle', 'purchaseCurrency', 'purchaseSource', 'notes',
 ]
 
-const fieldLabels: Record<string, string> = {
-  cellar: 'Cellar',
-  producer: 'Producer',
-  wineName: 'Wine Name',
-  color: 'Color',
-  region: 'Region',
-  appellation: 'Appellation',
-  grapes: 'Grapes',
-  vintage: 'Vintage',
-  format: 'Format',
-  quantity: 'Quantity',
-  purchaseDate: 'Purchase Date',
-  purchasePricePerBottle: 'Price per Bottle',
-  purchaseCurrency: 'Currency',
-  purchaseSource: 'Purchase Source',
-  notes: 'Notes',
-}
+const fieldLabels = computed<Record<string, string>>(() => ({
+  cellar: t('inventory.cellar'),
+  producer: t('inventory.producer'),
+  wineName: t('addWineModal.wineName'),
+  color: t('inventory.color'),
+  region: t('inventory.region'),
+  appellation: t('inventory.appellation'),
+  grapes: t('inventory.grapes'),
+  vintage: t('inventory.vintage'),
+  format: t('inventory.format'),
+  quantity: t('inventory.quantity'),
+  purchaseDate: t('inventory.purchaseDate'),
+  purchasePricePerBottle: t('inventory.pricePerBottle'),
+  purchaseCurrency: t('import.currency'), // TODO: add i18n key
+  purchaseSource: t('inventory.purchaseSource'),
+  notes: t('inventory.notes'),
+}))
 
 // Step 3: Validation
 const validatedRows = ref<any[]>([])
@@ -165,13 +166,13 @@ function parseExcelFile(file: File): Promise<{ headers: string[]; data: string[]
             data: jsonData.slice(1).map(row => row.map(cell => String(cell ?? ''))),
           })
         } else {
-          reject(new Error('Excel file appears to be empty'))
+          reject(new Error(t('import.excelEmpty'))) // TODO: add i18n key
         }
       } catch (err) {
         reject(err)
       }
     }
-    reader.onerror = () => reject(new Error('Failed to read file'))
+    reader.onerror = () => reject(new Error(t('import.failedReadFile'))) // TODO: add i18n key
     reader.readAsArrayBuffer(file)
   })
 }
@@ -191,11 +192,11 @@ function handleFileUpload(event: Event) {
         rawData.value = result.data
         autoMapColumns()
         currentStep.value = 2
-        showToast(`Loaded ${rawData.value.length} rows from ${file.name}`, 'success')
+        showToast(t('import.loadedRows', { count: rawData.value.length, file: file.name }), 'success') // TODO: add i18n key
       })
       .catch((error) => {
         console.error('Excel parse error:', error)
-        showToast(`Failed to parse Excel: ${error.message}`, 'error')
+        showToast(t('import.failedParseExcel', { message: error.message }), 'error') // TODO: add i18n key
       })
   } else {
     Papa.parse(file, {
@@ -205,14 +206,14 @@ function handleFileUpload(event: Event) {
           rawData.value = results.data.slice(1) as string[][]
           autoMapColumns()
           currentStep.value = 2
-          showToast(`Loaded ${rawData.value.length} rows from ${file.name}`, 'success')
+          showToast(t('import.loadedRows', { count: rawData.value.length, file: file.name }), 'success') // TODO: add i18n key
         } else {
-          showToast('CSV file appears to be empty', 'error')
+          showToast(t('import.csvEmpty'), 'error') // TODO: add i18n key
         }
       },
       error: (error) => {
         console.error('CSV parse error:', error)
-        showToast(`Failed to parse CSV: ${error.message}`, 'error')
+        showToast(t('import.failedParseCsv', { message: error.message }), 'error') // TODO: add i18n key
       },
     })
   }
@@ -348,23 +349,23 @@ async function validateData() {
       const isDuplicate = hashSet.has(importHash)
       
       if (isDuplicate) {
-        warnings.push('This row appears to be a duplicate of an existing entry')
+        warnings.push(t('import.duplicateWarning')) // TODO: add i18n key
       }
       
-      if (!row.cellar) errors.push('Cellar is required')
-      if (!row.producer) errors.push('Producer is required')
-      if (!row.wineName) errors.push('Wine name is required')
-      if (!row.color) errors.push('Color is required')
-      if (!row.quantity || Number(row.quantity) < 1) errors.push('Quantity must be at least 1')
+      if (!row.cellar) errors.push(t('import.cellarRequired')) // TODO: add i18n key
+      if (!row.producer) errors.push(t('import.producerRequired')) // TODO: add i18n key
+      if (!row.wineName) errors.push(t('import.wineNameRequired')) // TODO: add i18n key
+      if (!row.color) errors.push(t('import.colorRequired')) // TODO: add i18n key
+      if (!row.quantity || Number(row.quantity) < 1) errors.push(t('import.quantityRequired')) // TODO: add i18n key
       
       const cellar = refData.cellars.find((c: any) => c.name.toLowerCase() === row.cellar?.toLowerCase().trim())
       if (!cellar && row.cellar) {
-        errors.push(`Cellar "${row.cellar}" not found`)
+        errors.push(t('import.cellarNotFound', { name: row.cellar })) // TODO: add i18n key
       }
       
       const normalizedColor = normalizeColor(row.color)
       if (!normalizedColor && row.color) {
-        errors.push(`Invalid color "${row.color}"`)
+        errors.push(t('import.invalidColor', { color: row.color })) // TODO: add i18n key
       }
       
       let regionId: number | undefined
@@ -395,10 +396,10 @@ async function validateData() {
         if (standard) {
           formatId = standard.id
           if (row.format && row.format.toLowerCase() !== 'standard') {
-            warnings.push(`Format "${row.format}" not found, defaulting to Standard`)
+            warnings.push(t('import.formatNotFound', { format: row.format })) // TODO: add i18n key
           }
         } else {
-          errors.push('Could not resolve bottle format')
+          errors.push(t('import.formatResolveError')) // TODO: add i18n key
         }
       }
       
@@ -415,7 +416,7 @@ async function validateData() {
       if (row.vintage && row.vintage !== 'NV' && row.vintage !== 'nv' && row.vintage.toString().trim() !== '') {
         const v = Number(row.vintage)
         if (isNaN(v) || v < 1900 || v > 2100) {
-          warnings.push(`Invalid vintage "${row.vintage}", will be treated as NV`)
+          warnings.push(t('import.invalidVintage', { vintage: row.vintage })) // TODO: add i18n key
         } else {
           vintage = v
         }
@@ -500,17 +501,17 @@ async function executeImport() {
     }
     
     if (response.imported > 0) {
-      showToast(`Successfully imported ${response.imported} wines`, 'success')
+      showToast(t('import.importSuccess', { count: response.imported }), 'success') // TODO: add i18n key
     }
     if (response.errors.length > 0) {
-      showToast(`${response.errors.length} rows failed to import`, 'warning')
+      showToast(t('import.importRowsFailed', { count: response.errors.length }), 'warning') // TODO: add i18n key
     }
     
     currentStep.value = 4
   } catch (error: unknown) {
     const err = error as { data?: { message?: string }; message?: string }
     console.error('Import error:', error)
-    const errorMessage = err.data?.message || err.message || 'Import failed'
+    const errorMessage = err.data?.message || err.message || t('import.importFailed') // TODO: add i18n key
     showToast(errorMessage, 'error')
     importResult.value = {
       success: false,
@@ -559,9 +560,9 @@ function reset() {
 <template>
   <div>
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-muted-900">Import Wines</h1>
+      <h1 class="text-2xl font-bold text-muted-900">{{ $t('import.title') }}</h1>
       <p class="mt-1 text-sm text-muted-600">
-        Import your wine inventory from a CSV or Excel file
+        {{ $t('import.subtitle') }}
       </p>
     </div>
 
@@ -599,7 +600,7 @@ function reset() {
 
     <!-- Step 1: Upload -->
     <div v-if="currentStep === 1" class="card">
-      <h2 class="text-lg font-semibold text-muted-900 mb-4">Upload File</h2>
+      <h2 class="text-lg font-semibold text-muted-900 mb-4">{{ $t('import.uploadFile') }}</h2>
 
       <div class="border-2 border-dashed border-muted-300 rounded-lg p-8 text-center">
         <svg class="mx-auto h-12 w-12 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -607,7 +608,7 @@ function reset() {
         </svg>
         <div class="mt-4">
           <label class="cursor-pointer">
-            <span class="btn-primary">Select file</span>
+            <span class="btn-primary">{{ $t('import.selectFile') }}</span>
             <input
               type="file"
               accept=".csv,.xlsx,.xls"
@@ -617,25 +618,25 @@ function reset() {
           </label>
         </div>
         <p class="mt-2 text-sm text-muted-500">
-          CSV or Excel file (.xlsx, .xls) with headers in the first row
+          {{ $t('import.fileHint') }}
         </p>
       </div>
 
       <div class="mt-6 p-4 bg-muted-100 rounded-lg border-2 border-muted-200">
-        <h3 class="text-sm font-semibold text-muted-900 mb-2">Expected columns:</h3>
+        <h3 class="text-sm font-semibold text-muted-900 mb-2">{{ $t('import.expectedColumns') }}</h3>
         <div class="text-sm text-muted-600">
-          <p><strong>Required:</strong> cellar, producer, wine name, color, quantity</p>
-          <p><strong>Optional:</strong> region, appellation, grapes, vintage, format, purchase date, price, currency, source, notes</p>
+          <p><strong>{{ $t('import.required') }}:</strong> {{ $t('import.requiredColumns') }}</p>
+          <p><strong>{{ $t('import.optional') }}:</strong> {{ $t('import.optionalColumns') }}</p>
         </div>
       </div>
     </div>
 
     <!-- Step 2: Column Mapping -->
     <div v-if="currentStep === 2" class="card">
-      <h2 class="text-lg font-semibold text-muted-900 mb-4">Map Columns</h2>
+      <h2 class="text-lg font-semibold text-muted-900 mb-4">{{ $t('import.mapColumns') }}</h2>
       <p class="text-sm text-muted-600 mb-6">
-        Match your CSV columns to the wine fields, or set a manual default value for all rows.
-        <br >File: <strong>{{ fileName }}</strong> ({{ rawData.length }} rows)
+        {{ $t('import.mapColumnsDesc') }}
+        <br >{{ $t('import.file') }}: <strong>{{ fileName }}</strong> ({{ $t('import.rowCount', { count: rawData.length }) }})
       </p>
 
       <div class="space-y-4">
@@ -646,7 +647,7 @@ function reset() {
             </label>
             <div class="flex gap-2">
               <select v-model="columnMapping[field]" class="input flex-1">
-                <option value="">-- Select column --</option>
+                <option value="">{{ $t('import.selectColumn') }}</option>
                 <option v-for="header in headers" :key="header" :value="header">
                   {{ header }}
                 </option>
@@ -659,7 +660,7 @@ function reset() {
                   v-model="manualDefaults[field]"
                   class="input flex-1"
                 >
-                  <option :value="null">-- Set default --</option>
+                  <option :value="null">{{ $t('import.setDefault') }}</option>
                   <option v-for="c in cellarsData" :key="c.id" :value="c.id">
                     {{ c.name }}
                   </option>
@@ -670,7 +671,7 @@ function reset() {
                   v-model="manualDefaults[field]"
                   class="input flex-1"
                 >
-                  <option value="">-- Set default --</option>
+                  <option value="">{{ $t('import.setDefault') }}</option>
                   <option v-for="opt in colorOptions" :key="opt.value" :value="opt.value">
                     {{ opt.label }}
                   </option>
@@ -682,7 +683,7 @@ function reset() {
                   type="number"
                   min="0"
                   class="input flex-1"
-                  placeholder="Default qty"
+                  :placeholder="$t('import.defaultQty')"
                 >
                 <!-- Text input for other fields -->
                 <input
@@ -690,26 +691,26 @@ function reset() {
                   v-model="manualDefaults[field]"
                   type="text"
                   class="input flex-1"
-                  placeholder="Default value"
+                  :placeholder="$t('import.defaultValue')"
                 >
               </template>
             </div>
             <p v-if="!columnMapping[field] && manualDefaults[field]" class="mt-1 text-xs text-secondary-600">
-              Using default for all rows
+              {{ $t('import.usingDefault') }}
             </p>
           </div>
         </div>
 
         <details class="mt-6" open>
           <summary class="cursor-pointer text-sm font-semibold text-muted-700">
-            Optional fields
+            {{ $t('import.optionalFields') }}
           </summary>
           <div class="mt-4 grid gap-4 sm:grid-cols-2">
             <div v-for="field in optionalFields" :key="field">
               <label class="label">{{ fieldLabels[field] }}</label>
               <div class="flex gap-2">
                 <select v-model="columnMapping[field]" class="input flex-1">
-                  <option value="">-- Not mapped --</option>
+                  <option value="">{{ $t('import.notMapped') }}</option>
                   <option v-for="header in headers" :key="header" :value="header">
                     {{ header }}
                   </option>
@@ -722,7 +723,7 @@ function reset() {
                     v-model="manualDefaults[field]"
                     class="input flex-1"
                   >
-                    <option :value="null">-- Set default --</option>
+                    <option :value="null">{{ $t('import.setDefault') }}</option>
                     <option v-for="r in regionsData" :key="r.id" :value="r.id">
                       {{ r.name }}
                     </option>
@@ -733,7 +734,7 @@ function reset() {
                     v-model="manualDefaults[field]"
                     class="input flex-1"
                   >
-                    <option :value="null">-- Set default --</option>
+                    <option :value="null">{{ $t('import.setDefault') }}</option>
                     <option v-for="a in appellationsData" :key="a.id" :value="a.id">
                       {{ a.name }}
                     </option>
@@ -744,7 +745,7 @@ function reset() {
                     v-model="manualDefaults[field]"
                     class="input flex-1"
                   >
-                    <option :value="null">-- Set default --</option>
+                    <option :value="null">{{ $t('import.setDefault') }}</option>
                     <option v-for="f in formatsData" :key="f.id" :value="f.id">
                       {{ f.name }} ({{ f.volumeMl }}ml)
                     </option>
@@ -767,7 +768,7 @@ function reset() {
                     min="1900"
                     max="2100"
                     class="input flex-1"
-                    placeholder="Default vintage"
+                    :placeholder="$t('import.defaultVintage')"
                   >
                   <!-- Price input -->
                   <input
@@ -777,7 +778,7 @@ function reset() {
                     min="0"
                     step="0.01"
                     class="input flex-1"
-                    placeholder="Default price"
+                    :placeholder="$t('import.defaultPrice')"
                   >
                   <!-- Date input -->
                   <input
@@ -792,12 +793,12 @@ function reset() {
                     v-model="manualDefaults[field]"
                     type="text"
                     class="input flex-1"
-                    placeholder="Default value"
-                  >
-                </template>
-              </div>
+                  :placeholder="$t('import.defaultValue')"
+                >
+              </template>
+            </div>
               <p v-if="!columnMapping[field] && manualDefaults[field]" class="mt-1 text-xs text-secondary-600">
-                Using default for all rows
+                {{ $t('import.usingDefault') }}
               </p>
             </div>
           </div>
@@ -807,7 +808,7 @@ function reset() {
       <!-- Progress bar during validation -->
       <div v-if="isValidating" class="mt-6 p-4 bg-primary-50 rounded-lg border-2 border-primary-200">
         <div class="flex justify-between text-sm font-medium text-primary-700 mb-2">
-          <span>Validating rows...</span>
+          <span>{{ $t('import.validatingRows') }}</span>
           <span>{{ validationProgress.current }} / {{ validationProgress.total }}</span>
         </div>
         <div class="w-full bg-primary-200 rounded-full h-3">
@@ -820,7 +821,7 @@ function reset() {
 
       <div class="mt-6 flex justify-between">
         <button type="button" class="btn-secondary" :disabled="isValidating" @click="currentStep = 1">
-          Back
+          {{ $t('import.back') }}
         </button>
         <button
           type="button"
@@ -828,32 +829,32 @@ function reset() {
           :disabled="!mappingValid || isValidating"
           @click="validateData"
         >
-          {{ isValidating ? 'Validating...' : 'Validate & Preview' }}
+          {{ isValidating ? $t('import.validating') : $t('import.validatePreview') }}
         </button>
       </div>
     </div>
 
     <!-- Step 3: Preview -->
     <div v-if="currentStep === 3" class="card">
-      <h2 class="text-lg font-semibold text-muted-900 mb-4">Preview & Validate</h2>
+      <h2 class="text-lg font-semibold text-muted-900 mb-4">{{ $t('import.previewValidate') }}</h2>
 
       <!-- Summary -->
       <div v-if="validationSummary" class="grid gap-4 sm:grid-cols-4 mb-6">
         <div class="p-3 bg-muted-100 rounded-lg border-2 border-muted-200">
           <p class="text-2xl font-bold text-muted-900">{{ validationSummary.totalBottles }}</p>
-          <p class="text-sm font-semibold text-muted-600">Total bottles</p>
+          <p class="text-sm font-semibold text-muted-600">{{ $t('import.totalBottles') }}</p>
         </div>
         <div class="p-3 bg-secondary-50 rounded-lg border-2 border-secondary-200">
           <p class="text-2xl font-bold text-secondary-700">{{ validationSummary.valid }}</p>
-          <p class="text-sm font-semibold text-secondary-600">Valid rows</p>
+          <p class="text-sm font-semibold text-secondary-600">{{ $t('import.validRows') }}</p>
         </div>
         <div class="p-3 bg-red-50 rounded-lg border-2 border-red-200">
           <p class="text-2xl font-bold text-red-700">{{ validationSummary.invalid }}</p>
-          <p class="text-sm font-semibold text-red-600">Invalid rows</p>
+          <p class="text-sm font-semibold text-red-600">{{ $t('import.invalidRows') }}</p>
         </div>
         <div class="p-3 bg-accent-50 rounded-lg border-2 border-accent-200">
           <p class="text-2xl font-bold text-accent-700">{{ validationSummary.duplicates }}</p>
-          <p class="text-sm font-semibold text-accent-600">Duplicates</p>
+          <p class="text-sm font-semibold text-accent-600">{{ $t('import.duplicates') }}</p>
         </div>
       </div>
 
@@ -865,7 +866,7 @@ function reset() {
             type="checkbox"
             class="w-4 h-4 text-primary border-2 border-muted-300 rounded focus:ring-primary focus:ring-offset-2"
           >
-          <span class="ml-2 text-sm font-medium text-muted-700">Skip duplicate entries</span>
+          <span class="ml-2 text-sm font-medium text-muted-700">{{ $t('import.skipDuplicates') }}</span>
         </label>
       </div>
 
@@ -874,13 +875,13 @@ function reset() {
         <table class="min-w-full divide-y divide-muted-200 text-sm">
           <thead class="bg-muted-100 sticky top-0">
             <tr>
-              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">Row</th>
-              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">Status</th>
-              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">Wine</th>
-              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">Producer</th>
-              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">Vintage</th>
-              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">Qty</th>
-              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">Issues</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">{{ $t('import.row') }}</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">{{ $t('import.status') }}</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">{{ $t('import.wine') }}</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">{{ $t('inventory.producer') }}</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">{{ $t('inventory.vintage') }}</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">{{ $t('import.qty') }}</th>
+              <th class="px-3 py-2 text-left text-xs font-bold text-muted-600 uppercase">{{ $t('import.issues') }}</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-muted-200">
@@ -895,24 +896,24 @@ function reset() {
                   v-if="!row.isValid"
                   class="px-2 py-0.5 text-xs font-semibold rounded bg-red-100 text-red-700"
                 >
-                  Invalid
+                  {{ $t('import.invalid') }}
                 </span>
                 <span
                   v-else-if="row.isDuplicate"
                   class="px-2 py-0.5 text-xs font-semibold rounded bg-accent-100 text-accent-700"
                 >
-                  Duplicate
+                  {{ $t('import.duplicate') }}
                 </span>
                 <span
                   v-else
                   class="px-2 py-0.5 text-xs font-semibold rounded bg-secondary-100 text-secondary-700"
                 >
-                  OK
+                  {{ $t('import.ok') }}
                 </span>
               </td>
               <td class="px-3 py-2">{{ row.wineName }}</td>
               <td class="px-3 py-2">{{ row.producer }}</td>
-              <td class="px-3 py-2">{{ row.vintage || 'NV' }}</td>
+              <td class="px-3 py-2">{{ row.vintage || $t('common.nv') }}</td>
               <td class="px-3 py-2">{{ row.quantity }}</td>
               <td class="px-3 py-2 text-xs">
                 <span v-if="row.errors.length" class="text-red-600 font-medium">{{ row.errors.join(', ') }}</span>
@@ -926,7 +927,7 @@ function reset() {
       <!-- Progress bar during import -->
       <div v-if="isImporting" class="mt-6 p-4 bg-primary-50 rounded-lg border-2 border-primary-200">
         <div class="flex justify-between text-sm font-medium text-primary-700 mb-2">
-          <span>Importing wines...</span>
+          <span>{{ $t('import.importingWines') }}</span>
           <span>{{ importProgress.current }} / {{ importProgress.total }}</span>
         </div>
         <div class="w-full bg-primary-200 rounded-full h-3">
@@ -936,15 +937,15 @@ function reset() {
           />
         </div>
         <div class="mt-2 flex gap-4 text-xs text-primary-600">
-          <span>Imported: {{ importProgress.imported }}</span>
-          <span>Skipped: {{ importProgress.skipped }}</span>
-          <span v-if="importProgress.errors.length">Errors: {{ importProgress.errors.length }}</span>
+          <span>{{ $t('import.imported') }}: {{ importProgress.imported }}</span>
+          <span>{{ $t('import.skipped') }}: {{ importProgress.skipped }}</span>
+          <span v-if="importProgress.errors.length">{{ $t('import.errors') }}: {{ importProgress.errors.length }}</span>
         </div>
       </div>
 
       <div class="mt-6 flex justify-between">
         <button type="button" class="btn-secondary" :disabled="isImporting" @click="currentStep = 2">
-          Back
+          {{ $t('import.back') }}
         </button>
         <button
           type="button"
@@ -952,7 +953,7 @@ function reset() {
           :disabled="validationSummary?.valid === 0 || isImporting"
           @click="executeImport"
         >
-          {{ isImporting ? 'Importing...' : `Import ${validationSummary?.valid || 0} wines` }}
+          {{ isImporting ? $t('import.importing') : $t('import.importCount', { count: validationSummary?.valid || 0 }) }}
         </button>
       </div>
     </div>
@@ -963,11 +964,11 @@ function reset() {
         <svg class="mx-auto h-16 w-16 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <h2 class="mt-4 text-xl font-bold text-muted-900">Import Complete!</h2>
+        <h2 class="mt-4 text-xl font-bold text-muted-900">{{ $t('import.importComplete') }}</h2>
         <p class="mt-2 text-muted-600">
-          Successfully imported <strong>{{ importResult.imported }}</strong> wines.
+          {{ $t('import.importedWines', { count: importResult.imported }) }}
           <span v-if="importResult.skipped > 0">
-            Skipped {{ importResult.skipped }} duplicates.
+            {{ $t('import.skippedDuplicates', { count: importResult.skipped }) }}
           </span>
         </p>
       </div>
@@ -975,18 +976,18 @@ function reset() {
         <svg class="mx-auto h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <h2 class="mt-4 text-xl font-bold text-muted-900">Import Failed</h2>
+        <h2 class="mt-4 text-xl font-bold text-muted-900">{{ $t('import.importFailed') }}</h2>
         <p class="mt-2 text-muted-600">
-          {{ importResult?.errors?.[0]?.message || 'An error occurred during import.' }}
+          {{ importResult?.errors?.[0]?.message || $t('import.errorOccurred') }}
         </p>
       </div>
 
       <div class="mt-8 flex justify-center gap-4">
         <NuxtLink to="/inventory" class="btn-primary">
-          View Inventory
+          {{ $t('import.viewInventory') }}
         </NuxtLink>
         <button type="button" class="btn-secondary" @click="reset">
-          Import More
+          {{ $t('import.importMore') }}
         </button>
       </div>
     </div>

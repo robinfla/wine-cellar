@@ -412,9 +412,9 @@ onMounted(() => {
 <template>
   <div class="max-w-6xl mx-auto py-8 px-4">
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-display font-bold">Admin Dashboard</h1>
+      <h1 class="text-2xl font-display font-bold">{{ $t('admin.dashboard') }}</h1><!-- TODO: add i18n key -->
       <NuxtLink to="/profile" class="btn-secondary text-sm">
-        Back to Profile
+        {{ $t('admin.backToProfile') }}<!-- TODO: add i18n key -->
       </NuxtLink>
     </div>
 
@@ -435,20 +435,20 @@ onMounted(() => {
 
     <!-- Users Tab -->
     <section v-if="activeTab === 'users'" class="card">
-      <h2 class="text-lg font-semibold mb-4">Users ({{ users.length }})</h2>
+      <h2 class="text-lg font-semibold mb-4">{{ $t('admin.users') }} ({{ users.length }})</h2><!-- TODO: add i18n key -->
 
       <div v-if="isLoadingUsers" class="text-muted-500 py-8 text-center">
-        Loading users...
+        {{ $t('admin.loadingUsers') }}...<!-- TODO: add i18n key -->
       </div>
 
       <div v-else class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b-2 border-muted-200">
-              <th class="text-left py-2 px-3 font-semibold">Email</th>
-              <th class="text-left py-2 px-3 font-semibold">Name</th>
-              <th class="text-left py-2 px-3 font-semibold">Role</th>
-              <th class="text-left py-2 px-3 font-semibold">Joined</th>
+              <th class="text-left py-2 px-3 font-semibold">{{ $t('auth.email') }}</th>
+              <th class="text-left py-2 px-3 font-semibold">{{ $t('auth.name') }}</th>
+              <th class="text-left py-2 px-3 font-semibold">{{ $t('admin.role') }}</th><!-- TODO: add i18n key -->
+              <th class="text-left py-2 px-3 font-semibold">{{ $t('admin.joined') }}</th><!-- TODO: add i18n key -->
             </tr>
           </thead>
           <tbody>
@@ -460,7 +460,7 @@ onMounted(() => {
                   class="px-2 py-0.5 rounded text-xs font-semibold"
                   :class="u.isAdmin ? 'bg-primary-100 text-primary-700' : 'bg-muted-100 text-muted-700'"
                 >
-                  {{ u.isAdmin ? 'Admin' : 'User' }}
+                  {{ u.isAdmin ? $t('admin.admin') : $t('admin.user') }}<!-- TODO: add i18n key -->
                 </span>
               </td>
               <td class="py-2 px-3 text-muted-600">{{ formatDate(u.createdAt) }}</td>
@@ -473,36 +473,36 @@ onMounted(() => {
     <!-- Invitations Tab -->
     <section v-if="activeTab === 'invitations'" class="card">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">Invitations ({{ invitations.length }})</h2>
+        <h2 class="text-lg font-semibold">{{ $t('admin.invitations') }} ({{ invitations.length }})</h2><!-- TODO: add i18n key -->
         <button class="btn-primary text-sm" @click="showCreateModal = true">
-          Create Invitation
+          {{ $t('admin.createInvitation') }}<!-- TODO: add i18n key -->
         </button>
       </div>
 
       <div v-if="isLoadingInvitations" class="text-muted-500 py-8 text-center">
-        Loading invitations...
+        {{ $t('admin.loadingInvitations') }}...<!-- TODO: add i18n key -->
       </div>
 
       <div v-else-if="invitations.length === 0" class="text-muted-500 py-8 text-center">
-        No invitations yet. Create one to invite users.
+        {{ $t('admin.noInvitations') }}<!-- TODO: add i18n key -->
       </div>
 
       <div v-else class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b-2 border-muted-200">
-              <th class="text-left py-2 px-3 font-semibold">Code</th>
-              <th class="text-left py-2 px-3 font-semibold">Email Restriction</th>
-              <th class="text-left py-2 px-3 font-semibold">Status</th>
-              <th class="text-left py-2 px-3 font-semibold">Used By</th>
-              <th class="text-left py-2 px-3 font-semibold">Expires</th>
-              <th class="text-left py-2 px-3 font-semibold">Actions</th>
+              <th class="text-left py-2 px-3 font-semibold">{{ $t('admin.code') }}</th><!-- TODO: add i18n key -->
+              <th class="text-left py-2 px-3 font-semibold">{{ $t('admin.emailRestriction') }}</th><!-- TODO: add i18n key -->
+              <th class="text-left py-2 px-3 font-semibold">{{ $t('allocations.status') }}</th><!-- TODO: add i18n key -->
+              <th class="text-left py-2 px-3 font-semibold">{{ $t('admin.usedBy') }}</th><!-- TODO: add i18n key -->
+              <th class="text-left py-2 px-3 font-semibold">{{ $t('admin.expires') }}</th><!-- TODO: add i18n key -->
+              <th class="text-left py-2 px-3 font-semibold">{{ $t('admin.actions') }}</th><!-- TODO: add i18n key -->
             </tr>
           </thead>
           <tbody>
             <tr v-for="inv in invitations" :key="inv.id" class="border-b border-muted-100">
               <td class="py-2 px-3 font-mono">{{ inv.code }}</td>
-              <td class="py-2 px-3">{{ inv.email || 'Anyone' }}</td>
+              <td class="py-2 px-3">{{ inv.email || $t('admin.anyone') }}</td><!-- TODO: add i18n key -->
               <td class="py-2 px-3">
                 <span
                   class="px-2 py-0.5 rounded text-xs font-semibold"
@@ -518,17 +518,17 @@ onMounted(() => {
                   <button
                     v-if="!inv.usedAt"
                     class="text-primary hover:text-primary-700 font-semibold text-xs"
-                    title="Copy invite link"
+                    :title="$t('admin.copyInviteLink')"
                     @click="copyInviteLink(inv.code)"
-                  >
-                    Copy Link
+                  ><!-- TODO: add i18n key -->
+                    {{ $t('admin.copyLink') }}<!-- TODO: add i18n key -->
                   </button>
                   <button
                     v-if="!inv.usedAt"
                     class="text-red-600 hover:text-red-700 font-semibold text-xs"
                     @click="deleteInvitation(inv.id)"
                   >
-                    Delete
+                    {{ $t('common.delete') }}
                   </button>
                 </div>
               </td>
