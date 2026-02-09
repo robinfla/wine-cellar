@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const { user, logout } = useAuth()
-const { t, locale } = useI18n()
+const { t, locale } = useI18n({ useScope: 'global' })
 const route = useRoute()
 
 const navigation = computed(() => [

@@ -13,13 +13,13 @@ export default defineNuxtConfig({
 
   i18n: {
     restructureDir: '',
-    locales: [
-      { code: 'en', name: 'English', file: 'en.json' },
-      { code: 'fr', name: 'Francais', file: 'fr.json' },
-    ],
-    defaultLocale: 'en',
     langDir: 'locales',
+    defaultLocale: 'en',
     strategy: 'no_prefix',
+    locales: [
+      { code: 'en', file: 'en.json', name: 'English' },
+      { code: 'fr', file: 'fr.json', name: 'French' },
+    ],
     detectBrowserLanguage: {
       useCookie: true,
       cookieKey: 'i18n_locale',

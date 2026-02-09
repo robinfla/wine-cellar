@@ -28,7 +28,7 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 
 const rows = ref(props.modelValue?.rows || 5)
 const columns = ref(props.modelValue?.columns || 6)

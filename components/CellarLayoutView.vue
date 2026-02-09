@@ -33,7 +33,7 @@ const props = withDefaults(defineProps<Props>(), {
   selectedPositions: () => [],
 })
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 
 const selectedPositionsSet = computed(() => new Set(props.selectedPositions))
 

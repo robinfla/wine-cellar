@@ -3,7 +3,7 @@ definePageMeta({
   middleware: 'auth',
 })
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 const route = useRoute()
 
 // Filter state

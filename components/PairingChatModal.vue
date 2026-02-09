@@ -7,7 +7,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 
 interface ChatMessage {
   role: 'user' | 'assistant'

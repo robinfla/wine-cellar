@@ -3,7 +3,7 @@ definePageMeta({
   middleware: 'auth',
 })
 
-const { t } = useI18n()
+const { t } = useI18n({ useScope: 'global' })
 const { user, isAdmin, fetchUser } = useAuth()
 
 const name = ref(user.value?.name || '')
