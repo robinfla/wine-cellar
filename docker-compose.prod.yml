@@ -1,0 +1,22 @@
+services:
+  app:
+    build: .
+    container_name: wine-cellar
+    expose:
+      - "3000"
+    env_file:
+      - .env.production
+    networks:
+      - coolify
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.wine-cellar.rule=Host(`${APP_DOMAIN:-nogog88s04g408c0ksocgkkk.46.225.12.54.sslip.io}`)
+      - traefik.http.routers.wine-cellar.entrypoints=http
+      - traefik.http.services.wine-cellar.loadbalancer.server.port=3000
+      - traefik.http.middlewares.gzip.compress=true
+      - traefik.http.routers.wine-cellar.middlewares=gzip
+
+networks:
+  coolify:
+    external: true
