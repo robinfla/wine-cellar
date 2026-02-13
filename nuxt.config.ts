@@ -30,6 +30,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     databaseUrl: process.env.DATABASE_URL || 'postgresql://wine:password@localhost:5432/wine_cellar',
     sessionSecret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
+    openaiApiKey: process.env.OPENAI_API_KEY || '',
   },
 
   tailwindcss: {

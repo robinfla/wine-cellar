@@ -171,13 +171,11 @@ const handleAiAdd = async () => {
   try {
     const result = await $fetch('/api/wines/parse', {
       method: 'POST',
-      body: { description: aiInput.value },
+      body: { text: aiInput.value },
     })
-    if (result?.wineId) {
-      navigateTo(`/inventory/add?wineId=${result.wineId}`)
-    } else if (result?.parsed) {
+    if (result?.parsed) {
       const params = new URLSearchParams()
-      if (result.parsed.name) params.set('name', result.parsed.name)
+      if (result.parsed.wineName) params.set('name', result.parsed.wineName)
       if (result.parsed.producer) params.set('producer', result.parsed.producer)
       if (result.parsed.vintage) params.set('vintage', String(result.parsed.vintage))
       if (result.parsed.color) params.set('color', result.parsed.color)
