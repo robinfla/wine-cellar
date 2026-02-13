@@ -11,11 +11,17 @@ services:
     restart: unless-stopped
     labels:
       - traefik.enable=true
-      - traefik.http.routers.wine-cellar.rule=Host(`${APP_DOMAIN:-nogog88s04g408c0ksocgkkk.46.225.12.54.sslip.io}`)
+      - traefik.http.routers.wine-cellar.rule=Host(`cellar.zubi.wine`)
       - traefik.http.routers.wine-cellar.entrypoints=http
+      - traefik.http.routers.wine-cellar-secure.rule=Host(`cellar.zubi.wine`)
+      - traefik.http.routers.wine-cellar-secure.entrypoints=https
+      - traefik.http.routers.wine-cellar-secure.tls=true
+      - traefik.http.routers.wine-cellar-secure.tls.certresolver=letsencrypt
+      - traefik.http.routers.wine-cellar.middlewares=redirect-to-https
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
       - traefik.http.services.wine-cellar.loadbalancer.server.port=3000
       - traefik.http.middlewares.gzip.compress=true
-      - traefik.http.routers.wine-cellar.middlewares=gzip
+      - traefik.http.routers.wine-cellar-secure.middlewares=gzip
 
 networks:
   coolify:
