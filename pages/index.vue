@@ -161,33 +161,29 @@ onUnmounted(() => {
 })
 
 const aiInput = ref('')
-const aiParsing = ref(false)
-const aiError = ref('')
+const showAiSearchModal = ref(false)
+const showAddWineModal = ref(false)
 
-const handleAiAdd = async () => {
+const handleAiAdd = () => {
   if (!aiInput.value.trim()) return
-  aiParsing.value = true
-  aiError.value = ''
-  try {
-    const result = await $fetch('/api/wines/parse', {
-      method: 'POST',
-      body: { text: aiInput.value },
-    })
-    if (result?.parsed) {
-      const params = new URLSearchParams()
-      if (result.parsed.wineName) params.set('name', result.parsed.wineName)
-      if (result.parsed.producer) params.set('producer', result.parsed.producer)
-      if (result.parsed.vintage) params.set('vintage', String(result.parsed.vintage))
-      if (result.parsed.color) params.set('color', result.parsed.color)
-      if (result.parsed.region) params.set('region', result.parsed.region)
-      if (result.parsed.appellation) params.set('appellation', result.parsed.appellation)
-      navigateTo(`/inventory/add?${params.toString()}`)
-    }
-  } catch (e: any) {
-    aiError.value = e?.data?.message || t('home.aiParseFailed')
-  } finally {
-    aiParsing.value = false
-  }
+  showAiSearchModal.value = true
+}
+
+const handleAiAddNew = (parsed: any) => {
+  const params = new URLSearchParams()
+  if (parsed.wineName) params.set('name', parsed.wineName)
+  if (parsed.producer) params.set('producer', parsed.producer)
+  if (parsed.vintage) params.set('vintage', String(parsed.vintage))
+  if (parsed.color) params.set('color', parsed.color)
+  if (parsed.region) params.set('region', parsed.region)
+  if (parsed.appellation) params.set('appellation', parsed.appellation)
+  navigateTo(`/inventory/add?${params.toString()}`)
+  aiInput.value = ''
+}
+
+const handleAiAddExisting = (_wineId: number) => {
+  refreshStats()
+  aiInput.value = ''
 }
 
 const getColorLabel = (color: string) => {
@@ -334,14 +330,13 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
 
     <!-- Dashboard content -->
     <template v-else>
-      <!-- Consume Wine CTA -->
-      <div class="card mb-8 p-6 bg-gradient-to-r from-primary-50 to-secondary-50 border-primary-200">
-        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div class="flex-1">
-            <h2 class="text-lg font-bold text-muted-900">{{ $t('home.openBottle') }}</h2>
-            <p class="mt-1 text-sm text-muted-600">{{ $t('home.openBottleDesc') }}</p>
-          </div>
-          <div class="relative w-full sm:w-80">
+      <!-- CTA Cards -->
+      <div class="grid gap-4 mb-8 sm:grid-cols-2">
+        <!-- Open a Bottle CTA -->
+        <div class="card p-6 bg-gradient-to-r from-primary-50 to-secondary-50 border-primary-200">
+          <h2 class="text-lg font-bold text-muted-900">{{ $t('home.openBottle') }}</h2>
+          <p class="mt-1 text-sm text-muted-600">{{ $t('home.openBottleDesc') }}</p>
+          <div class="relative mt-4">
             <div class="relative">
               <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -399,39 +394,30 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
             </Transition>
           </div>
         </div>
-      </div>
 
-      <!-- Add a Wine CTA -->
-      <div class="card mb-8 p-6 bg-gradient-to-r from-secondary-50 to-accent-50 border-secondary-200">
-        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div class="flex-1">
-            <h2 class="text-lg font-bold text-muted-900">{{ $t('home.addAWine') }}</h2>
-            <p class="mt-1 text-sm text-muted-600">{{ $t('home.addAWineDesc') }}</p>
-          </div>
-          <div class="flex items-center gap-2 w-full sm:w-auto">
-            <div class="relative flex-1 sm:w-72">
+        <!-- Add a Wine CTA -->
+        <div class="card p-6 bg-gradient-to-r from-secondary-50 to-accent-50 border-secondary-200">
+          <h2 class="text-lg font-bold text-muted-900">{{ $t('home.addAWine') }}</h2>
+          <p class="mt-1 text-sm text-muted-600">{{ $t('home.addAWineDesc') }}</p>
+          <div class="relative mt-4">
+            <div class="relative">
+              <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
               <input
                 v-model="aiInput"
                 type="text"
-                :placeholder="$t('home.aiPlaceholder')"
-                class="input pr-4"
+                placeholder="Describe your wine... e.g. Chateau Margaux 2015 red"
+                class="input pl-10 pr-4"
                 @keydown.enter="handleAiAdd"
               />
             </div>
-            <button
-              type="button"
-              class="btn-primary whitespace-nowrap"
-              :disabled="aiParsing || !aiInput.trim()"
-              @click="handleAiAdd"
-            >
-              {{ aiParsing ? $t('home.parsing') : $t('home.addWithAi') }}
-            </button>
-            <NuxtLink to="/inventory/add" class="btn-secondary whitespace-nowrap">
-              {{ $t('home.manualInput') }}
-            </NuxtLink>
+            <p class="mt-2 text-xs text-muted-400">
+              <!-- TODO: i18n key home.orManualInput -->
+              Or <NuxtLink to="/inventory/add" class="text-primary-600 hover:text-primary-700 font-medium">add manually</NuxtLink>
+            </p>
           </div>
         </div>
-        <p v-if="aiError" class="mt-2 text-sm text-red-600">{{ aiError }}</p>
       </div>
 
       <!-- Stats grid -->
@@ -558,6 +544,20 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
          </button>
       </div>
     </template>
+
+    <!-- AI Wine Search Modal -->
+    <AiWineSearchModal
+      v-model="showAiSearchModal"
+      :initial-query="aiInput"
+      @add-new="handleAiAddNew"
+      @add-existing="handleWineAdded"
+    />
+
+    <!-- Add Wine Modal (for manual/prefilled add) -->
+    <AddWineModal
+      v-model="showAddWineModal"
+      @success="handleWineAdded"
+    />
 
     <!-- Consume Wine Modal -->
     <Teleport to="body">
@@ -732,5 +732,13 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
         </div>
       </Transition>
     </Teleport>
+
+    <!-- AI Wine Search Modal -->
+    <AiWineSearchModal
+      v-model="showAiSearchModal"
+      :search-text="aiInput"
+      @add-existing="handleAiAddExisting"
+      @add-new="handleAiAddNew"
+    />
   </div>
 </template>
