@@ -114,6 +114,37 @@ const formatTime = (date: string | Date | null) => {
 const totalPages = computed(() => Math.ceil((eventsData.value?.total || 0) / limit))
 const canPrev = computed(() => page.value > 1)
 const canNext = computed(() => page.value < totalPages.value)
+
+// Group events by month
+const formatMonthKey = (date: string | Date | null) => {
+  if (!date) return 'unknown'
+  const d = new Date(date)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+const formatMonthLabel = (key: string) => {
+  if (key === 'unknown') return 'Unknown'
+  const [year, month] = key.split('-')
+  const d = new Date(Number(year), Number(month) - 1)
+  return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+}
+
+const groupedEvents = computed(() => {
+  const events = eventsData.value?.events || []
+  const groups: { key: string; label: string; events: typeof events }[] = []
+  let currentKey = ''
+
+  for (const evt of events) {
+    const key = formatMonthKey(evt.eventDate)
+    if (key !== currentKey) {
+      currentKey = key
+      groups.push({ key, label: formatMonthLabel(key), events: [] })
+    }
+    groups[groups.length - 1].events.push(evt)
+  }
+
+  return groups
+})
 </script>
 
 <template>
@@ -156,56 +187,68 @@ const canNext = computed(() => page.value < totalPages.value)
       </p>
     </div>
 
-    <!-- Events list -->
-    <div v-else class="space-y-2">
-      <div
-        v-for="evt in eventsData.events"
-        :key="evt.id"
-        class="flex items-center gap-4 px-4 py-3 bg-white border border-muted-200 rounded-lg hover:border-muted-300 transition-colors"
-      >
-        <!-- Color dot -->
-        <span
-          class="w-3 h-3 rounded-full flex-shrink-0"
-          :class="getColorDot(evt.wineColor)"
-        />
-
-        <!-- Wine info -->
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-semibold text-muted-900 truncate">{{ evt.wineName }}</span>
-            <span v-if="evt.vintage" class="text-xs text-muted-500">{{ evt.vintage }}</span>
-          </div>
-          <div class="text-xs text-muted-500 truncate">
-            {{ evt.producerName }} · {{ evt.cellarName }}
-          </div>
-          <div v-if="evt.notes" class="text-xs text-muted-400 mt-0.5 truncate">
-            {{ evt.notes }}
-          </div>
-        </div>
-
-        <!-- Quantity change -->
-        <div class="flex-shrink-0 text-right">
-          <span
-            class="text-sm font-bold"
-            :class="getQuantityClasses(evt.quantityChange)"
+    <!-- Events list grouped by month -->
+    <div v-else class="space-y-6">
+      <div v-for="group in groupedEvents" :key="group.key">
+        <!-- Month subheader -->
+        <h2 class="text-sm font-bold text-muted-700 uppercase tracking-wide mb-2 px-1">
+          {{ group.label }}
+        </h2>
+        <div class="space-y-2">
+          <div
+            v-for="evt in group.events"
+            :key="evt.id"
+            class="flex items-start sm:items-center gap-3 sm:gap-4 px-4 py-3 bg-white border border-muted-200 rounded-lg hover:border-muted-300 transition-colors"
           >
-            {{ getQuantityPrefix(evt.quantityChange) }}{{ evt.quantityChange }}
-          </span>
-          <span class="text-xs text-muted-400 ml-1">{{ $t('common.btl') }}</span>
-        </div>
+            <!-- Color dot -->
+            <span
+              class="w-3 h-3 rounded-full flex-shrink-0 mt-1 sm:mt-0"
+              :class="getColorDot(evt.wineColor)"
+            />
 
-        <!-- Event type badge -->
-        <span
-          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0"
-          :class="getEventBadgeClasses(evt.eventType)"
-        >
-          {{ getEventLabel(evt.eventType) }}
-        </span>
+            <!-- Wine info -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-muted-900 truncate">{{ evt.wineName }}</span>
+                <span v-if="evt.vintage" class="text-xs text-muted-500">{{ evt.vintage }}</span>
+              </div>
+              <div class="text-xs text-muted-500 truncate">
+                {{ evt.producerName }} · {{ evt.cellarName }}
+              </div>
+              <div v-if="evt.notes" class="text-xs text-muted-400 mt-0.5 truncate">
+                {{ evt.notes }}
+              </div>
+              <!-- Date on mobile -->
+              <div class="text-xs text-muted-400 mt-1 sm:hidden">
+                {{ formatDate(evt.eventDate) }} · {{ formatTime(evt.eventDate) }}
+              </div>
+            </div>
 
-        <!-- Date -->
-        <div class="flex-shrink-0 text-right hidden sm:block w-24">
-          <div class="text-xs text-muted-600">{{ formatDate(evt.eventDate) }}</div>
-          <div class="text-xs text-muted-400">{{ formatTime(evt.eventDate) }}</div>
+            <!-- Quantity change -->
+            <div class="flex-shrink-0 text-right">
+              <span
+                class="text-sm font-bold"
+                :class="getQuantityClasses(evt.quantityChange)"
+              >
+                {{ getQuantityPrefix(evt.quantityChange) }}{{ evt.quantityChange }}
+              </span>
+              <span class="text-xs text-muted-400 ml-1">{{ $t('common.btl') }}</span>
+            </div>
+
+            <!-- Event type badge -->
+            <span
+              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0"
+              :class="getEventBadgeClasses(evt.eventType)"
+            >
+              {{ getEventLabel(evt.eventType) }}
+            </span>
+
+            <!-- Date on desktop -->
+            <div class="flex-shrink-0 text-right hidden sm:block w-24">
+              <div class="text-xs text-muted-600">{{ formatDate(evt.eventDate) }}</div>
+              <div class="text-xs text-muted-400">{{ formatTime(evt.eventDate) }}</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
