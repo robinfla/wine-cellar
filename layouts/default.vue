@@ -19,6 +19,13 @@ const isActive = (path: string) => {
   return route.path.startsWith(path)
 }
 
+const mobileMenuOpen = ref(false)
+
+// Close mobile menu on route change
+watch(() => route.path, () => {
+  mobileMenuOpen.value = false
+})
+
 const toggleLocale = () => {
   locale.value = locale.value === 'en' ? 'fr' : 'en'
 }
@@ -27,39 +34,112 @@ const toggleLocale = () => {
 <template>
   <div class="min-h-screen bg-muted-50">
      <!-- Mobile header -->
-     <header class="sticky top-0 z-10 bg-white border-b-2 border-muted-200 lg:hidden">
+     <header class="sticky top-0 z-30 bg-white border-b-2 border-muted-200 lg:hidden">
        <div class="flex items-center justify-between px-4 h-14">
+         <button
+           type="button"
+           class="text-muted-600 hover:text-muted-900 transition-colors"
+           @click="mobileMenuOpen = true"
+         >
+           <span class="sr-only">Open menu</span>
+           <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+           </svg>
+         </button>
          <h1 class="text-lg font-bold text-primary">{{ $t('common.appName') }}</h1>
-         <div class="flex items-center gap-3">
-           <NuxtLink
-             to="/profile"
-             class="text-muted-500 hover:text-muted-700 hover:scale-110 transition-all duration-200"
-           >
-             <span class="sr-only">{{ $t('common.profile') }}</span>
-             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-             </svg>
-           </NuxtLink>
-           <button
-             type="button"
-             class="text-xs font-semibold text-muted-500 hover:text-primary px-2 py-1 rounded transition-colors"
-             @click="toggleLocale"
-           >
-             {{ locale === 'en' ? 'FR' : 'EN' }}
-           </button>
-           <button
-             type="button"
-             class="text-muted-500 hover:text-muted-700 hover:scale-110 transition-all duration-200"
-             @click="logout"
-           >
-             <span class="sr-only">{{ $t('common.signOut') }}</span>
-             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-             </svg>
-           </button>
-         </div>
+         <NuxtLink
+           to="/profile"
+           class="text-muted-500 hover:text-muted-700 transition-all"
+         >
+           <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+           </svg>
+         </NuxtLink>
        </div>
      </header>
+
+     <!-- Mobile sidebar overlay -->
+     <Teleport to="body">
+       <Transition
+         enter-active-class="transition-opacity duration-300"
+         enter-from-class="opacity-0"
+         enter-to-class="opacity-100"
+         leave-active-class="transition-opacity duration-300"
+         leave-from-class="opacity-100"
+         leave-to-class="opacity-0"
+       >
+         <div
+           v-if="mobileMenuOpen"
+           class="fixed inset-0 z-40 bg-black/50 lg:hidden"
+           @click="mobileMenuOpen = false"
+         />
+       </Transition>
+       <Transition
+         enter-active-class="transition-transform duration-300 ease-out"
+         enter-from-class="-translate-x-full"
+         enter-to-class="translate-x-0"
+         leave-active-class="transition-transform duration-300 ease-in"
+         leave-from-class="translate-x-0"
+         leave-to-class="-translate-x-full"
+       >
+         <aside
+           v-if="mobileMenuOpen"
+           class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r-2 border-muted-200 flex flex-col lg:hidden"
+         >
+           <div class="flex items-center justify-between h-14 px-4 border-b-2 border-muted-200">
+             <h1 class="text-lg font-bold text-primary">{{ $t('common.appName') }}</h1>
+             <button
+               type="button"
+               class="text-muted-400 hover:text-muted-600 transition-colors"
+               @click="mobileMenuOpen = false"
+             >
+               <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+               </svg>
+             </button>
+           </div>
+           <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+             <NuxtLink
+               v-for="item in navigation"
+               :key="item.path"
+               :to="item.path"
+               class="flex items-center px-3 py-3 text-sm font-semibold rounded-lg transition-all duration-200"
+               :class="isActive(item.path)
+                 ? 'bg-primary-100 text-primary-700'
+                 : 'text-muted-600 hover:bg-muted-100 hover:text-muted-900'"
+             >
+               {{ item.name }}
+             </NuxtLink>
+           </nav>
+           <div class="p-4 border-t-2 border-muted-200">
+             <div class="flex items-center justify-between mb-3">
+               <button
+                 type="button"
+                 class="text-xs font-semibold text-muted-500 hover:text-primary px-2 py-1 rounded transition-colors"
+                 @click="toggleLocale"
+               >
+                 {{ locale === 'en' ? 'FR' : 'EN' }}
+               </button>
+             </div>
+             <div class="flex items-center justify-between">
+               <NuxtLink to="/profile" class="text-sm hover:text-primary transition-colors">
+                 <p class="font-semibold text-muted-900 hover:text-primary">{{ user?.name || user?.email }}</p>
+               </NuxtLink>
+               <button
+                 type="button"
+                 class="text-muted-400 hover:text-muted-600 transition-all"
+                 @click="logout"
+               >
+                 <span class="sr-only">{{ $t('common.signOut') }}</span>
+                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                 </svg>
+               </button>
+             </div>
+           </div>
+         </aside>
+       </Transition>
+     </Teleport>
 
      <!-- Desktop sidebar -->
      <aside class="fixed inset-y-0 left-0 z-20 hidden w-64 bg-white border-r-2 border-muted-200 lg:block">
@@ -118,24 +198,6 @@ const toggleLocale = () => {
       </div>
     </main>
 
-     <!-- Mobile bottom navigation -->
-     <nav class="fixed bottom-0 left-0 right-0 z-10 bg-white border-t-2 border-muted-200 lg:hidden">
-       <div class="grid h-16 grid-cols-8">
-         <NuxtLink
-           v-for="item in navigation"
-           :key="item.path"
-           :to="item.path"
-           class="flex flex-col items-center justify-center text-xs font-semibold transition-all duration-200"
-           :class="isActive(item.path)
-             ? 'text-primary'
-             : 'text-muted-500'"
-         >
-           <span class="mt-1">{{ item.name }}</span>
-         </NuxtLink>
-       </div>
-     </nav>
-
-    <!-- Mobile bottom padding to account for bottom nav -->
-    <div class="h-16 lg:hidden" />
+    <!-- Bottom nav removed — mobile uses slide-out sidebar instead -->
   </div>
 </template>
