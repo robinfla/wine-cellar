@@ -225,6 +225,7 @@ const colorChartData = computed(() => {
     bottles: Number(item.bottles),
     percent: Math.round((Number(item.bottles) / total) * 100),
     width: (Number(item.bottles) / max) * 100,
+    filterQuery: { color: item.color },
   }))
 })
 
@@ -238,6 +239,7 @@ const cellarChartData = computed(() => {
     bottles: Number(item.bottles),
     percent: Math.round((Number(item.bottles) / total) * 100),
     width: (Number(item.bottles) / max) * 100,
+    filterQuery: { cellar: item.cellarId },
   }))
 })
 
@@ -253,6 +255,7 @@ const regionChartData = computed(() => {
     bottles: Number(item.bottles),
     percent: Math.round((Number(item.bottles) / total) * 100),
     width: (Number(item.bottles) / max) * 100,
+    filterQuery: { region: item.regionId },
   }))
 })
 
@@ -270,6 +273,7 @@ const vintageChartData = computed(() => {
     bottles: Number(item.bottles),
     percent: Math.round((Number(item.bottles) / total) * 100),
     width: (Number(item.bottles) / max) * 100,
+    filterQuery: { vintage: item.vintage },
   }))
 })
 
@@ -287,6 +291,7 @@ const grapeChartData = computed(() => {
     bottles: Number(item.bottles),
     percent: Math.round((Number(item.bottles) / total) * 100),
     width: (Number(item.bottles) / max) * 100,
+    filterQuery: { grape: item.grapeId },
   }))
 })
 
@@ -446,15 +451,15 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
         <div class="card p-4">
           <h3 class="text-sm font-semibold text-muted-500 mb-3">{{ $t('home.byCellar') }}</h3>
           <div class="space-y-2">
-            <div v-for="item in cellarChartData" :key="item.label" class="group">
+            <NuxtLink v-for="item in cellarChartData" :key="item.label" :to="{ path: '/inventory', query: item.filterQuery }" class="block group cursor-pointer hover:bg-muted-50 -mx-2 px-2 py-1 rounded-lg transition-colors">
               <div class="flex justify-between text-xs mb-1">
-                <span class="text-muted-700 font-medium truncate">{{ item.label }}</span>
+                <span class="text-muted-700 font-medium truncate group-hover:text-primary-600 transition-colors">{{ item.label }}</span>
                 <span class="text-muted-500 ml-2">{{ item.bottles }}</span>
               </div>
               <div class="h-2 bg-muted-100 rounded-full overflow-hidden">
                 <div class="h-full rounded-full transition-all" :style="{ width: `${item.width}%`, backgroundColor: item.color }" />
               </div>
-            </div>
+            </NuxtLink>
           </div>
         </div>
 
@@ -462,15 +467,15 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
         <div class="card p-4">
           <h3 class="text-sm font-semibold text-muted-500 mb-3">{{ $t('home.byColor') }}</h3>
           <div class="space-y-2">
-            <div v-for="item in colorChartData" :key="item.label" class="group">
+            <NuxtLink v-for="item in colorChartData" :key="item.label" :to="{ path: '/inventory', query: item.filterQuery }" class="block group cursor-pointer hover:bg-muted-50 -mx-2 px-2 py-1 rounded-lg transition-colors">
               <div class="flex justify-between text-xs mb-1">
-                <span class="text-muted-700 font-medium">{{ item.label }}</span>
+                <span class="text-muted-700 font-medium group-hover:text-primary-600 transition-colors">{{ item.label }}</span>
                 <span class="text-muted-500">{{ item.bottles }}</span>
               </div>
               <div class="h-2 bg-muted-100 rounded-full overflow-hidden">
                 <div class="h-full rounded-full transition-all" :style="{ width: `${item.width}%`, backgroundColor: item.color }" />
               </div>
-            </div>
+            </NuxtLink>
           </div>
         </div>
 
@@ -478,15 +483,15 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
         <div class="card p-4">
           <h3 class="text-sm font-semibold text-muted-500 mb-3">{{ $t('home.topRegions') }}</h3>
           <div class="space-y-2">
-            <div v-for="item in regionChartData" :key="item.label" class="group">
+            <NuxtLink v-for="item in regionChartData" :key="item.label" :to="{ path: '/inventory', query: item.filterQuery }" class="block group cursor-pointer hover:bg-muted-50 -mx-2 px-2 py-1 rounded-lg transition-colors">
               <div class="flex justify-between text-xs mb-1">
-                <span class="text-muted-700 font-medium truncate">{{ item.label }}</span>
+                <span class="text-muted-700 font-medium truncate group-hover:text-primary-600 transition-colors">{{ item.label }}</span>
                 <span class="text-muted-500 ml-2">{{ item.bottles }}</span>
               </div>
               <div class="h-2 bg-muted-100 rounded-full overflow-hidden">
                 <div class="h-full rounded-full transition-all" :style="{ width: `${item.width}%`, backgroundColor: item.color }" />
               </div>
-            </div>
+            </NuxtLink>
           </div>
            <button
              v-if="hasMoreRegions"
@@ -501,15 +506,15 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
         <div v-if="vintageChartData.length > 0" class="card p-4">
           <h3 class="text-sm font-semibold text-muted-500 mb-3">{{ $t('home.topVintages') }}</h3>
           <div class="space-y-2">
-            <div v-for="item in vintageChartData" :key="item.label" class="group">
+            <NuxtLink v-for="item in vintageChartData" :key="item.label" :to="{ path: '/inventory', query: item.filterQuery }" class="block group cursor-pointer hover:bg-muted-50 -mx-2 px-2 py-1 rounded-lg transition-colors">
               <div class="flex justify-between text-xs mb-1">
-                <span class="text-muted-700 font-medium">{{ item.label }}</span>
+                <span class="text-muted-700 font-medium group-hover:text-primary-600 transition-colors">{{ item.label }}</span>
                 <span class="text-muted-500">{{ item.bottles }}</span>
               </div>
               <div class="h-2 bg-muted-100 rounded-full overflow-hidden">
                 <div class="h-full rounded-full transition-all" :style="{ width: `${item.width}%`, backgroundColor: item.color }" />
               </div>
-            </div>
+            </NuxtLink>
           </div>
            <button
              v-if="hasMoreVintages"
@@ -525,15 +530,15 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
       <div v-if="grapeChartData.length > 0" class="card p-4 mt-4">
         <h3 class="text-sm font-semibold text-muted-500 mb-3">{{ $t('home.topGrapes') }}</h3>
         <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          <div v-for="item in grapeChartData" :key="item.label" class="group">
+          <NuxtLink v-for="item in grapeChartData" :key="item.label" :to="{ path: '/inventory', query: item.filterQuery }" class="block group cursor-pointer hover:bg-muted-50 -mx-2 px-2 py-1 rounded-lg transition-colors">
             <div class="flex justify-between text-xs mb-1">
-              <span class="text-muted-700 font-medium truncate">{{ item.label }}</span>
+              <span class="text-muted-700 font-medium truncate group-hover:text-primary-600 transition-colors">{{ item.label }}</span>
               <span class="text-muted-500 ml-2">{{ item.bottles }}</span>
             </div>
             <div class="h-2 bg-muted-100 rounded-full overflow-hidden">
               <div class="h-full rounded-full transition-all" :style="{ width: `${item.width}%`, backgroundColor: item.color }" />
             </div>
-          </div>
+          </NuxtLink>
         </div>
          <button
            v-if="hasMoreGrapes"

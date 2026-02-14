@@ -116,22 +116,25 @@ export default defineEventHandler(async (event) => {
 
   const byCellarResult = await db
     .select({
+      cellarId: cellars.id,
       cellarName: cellars.name,
       bottles: sql<number>`coalesce(sum(${inventoryLots.quantity}), 0)`,
     })
     .from(inventoryLots)
     .innerJoin(cellars, eq(inventoryLots.cellarId, cellars.id))
     .where(and(eq(inventoryLots.userId, userId), sql`${inventoryLots.quantity} > 0`))
-    .groupBy(cellars.name)
+    .groupBy(cellars.id, cellars.name)
     .orderBy(desc(sql`sum(${inventoryLots.quantity})`))
 
   const byCellar = byCellarResult.map((row) => ({
+    cellarId: row.cellarId,
     cellarName: row.cellarName,
     bottles: Number(row.bottles),
   }))
 
   const byRegionResult = await db
     .select({
+      regionId: regions.id,
       regionName: regions.name,
       bottles: sql<number>`coalesce(sum(${inventoryLots.quantity}), 0)`,
     })
@@ -140,10 +143,11 @@ export default defineEventHandler(async (event) => {
     .innerJoin(producers, eq(wines.producerId, producers.id))
     .innerJoin(regions, eq(producers.regionId, regions.id))
     .where(and(eq(inventoryLots.userId, userId), sql`${inventoryLots.quantity} > 0`))
-    .groupBy(regions.name)
+    .groupBy(regions.id, regions.name)
     .orderBy(desc(sql`sum(${inventoryLots.quantity})`))
 
   const byRegion = byRegionResult.map((row) => ({
+    regionId: row.regionId,
     regionName: row.regionName,
     bottles: Number(row.bottles),
   }))
@@ -166,6 +170,7 @@ export default defineEventHandler(async (event) => {
 
   const byGrapeResult = await db
     .select({
+      grapeId: grapes.id,
       grapeName: grapes.name,
       bottles: sql<number>`coalesce(sum(${inventoryLots.quantity}), 0)`,
     })
@@ -174,11 +179,12 @@ export default defineEventHandler(async (event) => {
     .innerJoin(wineGrapes, eq(wines.id, wineGrapes.wineId))
     .innerJoin(grapes, eq(wineGrapes.grapeId, grapes.id))
     .where(and(eq(inventoryLots.userId, userId), sql`${inventoryLots.quantity} > 0`))
-    .groupBy(grapes.name)
+    .groupBy(grapes.id, grapes.name)
     .orderBy(desc(sql`sum(${inventoryLots.quantity})`))
     .limit(5)
 
   const byGrape = byGrapeResult.map((row) => ({
+    grapeId: row.grapeId,
     grapeName: row.grapeName,
     bottles: Number(row.bottles),
   }))
