@@ -1081,6 +1081,7 @@ onMounted(() => {
     </div>
 
     <!-- Side Panel -->
+    <Teleport to="body">
     <Transition
       enter-active-class="transition-transform duration-300 ease-out"
       enter-from-class="translate-x-full"
@@ -1091,7 +1092,7 @@ onMounted(() => {
     >
       <div
         v-if="selectedLot"
-        class="fixed right-0 top-0 h-full w-full sm:w-80 lg:w-96 bg-white border-l-2 border-muted-200 overflow-y-auto z-40"
+        class="fixed right-0 top-0 h-full w-full sm:w-80 lg:w-96 bg-white border-l-2 border-muted-200 overflow-y-auto z-50"
       >
         <!-- Panel Header -->
         <div class="sticky top-0 bg-white border-b border-muted-200 px-6 py-4 z-10">
@@ -1860,13 +1861,16 @@ onMounted(() => {
         </div>
       </div>
     </Transition>
+    </Teleport>
 
     <!-- Overlay -->
+    <Teleport to="body">
     <div
       v-if="selectedLot"
-      class="fixed inset-0 bg-black/20 z-30"
+      class="fixed inset-0 bg-black/20 z-40"
       @click="closePanel"
     />
+    </Teleport>
 
     <!-- Add Wine Modal -->
     <AddWineModal
