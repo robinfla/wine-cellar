@@ -1,4 +1,4 @@
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import { eq, gt, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
@@ -30,10 +30,10 @@ export default defineEventHandler(async (event) => {
   }
 
   const config = useRuntimeConfig()
-  if (!config.openaiApiKey) {
+  if (!config.anthropicApiKey) {
     throw createError({
       statusCode: 503,
-      message: 'OpenAI API key is not configured',
+      message: 'Anthropic API key is not configured',
     })
   }
 
@@ -70,32 +70,30 @@ export default defineEventHandler(async (event) => {
     'When suggesting a wine, reference specific bottles from their cellar.',
   ].join(' ')
 
-  const openai = new OpenAI({ apiKey: config.openaiApiKey })
+  const anthropic = new Anthropic({ apiKey: config.anthropicApiKey })
 
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o',
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 1024,
+    system: systemPrompt,
     messages: [
-      {
-        role: 'system',
-        content: systemPrompt,
-      },
       ...(parsedBody.data.history ?? []).map(({ role, content }) => ({
-        role,
+        role: role as 'user' | 'assistant',
         content,
       })),
       {
-        role: 'user',
+        role: 'user' as const,
         content: parsedBody.data.message,
       },
     ],
   })
 
-  const reply = completion.choices[0]?.message?.content?.trim()
-  if (!reply) {
-    throw createError({ statusCode: 502, message: 'OpenAI returned an empty response' })
+  const contentBlock = message.content[0]
+  if (!contentBlock || contentBlock.type !== 'text') {
+    throw createError({ statusCode: 502, message: 'Anthropic returned an empty response' })
   }
 
   return {
-    reply,
+    reply: contentBlock.text.trim(),
   }
 })

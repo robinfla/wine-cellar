@@ -68,7 +68,10 @@
     "seeAllRegions": "Voir toutes les regions",
     "seeAllVintages": "Voir tous les millesimes",
     "seeAllVarieties": "Voir tous les cepages",
-    "showLess": "Voir moins"
+    "showLess": "Voir moins",
+    "getInspiration": "Trouver l'inspiration",
+    "getInspirationDesc": "Qu'est-ce que vous cuisinez ce soir ?",
+    "getInspirationPlaceholder": "ex. Epaule d'agneau au romarin, saumon grille..."
   },
   "consume": {
     "title": "Consommer un vin",
@@ -366,7 +369,7 @@
     "greeting": "Bonjour ! Je suis votre assistant sommelier. Dites-moi ce que vous cuisinez ou mangez ce soir, et je vous suggererai le vin parfait de votre cave.",
     "placeholder": "Je prepare une epaule d'agneau ce soir...",
     "hint": "Posez vos questions sur les accords mets-vins, je vous suggererai des vins de votre cave",
-    "aiNotConfigured": "IA non configuree. Ajoutez OPENAI_API_KEY dans votre environnement.",
+    "aiNotConfigured": "IA non configuree. Ajoutez ANTHROPIC_API_KEY dans votre environnement.",
     "failedToRespond": "Impossible d'obtenir une reponse. Veuillez reessayer."
   },
   "addWineModal": {

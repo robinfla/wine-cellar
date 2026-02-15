@@ -458,14 +458,14 @@ describe('API route content checks', () => {
     expect(content).toContain('wineCriticScores')
   })
 
-  it('AI wine parsing API calls OpenAI', async () => {
+  it('AI wine parsing API calls Anthropic', async () => {
     const content = await readFile('server/api/wines/parse.post.ts')
-    expect(content).toMatch(/openai|OpenAI|gpt/i)
+    expect(content).toMatch(/anthropic|Anthropic|claude/i)
   })
 
-  it('AI pairing chat API calls OpenAI', async () => {
+  it('AI pairing chat API calls Anthropic', async () => {
     const content = await readFile('server/api/chat/pairing.post.ts')
-    expect(content).toMatch(/openai|OpenAI|gpt/i)
+    expect(content).toMatch(/anthropic|Anthropic|claude/i)
   })
 })
 

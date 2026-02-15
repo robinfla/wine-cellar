@@ -163,6 +163,7 @@ onUnmounted(() => {
 const aiInput = ref('')
 const showAiSearchModal = ref(false)
 const showAddWineModal = ref(false)
+const showPairingModal = ref(false)
 
 const handleAiAdd = () => {
   if (!aiInput.value.trim()) return
@@ -336,7 +337,7 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
     <!-- Dashboard content -->
     <template v-else>
       <!-- CTA Cards -->
-      <div class="grid gap-4 mb-8 sm:grid-cols-2">
+      <div class="grid gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-3">
         <!-- Open a Bottle CTA -->
         <div class="card p-6 bg-gradient-to-r from-primary-50 to-secondary-50 border-primary-200">
           <h2 class="text-lg font-bold text-muted-900">{{ $t('home.openBottle') }}</h2>
@@ -421,6 +422,24 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
               <!-- TODO: i18n key home.orManualInput -->
               Or <NuxtLink to="/inventory/add" class="text-primary-600 hover:text-primary-700 font-medium">add manually</NuxtLink>
             </p>
+          </div>
+        </div>
+
+        <!-- Get Inspiration CTA -->
+        <div class="card p-6 bg-gradient-to-r from-accent-50 to-primary-50 border-accent-200">
+          <h2 class="text-lg font-bold text-muted-900">{{ $t('home.getInspiration') }}</h2>
+          <p class="mt-1 text-sm text-muted-600">{{ $t('home.getInspirationDesc') }}</p>
+          <div class="mt-4">
+            <button
+              type="button"
+              class="btn-primary w-full flex items-center justify-center gap-2"
+              @click="showPairingModal = true"
+            >
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              {{ $t('home.getInspiration') }}
+            </button>
           </div>
         </div>
       </div>
@@ -745,5 +764,8 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
       @add-existing="handleAiAddExisting"
       @add-new="handleAiAddNew"
     />
+
+    <!-- Pairing Chat Modal (Get Inspiration) -->
+    <PairingChatModal v-model="showPairingModal" />
   </div>
 </template>

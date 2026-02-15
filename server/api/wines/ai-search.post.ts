@@ -1,4 +1,4 @@
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import { db } from '~/server/utils/db'
 import { wines, producers, regions } from '~/server/db/schema'
@@ -35,70 +35,45 @@ export default defineEventHandler(async (event) => {
   }
 
   const config = useRuntimeConfig()
-  if (!config.openaiApiKey) {
+  if (!config.anthropicApiKey) {
     throw createError({
       statusCode: 503,
-      message: 'OpenAI API key is not configured',
+      message: 'Anthropic API key is not configured',
     })
   }
 
   // Step 1: Parse with AI (reuse parse.post.ts logic)
-  const openai = new OpenAI({ apiKey: config.openaiApiKey })
+  const anthropic = new Anthropic({ apiKey: config.anthropicApiKey })
 
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o',
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 1024,
+    system: 'You extract structured wine information from short free-text inputs. When a value is unknown, use null for nullable fields. Keep producer and wineName concise and normalized. Respond ONLY with a JSON object matching this schema: { "producer": string, "wineName": string, "vintage": integer|null, "color": "red"|"white"|"rose"|"sparkling"|"dessert"|"fortified", "region": string|null, "appellation": string|null }',
     messages: [
-      {
-        role: 'system',
-        content: 'You extract structured wine information from short free-text inputs. When a value is unknown, use null for nullable fields. Keep producer and wineName concise and normalized.',
-      },
       {
         role: 'user',
         content: parsedBody.data.text,
       },
     ],
-    response_format: {
-      type: 'json_schema',
-      json_schema: {
-        name: 'wine_parse_result',
-        strict: true,
-        schema: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            producer: { type: 'string' },
-            wineName: { type: 'string' },
-            vintage: { type: ['integer', 'null'] },
-            color: {
-              type: 'string',
-              enum: ['red', 'white', 'rose', 'sparkling', 'dessert', 'fortified'],
-            },
-            region: { type: ['string', 'null'] },
-            appellation: { type: ['string', 'null'] },
-          },
-          required: ['producer', 'wineName', 'vintage', 'color', 'region', 'appellation'],
-        },
-      },
-    },
   })
 
-  const content = completion.choices[0]?.message?.content
-  if (!content) {
-    throw createError({ statusCode: 502, message: 'OpenAI returned an empty response' })
+  const contentBlock = message.content[0]
+  if (!contentBlock || contentBlock.type !== 'text') {
+    throw createError({ statusCode: 502, message: 'Anthropic returned an empty response' })
   }
 
   let parsedResponse: unknown
   try {
-    parsedResponse = JSON.parse(content)
+    parsedResponse = JSON.parse(contentBlock.text)
   } catch {
-    throw createError({ statusCode: 502, message: 'OpenAI returned invalid JSON' })
+    throw createError({ statusCode: 502, message: 'Anthropic returned invalid JSON' })
   }
 
   const validatedResponse = parsedWineSchema.safeParse(parsedResponse)
   if (!validatedResponse.success) {
     throw createError({
       statusCode: 502,
-      message: 'OpenAI response did not match expected schema',
+      message: 'Anthropic response did not match expected schema',
       data: validatedResponse.error.flatten(),
     })
   }

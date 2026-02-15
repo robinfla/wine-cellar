@@ -68,7 +68,10 @@
     "seeAllRegions": "See all regions",
     "seeAllVintages": "See all vintages",
     "seeAllVarieties": "See all varieties",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "getInspiration": "Get inspiration",
+    "getInspirationDesc": "What are you cooking tonight?",
+    "getInspirationPlaceholder": "e.g. Lamb shoulder with rosemary, grilled salmon..."
   },
   "consume": {
     "title": "Consume Wine",
@@ -366,7 +369,7 @@
     "greeting": "Hi! I'm your sommelier assistant. Tell me what you're cooking or eating tonight, and I'll suggest the perfect wine from your cellar.",
     "placeholder": "I'm making lamb shoulder tonight...",
     "hint": "Ask about food pairings, and I'll suggest wines from your cellar",
-    "aiNotConfigured": "AI not configured. Add OPENAI_API_KEY to your environment.",
+    "aiNotConfigured": "AI not configured. Add ANTHROPIC_API_KEY to your environment.",
     "failedToRespond": "Failed to get response. Please try again."
   },
   "addWineModal": {
