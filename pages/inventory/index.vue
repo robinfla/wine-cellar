@@ -246,6 +246,20 @@ async function selectLot(lot: any) {
   fetchValuation(lot.wineId, lot.vintage)
 }
 
+// Auto-open lot from query param (e.g. from history page)
+const lotIdFromQuery = route.query.lot ? Number(route.query.lot) : undefined
+if (lotIdFromQuery && inventory.value?.lots) {
+  const lot = inventory.value.lots.find(l => l.id === lotIdFromQuery)
+  if (lot) selectLot(lot)
+}
+if (lotIdFromQuery && !inventory.value?.lots) {
+  // If lot not in current page, fetch it directly
+  try {
+    const lot = await $fetch(`/api/inventory/${lotIdFromQuery}`)
+    if (lot) selectLot(lot)
+  } catch {}
+}
+
 function closePanel() {
   selectedLot.value = null
   valuation.value = null
@@ -1077,7 +1091,7 @@ onMounted(() => {
     >
       <div
         v-if="selectedLot"
-        class="fixed right-0 top-0 h-full w-full sm:w-80 lg:w-96 bg-white border-l-2 border-muted-200 overflow-y-auto z-20"
+        class="fixed right-0 top-0 h-full w-full sm:w-80 lg:w-96 bg-white border-l-2 border-muted-200 overflow-y-auto z-40"
       >
         <!-- Panel Header -->
         <div class="sticky top-0 bg-white border-b border-muted-200 px-6 py-4 z-10">
@@ -1850,7 +1864,7 @@ onMounted(() => {
     <!-- Overlay -->
     <div
       v-if="selectedLot"
-      class="fixed inset-0 bg-black/20 z-10 lg:hidden"
+      class="fixed inset-0 bg-black/20 z-30"
       @click="closePanel"
     />
 

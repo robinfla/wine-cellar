@@ -195,10 +195,11 @@ const groupedEvents = computed(() => {
           {{ group.label }}
         </h2>
         <div class="space-y-2">
-          <div
+          <NuxtLink
             v-for="evt in group.events"
             :key="evt.id"
-            class="flex items-start sm:items-center gap-3 sm:gap-4 px-4 py-3 bg-white border border-muted-200 rounded-lg hover:border-muted-300 transition-colors"
+            :to="{ path: '/inventory', query: { lot: evt.lotId } }"
+            class="flex items-start sm:items-center gap-3 sm:gap-4 px-4 py-3 bg-white border border-muted-200 rounded-lg hover:border-primary-300 hover:bg-primary-50/30 cursor-pointer transition-colors block"
           >
             <!-- Color dot -->
             <span
@@ -248,7 +249,7 @@ const groupedEvents = computed(() => {
               <div class="text-xs text-muted-600">{{ formatDate(evt.eventDate) }}</div>
               <div class="text-xs text-muted-400">{{ formatTime(evt.eventDate) }}</div>
             </div>
-          </div>
+          </NuxtLink>
         </div>
       </div>
     </div>
