@@ -170,15 +170,18 @@ const handleAiAdd = () => {
   showAiSearchModal.value = true
 }
 
+const addWinePrefill = ref<any>(null)
+
 const handleAiAddNew = (parsed: any) => {
-  const params = new URLSearchParams()
-  if (parsed.wineName) params.set('name', parsed.wineName)
-  if (parsed.producer) params.set('producer', parsed.producer)
-  if (parsed.vintage) params.set('vintage', String(parsed.vintage))
-  if (parsed.color) params.set('color', parsed.color)
-  if (parsed.region) params.set('region', parsed.region)
-  if (parsed.appellation) params.set('appellation', parsed.appellation)
-  navigateTo(`/inventory/add?${params.toString()}`)
+  addWinePrefill.value = {
+    wineName: parsed.wineName || '',
+    producer: parsed.producer || '',
+    vintage: parsed.vintage || null,
+    color: parsed.color || '',
+    region: parsed.region || '',
+    appellation: parsed.appellation || '',
+  }
+  showAddWineModal.value = true
   aiInput.value = ''
 }
 
@@ -580,7 +583,9 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
     <!-- Add Wine Modal (for manual/prefilled add) -->
     <AddWineModal
       v-model="showAddWineModal"
+      :prefill="addWinePrefill"
       @success="handleWineAdded"
+      @close="addWinePrefill = null"
     />
 
     <!-- Consume Wine Modal -->

@@ -3,6 +3,14 @@ const props = defineProps<{
   modelValue: boolean
   defaultProducer?: string
   wineOnly?: boolean
+  prefill?: {
+    wineName?: string
+    producer?: string
+    vintage?: number | null
+    color?: string
+    region?: string
+    appellation?: string
+  } | null
 }>()
 
 const emit = defineEmits<{
@@ -247,6 +255,18 @@ watch(() => props.modelValue, (isOpen) => {
     // Pre-fill producer if provided
     if (props.defaultProducer) {
       form.value.producer = props.defaultProducer
+    }
+    // Pre-fill from AI parsed data
+    if (props.prefill) {
+      if (props.prefill.wineName) form.value.wineName = props.prefill.wineName
+      if (props.prefill.producer) form.value.producer = props.prefill.producer
+      if (props.prefill.vintage) form.value.vintage = props.prefill.vintage
+      if (props.prefill.color) form.value.color = props.prefill.color
+      // Match region by name
+      if (props.prefill.region && regions.value) {
+        const match = regions.value.find((r: any) => r.name.toLowerCase() === props.prefill!.region!.toLowerCase())
+        if (match) form.value.regionId = match.id
+      }
     }
   }
 })

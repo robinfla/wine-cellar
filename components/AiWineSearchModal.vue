@@ -275,45 +275,87 @@ onUnmounted(() => {
                 </div>
 
                 <!-- Match Found -->
-                <div v-else-if="step === 'match' && currentMatch" class="space-y-4">
-                  <!-- TODO: i18n -->
-                  <p class="text-sm font-semibold text-muted-700">Is this your wine?</p>
+                <div v-else-if="step === 'match'" class="space-y-4">
+                  <p class="text-sm font-semibold text-muted-700">Here's what we found:</p>
 
-                  <div class="bg-muted-50 rounded-lg p-4 border border-muted-200">
-                    <h3 class="font-semibold text-muted-900">{{ currentMatch.wine.name }}</h3>
-                    <p class="text-sm text-muted-600 mt-1">{{ currentMatch.producer.name }}</p>
-                    <div class="flex flex-wrap gap-2 mt-2">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                        {{ colorLabels[currentMatch.wine.color] || currentMatch.wine.color }}
-                      </span>
-                      <span v-if="currentMatch.region" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted-100 text-muted-700">
-                        {{ currentMatch.region.name }}
-                      </span>
-                      <span v-if="parsed?.vintage" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted-100 text-muted-700">
-                        {{ parsed.vintage }}
-                      </span>
+                  <!-- Existing matches -->
+                  <div class="space-y-2 max-h-64 overflow-y-auto">
+                    <button
+                      v-for="(match, i) in matches"
+                      :key="i"
+                      type="button"
+                      class="w-full text-left bg-muted-50 rounded-lg p-4 border-2 border-muted-200 hover:border-primary-400 hover:bg-primary-50/30 transition-colors cursor-pointer"
+                      @click="handleYes(match)"
+                    >
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <h3 class="font-semibold text-muted-900">{{ match.wine.name }}</h3>
+                          <p class="text-sm text-muted-600 mt-1">{{ match.producer.name }}</p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                          <span class="text-xs text-muted-400 bg-muted-100 px-2 py-0.5 rounded-full">In cellar</span>
+                          <svg class="w-5 h-5 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div class="flex flex-wrap gap-2 mt-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                          {{ colorLabels[match.wine.color] || match.wine.color }}
+                        </span>
+                        <span v-if="match.region" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted-100 text-muted-700">
+                          {{ match.region.name }}
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+
+                  <!-- Divider -->
+                  <div class="flex items-center gap-3">
+                    <div class="flex-1 border-t border-muted-200" />
+                    <span class="text-xs text-muted-400">or</span>
+                    <div class="flex-1 border-t border-muted-200" />
+                  </div>
+
+                  <!-- Add as new wine option -->
+                  <button
+                    type="button"
+                    class="w-full text-left bg-white rounded-lg p-4 border-2 border-dashed border-muted-300 hover:border-primary-400 hover:bg-primary-50/30 transition-colors cursor-pointer"
+                    @click="handleAddNew"
+                  >
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <h3 class="font-semibold text-muted-900">Add as new wine</h3>
+                        <p class="text-sm text-muted-500 mt-0.5">{{ parsed?.wineName }} — {{ parsed?.producer }}</p>
+                      </div>
+                      <svg class="w-5 h-5 text-primary-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                      </svg>
                     </div>
-                  </div>
+                  </button>
 
-                  <p v-if="matches.length > 1" class="text-xs text-muted-400">
-                    Match {{ currentMatchIndex + 1 }} of {{ matches.length }}
-                  </p>
-
-                  <div class="flex justify-end gap-3">
-                    <!-- TODO: i18n -->
-                    <button type="button" class="btn-secondary" @click="handleNotThisOne">Not this one</button>
-                    <button type="button" class="btn-primary" @click="handleYes(currentMatch)">Yes, add this</button>
-                  </div>
+                  <button type="button" class="text-sm text-muted-500 hover:text-muted-700" @click="closeModal">Cancel</button>
                 </div>
 
                 <!-- No Match / AI Parsed -->
                 <div v-else-if="step === 'no-match' && parsed" class="space-y-4">
-                  <!-- TODO: i18n -->
-                  <p class="text-sm font-semibold text-muted-700">No existing wine found. Here's what we parsed:</p>
+                  <p class="text-sm font-semibold text-muted-700">Here's what we found:</p>
 
-                  <div class="bg-muted-50 rounded-lg p-4 border border-muted-200">
-                    <h3 class="font-semibold text-muted-900">{{ parsed.wineName }}</h3>
-                    <p class="text-sm text-muted-600 mt-1">{{ parsed.producer }}</p>
+                  <!-- AI parsed result — clickable -->
+                  <button
+                    type="button"
+                    class="w-full text-left bg-muted-50 rounded-lg p-4 border-2 border-muted-200 hover:border-primary-400 hover:bg-primary-50/30 transition-colors cursor-pointer"
+                    @click="handleAddNew"
+                  >
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <h3 class="font-semibold text-muted-900">{{ parsed.wineName }}</h3>
+                        <p class="text-sm text-muted-600 mt-1">{{ parsed.producer }}</p>
+                      </div>
+                      <svg class="w-5 h-5 text-muted-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                     <div class="flex flex-wrap gap-2 mt-2">
                       <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
                         {{ colorLabels[parsed.color] || parsed.color }}
@@ -328,13 +370,10 @@ onUnmounted(() => {
                         {{ parsed.appellation }}
                       </span>
                     </div>
-                  </div>
+                    <p class="text-xs text-primary-600 font-medium mt-3">Tap to add this wine →</p>
+                  </button>
 
-                  <div class="flex justify-end gap-3">
-                    <button type="button" class="btn-secondary" @click="closeModal">Cancel</button>
-                    <!-- TODO: i18n -->
-                    <button type="button" class="btn-primary" @click="handleAddNew">Add as new wine</button>
-                  </div>
+                  <button type="button" class="text-sm text-muted-500 hover:text-muted-700" @click="closeModal">Cancel</button>
                 </div>
 
                 <!-- Inventory Form (adding to existing wine) -->
