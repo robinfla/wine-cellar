@@ -146,6 +146,7 @@ watch(
   () => {
     router.replace({
       query: {
+        ...(selectedLot.value && { lot: selectedLot.value.id }),
         ...(maturityFilter.value && { maturity: maturityFilter.value }),
         ...(producerId.value && { producer: producerId.value }),
         ...(regionId.value && { region: regionId.value }),
@@ -244,25 +245,29 @@ async function selectLot(lot: any) {
   selectedLot.value = lot
   valuation.value = null
   fetchValuation(lot.wineId, lot.vintage)
+  router.replace({ query: { ...route.query, lot: lot.id } })
 }
 
 // Auto-open lot from query param (e.g. from history page)
 const lotIdFromQuery = route.query.lot ? Number(route.query.lot) : undefined
-if (lotIdFromQuery && inventory.value?.lots) {
-  const lot = inventory.value.lots.find(l => l.id === lotIdFromQuery)
-  if (lot) selectLot(lot)
-}
-if (lotIdFromQuery && !inventory.value?.lots) {
-  // If lot not in current page, fetch it directly
-  try {
-    const lot = await $fetch(`/api/inventory/${lotIdFromQuery}`)
-    if (lot) selectLot(lot)
-  } catch {}
+if (lotIdFromQuery) {
+  const lot = inventory.value?.lots?.find(l => l.id === lotIdFromQuery)
+  if (lot) {
+    selectLot(lot)
+  } else {
+    // Lot not in current page (different page, consumed, etc.) - fetch directly
+    try {
+      const fetchedLot = await $fetch(`/api/inventory/${lotIdFromQuery}`)
+      if (fetchedLot) selectLot(fetchedLot)
+    } catch {}
+  }
 }
 
 function closePanel() {
   selectedLot.value = null
   valuation.value = null
+  const { lot: _lot, ...rest } = route.query
+  router.replace({ query: rest })
 }
 
 async function fetchValuation(wineId: number, vintage: number | null) {
@@ -1381,7 +1386,7 @@ onMounted(() => {
                   min="1900"
                   max="2100"
                   class="input w-16 sm:w-20 text-sm text-center py-1.5"
-                  :placeholder="$t('inventory.drinkFrom')"<!-- TODO: add i18n key inventory.drinkFrom -->
+                  :placeholder="$t('inventory.drinkFrom')"
                   :disabled="isSavingDrinkWindow"
                   @change="saveDrinkingWindow"
                 >
@@ -1392,7 +1397,7 @@ onMounted(() => {
                   min="1900"
                   max="2100"
                   class="input w-16 sm:w-20 text-sm text-center py-1.5"
-                  :placeholder="$t('inventory.drinkUntil')"<!-- TODO: add i18n key inventory.drinkUntil -->
+                  :placeholder="$t('inventory.drinkUntil')"
                   :disabled="isSavingDrinkWindow"
                   @change="saveDrinkingWindow"
                 >

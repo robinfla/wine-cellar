@@ -60,7 +60,11 @@ export default defineEventHandler(async (event) => {
 
   let parsedResponse: unknown
   try {
-    parsedResponse = JSON.parse(contentBlock.text)
+    let jsonText = contentBlock.text.trim()
+    if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
+    }
+    parsedResponse = JSON.parse(jsonText)
   } catch {
     throw createError({ statusCode: 502, message: 'Anthropic returned invalid JSON' })
   }
