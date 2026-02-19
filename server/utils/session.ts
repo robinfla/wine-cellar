@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto'
 import type { H3Event } from 'h3'
-import { getCookie, setCookie, deleteCookie, getRequestURL } from 'h3'
+import { getCookie, setCookie, deleteCookie, getRequestURL, getRequestHeader } from 'h3'
 import { eq, and, gt } from 'drizzle-orm'
 import { db } from './db'
 import { sessions, users } from '../db/schema'
@@ -70,9 +70,16 @@ export async function invalidateSession(token: string): Promise<void> {
 }
 
 /**
- * Get session token from request cookies
+ * Get session token from request cookies or Authorization header (Bearer token)
  */
 export function getSessionToken(event: H3Event): string | null {
+  // Check Authorization header first (for mobile/API clients)
+  const authHeader = getRequestHeader(event, 'authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.slice(7)
+  }
+
+  // Fall back to cookie (for web clients)
   return getCookie(event, SESSION_COOKIE_NAME) || null
 }
 

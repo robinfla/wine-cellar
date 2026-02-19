@@ -46,11 +46,11 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Create session
   const sessionToken = await createSession(user[0].id)
   setSessionCookie(event, sessionToken)
 
   return {
+    token: sessionToken,
     user: {
       id: user[0].id,
       email: user[0].email,
