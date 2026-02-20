@@ -348,28 +348,10 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
         </h1>
         <p class="mt-1 text-primary-200 text-sm">{{ $t('home.welcomeBack') }}</p>
 
-        <!-- Cellar stats cards -->
-        <div class="grid grid-cols-2 gap-3 mt-5">
-          <div class="bg-white/15 backdrop-blur-sm rounded-xl p-4">
-            <p class="text-primary-200 text-xs font-medium">{{ $t('home.totalBottles') }}</p>
-            <p class="text-2xl font-bold mt-1">{{ statsData?.totals?.bottles || 0 }}</p>
-          </div>
-          <div class="bg-white/15 backdrop-blur-sm rounded-xl p-4">
-            <p class="text-primary-200 text-xs font-medium">{{ $t('home.purchaseValue') }}</p>
-            <p class="text-2xl font-bold mt-1">{{ formatCurrency(statsData?.totals?.estimatedValue || 0) }}</p>
-          </div>
-        </div>
-
-        <!-- Secondary stats row -->
-        <div class="grid grid-cols-2 gap-3 mt-3">
-          <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-            <p class="text-primary-200 text-xs font-medium">{{ $t('home.totalLots') }}</p>
-            <p class="text-lg font-bold mt-0.5">{{ statsData?.totals?.lots || 0 }}</p>
-          </div>
-          <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-            <p class="text-primary-200 text-xs font-medium">{{ $t('home.readyToDrink') }}</p>
-            <p class="text-lg font-bold mt-0.5 text-secondary-300">{{ statsData?.readyToDrink || 0 }}</p>
-          </div>
+        <!-- Bottle count -->
+        <div class="mt-5 bg-white/15 backdrop-blur-sm rounded-xl p-4 inline-block">
+          <p class="text-primary-200 text-xs font-medium">{{ $t('home.totalBottles') }}</p>
+          <p class="text-3xl font-bold mt-1">{{ statsData?.totals?.bottles || 0 }}</p>
         </div>
       </div>
 
