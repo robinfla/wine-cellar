@@ -50,7 +50,7 @@
     "noWinesFound": "No wines found",
     "addAWine": "Add a wine",
     "addAWineDesc": "Describe it naturally or enter manually",
-    "aiPlaceholder": "e.g. Chateau Margaux 2015 red Bordeaux",
+    "aiPlaceholder": "Describe your wine... e.g. Margaux 2015",
     "addWithAi": "Add with AI",
     "parsing": "Parsing...",
     "manualInput": "Manual input",
@@ -77,7 +77,10 @@
     "tastingNotesOptional": "Tasting Notes (optional)",
     "score": "Score",
     "comment": "Comment",
-    "pairing": "Food Pairing"
+    "pairing": "Food Pairing",
+    "hello": "Hello {name}!",
+    "welcomeBack": "Welcome back to your cellar",
+    "quickActions": "Quick Actions"
   },
   "consume": {
     "title": "Consume Wine",

@@ -50,7 +50,7 @@
     "noWinesFound": "Aucun vin trouve",
     "addAWine": "Ajouter un vin",
     "addAWineDesc": "Decrivez-le naturellement ou saisissez manuellement",
-    "aiPlaceholder": "ex. Chateau Margaux 2015 rouge Bordeaux",
+    "aiPlaceholder": "Décrivez votre vin... ex. Margaux 2015",
     "addWithAi": "Ajouter avec IA",
     "parsing": "Analyse...",
     "manualInput": "Saisie manuelle",
@@ -77,7 +77,10 @@
     "tastingNotesOptional": "Notes de dégustation (optionnel)",
     "score": "Note",
     "comment": "Commentaire",
-    "pairing": "Accord mets-vin"
+    "pairing": "Accord mets-vin",
+    "hello": "Bonjour {name} !",
+    "welcomeBack": "Bienvenue dans votre cave",
+    "quickActions": "Actions rapides"
   },
   "consume": {
     "title": "Consommer un vin",
