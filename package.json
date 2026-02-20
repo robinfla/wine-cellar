@@ -18,7 +18,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "npx tsx server/db/seed.ts",
-    "db:pull-prod": "./pull-prod-db.sh",
+    "db:pull-prod": "./scripts/pull-prod-db.sh",
     "test": "vitest",
     "test:ssr": "vitest run tests/e2e/ssr-smoke.test.ts",
     "test:e2e": "playwright test",

@@ -164,8 +164,6 @@ const aiInput = ref('')
 const showAiSearchModal = ref(false)
 const showAddWineModal = ref(false)
 const showPairingModal = ref(false)
-const showConsumeSearch = ref(false)
-const showAddSearch = ref(false)
 
 const handleAiAdd = () => {
   if (!aiInput.value.trim()) return
@@ -341,180 +339,133 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
 
     <!-- Dashboard content -->
     <template v-else>
-      <!-- Hero greeting -->
-      <div class="-mx-4 -mt-6 lg:-mx-8 px-4 lg:px-8 pt-8 pb-6 mb-6 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900 text-white">
-        <h1 class="text-2xl font-bold">
-          {{ $t('home.hello', { name: user?.name || user?.email?.split('@')[0] || '' }) }} 👋
-        </h1>
-        <p class="mt-1 text-primary-200 text-sm">{{ $t('home.welcomeBack') }}</p>
+      <!-- CTA Cards -->
+      <div class="grid gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-3">
+        <!-- Open a Bottle CTA -->
+        <div class="card p-6 bg-gradient-to-r from-primary-50 to-secondary-50 border-primary-200">
+          <h2 class="text-lg font-bold text-muted-900">{{ $t('home.openBottle') }}</h2>
+          <p class="mt-1 text-sm text-muted-600">{{ $t('home.openBottleDesc') }}</p>
+          <div class="relative mt-4">
+            <div class="relative">
+              <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                :value="consumeSearchQuery"
+                :placeholder="$t('home.searchPlaceholder')"
+                class="input pl-10 pr-4"
+                @input="handleConsumeSearchInput(($event.target as HTMLInputElement).value)"
+                @focus="consumeSearchResults.length > 0 && (showConsumeDropdown = true)"
+                @blur="setTimeout(() => showConsumeDropdown = false, 200)"
+              >
+              <div v-if="isSearching" class="absolute right-3 top-1/2 -translate-y-1/2">
+                <svg class="animate-spin h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              </div>
+            </div>
 
-        <!-- Bottle count -->
-        <div class="mt-5 bg-white/15 backdrop-blur-sm rounded-xl p-4 inline-block">
-          <p class="text-primary-200 text-xs font-medium">{{ $t('home.totalBottles') }}</p>
-          <p class="text-3xl font-bold mt-1">{{ statsData?.totals?.bottles || 0 }}</p>
+            <!-- Search Results Dropdown -->
+            <Transition
+              enter-active-class="transition ease-out duration-100"
+              enter-from-class="opacity-0 scale-95"
+              enter-to-class="opacity-100 scale-100"
+              leave-active-class="transition ease-in duration-75"
+              leave-from-class="opacity-100 scale-100"
+              leave-to-class="opacity-0 scale-95"
+            >
+              <div
+                v-if="showConsumeDropdown && consumeSearchQuery.trim()"
+                class="absolute z-20 mt-1 w-full bg-white rounded-xl border-2 border-muted-200 max-h-64 overflow-y-auto"
+              >
+                <div v-if="consumeSearchResults.length === 0 && !isSearching" class="p-4 text-center text-sm text-muted-500">
+                   {{ $t('home.noWinesFound') }}
+                 </div>
+                <button
+                  v-for="lot in consumeSearchResults"
+                  :key="lot.id"
+                  type="button"
+                  class="w-full text-left px-4 py-3 hover:bg-muted-50 border-b border-muted-100 last:border-b-0 transition-colors"
+                  @mousedown.prevent="selectWineToConsume(lot)"
+                >
+                  <div class="font-medium text-muted-900">{{ lot.wineName }}</div>
+                  <div class="text-sm text-muted-500 mt-0.5">
+                    {{ lot.producerName }}
+                    <span v-if="lot.vintage" class="mx-1">-</span>
+                    <span v-if="lot.vintage">{{ lot.vintage }}</span>
+                    <span class="mx-1">-</span>
+                    <span class="text-muted-400">{{ lot.quantity }} bottle{{ lot.quantity > 1 ? 's' : '' }} in {{ lot.cellarName }}</span>
+                  </div>
+                </button>
+              </div>
+            </Transition>
+          </div>
         </div>
-      </div>
 
-      <!-- Quick Actions -->
-      <div class="mb-8">
-        <h2 class="text-lg font-bold text-muted-900 mb-4">{{ $t('home.quickActions') }}</h2>
-        <div class="grid grid-cols-3 gap-3">
-          <!-- Open a Bottle -->
-          <button
-            type="button"
-            class="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border-2 border-muted-200 hover:border-primary-300 hover:bg-primary-50/30 transition-all"
-            @click="showConsumeSearch = true"
-          >
-            <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
-              <svg class="w-6 h-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <!-- Add a Wine CTA -->
+        <div class="card p-6 bg-gradient-to-r from-secondary-50 to-accent-50 border-secondary-200">
+          <h2 class="text-lg font-bold text-muted-900">{{ $t('home.addAWine') }}</h2>
+          <p class="mt-1 text-sm text-muted-600">{{ $t('home.addAWineDesc') }}</p>
+          <div class="relative mt-4">
+            <div class="relative">
+              <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
+              <input
+                v-model="aiInput"
+                type="text"
+                placeholder="Describe your wine... e.g. Chateau Margaux 2015 red"
+                class="input pl-10 pr-4"
+                @keydown.enter="handleAiAdd"
+              />
             </div>
-            <span class="text-xs font-semibold text-muted-700 text-center">{{ $t('home.openBottle') }}</span>
-          </button>
+            <p class="mt-2 text-xs text-muted-400">
+              <!-- TODO: i18n key home.orManualInput -->
+              Or <NuxtLink to="/inventory/add" class="text-primary-600 hover:text-primary-700 font-medium">add manually</NuxtLink>
+            </p>
+          </div>
+        </div>
 
-          <!-- Add a Wine -->
-          <button
-            type="button"
-            class="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border-2 border-muted-200 hover:border-secondary-300 hover:bg-secondary-50/30 transition-all"
-            @click="showAddSearch = true"
-          >
-            <div class="w-12 h-12 rounded-full bg-secondary-100 flex items-center justify-center">
-              <svg class="w-6 h-6 text-secondary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-            </div>
-            <span class="text-xs font-semibold text-muted-700 text-center">{{ $t('home.addAWine') }}</span>
-          </button>
-
-          <!-- Get Inspiration -->
-          <button
-            type="button"
-            class="flex flex-col items-center gap-2 p-4 bg-white rounded-xl border-2 border-muted-200 hover:border-accent-300 hover:bg-accent-50/30 transition-all"
-            @click="showPairingModal = true"
-          >
-            <div class="w-12 h-12 rounded-full bg-accent-100 flex items-center justify-center">
-              <svg class="w-6 h-6 text-accent-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <!-- Get Inspiration CTA -->
+        <div class="card p-6 bg-gradient-to-r from-accent-50 to-primary-50 border-accent-200">
+          <h2 class="text-lg font-bold text-muted-900">{{ $t('home.getInspiration') }}</h2>
+          <p class="mt-1 text-sm text-muted-600">{{ $t('home.getInspirationDesc') }}</p>
+          <div class="mt-4">
+            <button
+              type="button"
+              class="btn-primary w-full flex items-center justify-center gap-2"
+              @click="showPairingModal = true"
+            >
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-            </div>
-            <span class="text-xs font-semibold text-muted-700 text-center">{{ $t('home.getInspiration') }}</span>
-          </button>
+              {{ $t('home.getInspiration') }}
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Consume Search Modal -->
-      <Teleport to="body">
-        <Transition
-          enter-active-class="transition ease-out duration-200"
-          enter-from-class="opacity-0"
-          enter-to-class="opacity-100"
-          leave-active-class="transition ease-in duration-150"
-          leave-from-class="opacity-100"
-          leave-to-class="opacity-0"
-        >
-          <div v-if="showConsumeSearch" class="fixed inset-0 z-50 overflow-y-auto">
-            <div class="fixed inset-0 bg-muted-900/50" @click="showConsumeSearch = false" />
-            <div class="relative min-h-screen flex items-start justify-center p-4 pt-20">
-              <div class="relative bg-white rounded-xl border-2 border-muted-200 w-full max-w-md" @click.stop>
-                <div class="p-4">
-                  <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-bold text-muted-900">{{ $t('home.openBottle') }}</h2>
-                    <button type="button" class="text-muted-400 hover:text-muted-600" @click="showConsumeSearch = false">
-                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </div>
-                  <div class="relative">
-                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input
-                      type="text"
-                      :value="consumeSearchQuery"
-                      :placeholder="$t('home.searchPlaceholder')"
-                      class="input pl-10 pr-4 w-full"
-                      autofocus
-                      @input="handleConsumeSearchInput(($event.target as HTMLInputElement).value)"
-                    >
-                  </div>
-                  <!-- Results -->
-                  <div v-if="consumeSearchQuery.trim()" class="mt-3 max-h-64 overflow-y-auto">
-                    <div v-if="isSearching" class="text-center py-4">
-                      <svg class="animate-spin h-5 w-5 text-primary mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                    </div>
-                    <div v-else-if="consumeSearchResults.length === 0" class="text-center py-4 text-sm text-muted-500">
-                      {{ $t('home.noWinesFound') }}
-                    </div>
-                    <button
-                      v-for="lot in consumeSearchResults"
-                      :key="lot.id"
-                      type="button"
-                      class="w-full text-left px-3 py-3 hover:bg-muted-50 rounded-lg transition-colors"
-                      @click="selectWineToConsume(lot); showConsumeSearch = false"
-                    >
-                      <div class="font-medium text-muted-900">{{ lot.wineName }}</div>
-                      <div class="text-sm text-muted-500 mt-0.5">
-                        {{ lot.producerName }}
-                        <span v-if="lot.vintage" class="mx-1">·</span>
-                        <span v-if="lot.vintage">{{ lot.vintage }}</span>
-                        <span class="mx-1">·</span>
-                        <span class="text-muted-400">{{ lot.quantity }} btl</span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Transition>
-      </Teleport>
-
-      <!-- Add Wine Search Modal -->
-      <Teleport to="body">
-        <Transition
-          enter-active-class="transition ease-out duration-200"
-          enter-from-class="opacity-0"
-          enter-to-class="opacity-100"
-          leave-active-class="transition ease-in duration-150"
-          leave-from-class="opacity-100"
-          leave-to-class="opacity-0"
-        >
-          <div v-if="showAddSearch" class="fixed inset-0 z-50 overflow-y-auto">
-            <div class="fixed inset-0 bg-muted-900/50" @click="showAddSearch = false" />
-            <div class="relative min-h-screen flex items-start justify-center p-4 pt-20">
-              <div class="relative bg-white rounded-xl border-2 border-muted-200 w-full max-w-md" @click.stop>
-                <div class="p-4">
-                  <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-bold text-muted-900">{{ $t('home.addAWine') }}</h2>
-                    <button type="button" class="text-muted-400 hover:text-muted-600" @click="showAddSearch = false">
-                      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </div>
-                  <div class="relative">
-                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input
-                      v-model="aiInput"
-                      type="text"
-                      :placeholder="$t('home.aiPlaceholder')"
-                      class="input pl-10 pr-4 w-full"
-                      autofocus
-                      @keydown.enter="handleAiAdd(); showAddSearch = false"
-                    />
-                  </div>
-                  <p class="mt-3 text-xs text-muted-400 text-center">
-                    Or <NuxtLink to="/inventory/add" class="text-primary-600 hover:text-primary-700 font-medium" @click="showAddSearch = false">add manually</NuxtLink>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Transition>
-      </Teleport>
+      <!-- Stats grid -->
+      <div class="grid gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="card">
+          <p class="text-sm font-semibold text-muted-500">{{ $t('home.totalBottles') }}</p>
+          <p class="mt-1 text-3xl font-bold text-muted-900">{{ statsData?.totals?.bottles || 0 }}</p>
+        </div>
+        <div class="card">
+          <p class="text-sm font-semibold text-muted-500">{{ $t('home.totalLots') }}</p>
+          <p class="mt-1 text-3xl font-bold text-muted-900">{{ statsData?.totals?.lots || 0 }}</p>
+        </div>
+        <div class="card">
+          <p class="text-sm font-semibold text-muted-500">{{ $t('home.readyToDrink') }}</p>
+          <p class="mt-1 text-3xl font-bold text-secondary">{{ statsData?.readyToDrink || 0 }}</p>
+        </div>
+        <div class="card">
+          <p class="text-sm font-semibold text-muted-500">{{ $t('home.purchaseValue') }}</p>
+          <p class="mt-1 text-3xl font-bold text-primary">{{ formatCurrency(statsData?.totals?.estimatedValue || 0) }}</p>
+        </div>
+      </div>
 
       <!-- Charts grid - compact 2x2 layout -->
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
