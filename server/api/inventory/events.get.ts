@@ -6,6 +6,7 @@ import {
   wines,
   producers,
   cellars,
+  tastingNotes,
 } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
@@ -41,12 +42,18 @@ export default defineEventHandler(async (event) => {
       producerName: producers.name,
       vintage: inventoryLots.vintage,
       cellarName: cellars.name,
+      // From tasting_notes table
+      tnScore: tastingNotes.score,
+      tnComment: tastingNotes.comment,
+      tnPairing: tastingNotes.pairing,
+      tnTastedAt: tastingNotes.tastedAt,
     })
     .from(inventoryEvents)
     .innerJoin(inventoryLots, eq(inventoryEvents.lotId, inventoryLots.id))
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
     .innerJoin(producers, eq(wines.producerId, producers.id))
     .innerJoin(cellars, eq(inventoryLots.cellarId, cellars.id))
+    .leftJoin(tastingNotes, eq(inventoryEvents.lotId, tastingNotes.lotId))
     .where(and(...conditions))
     .orderBy(desc(inventoryEvents.eventDate), desc(inventoryEvents.id))
     .limit(limit)
@@ -62,8 +69,16 @@ export default defineEventHandler(async (event) => {
 
   const total = Number(countResult[0].count)
 
+  const events = result.map(({ tnScore, tnComment, tnPairing, tnTastedAt, ...ev }) => ({
+    ...ev,
+    // Prefer tasting_notes table data over event columns
+    rating: tnScore ?? ev.rating,
+    tastingNotes: tnComment ?? ev.tastingNotes,
+    pairing: tnPairing ?? null,
+  }))
+
   return {
-    events: result,
+    events,
     total,
     limit,
     offset,
