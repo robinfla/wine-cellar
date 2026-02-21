@@ -8,13 +8,23 @@ const searchRequestSchema = z.object({
   text: z.string().min(1).max(500),
 })
 
+const normalizeColor = (c: string): string => {
+  const lower = c.toLowerCase().replace(/é/g, 'e').trim()
+  const map: Record<string, string> = { red: 'red', white: 'white', rose: 'rose', rosé: 'rose', pink: 'rose', sparkling: 'sparkling', dessert: 'dessert', fortified: 'fortified', sweet: 'dessert', orange: 'white' }
+  return map[lower] ?? 'red'
+}
+
 const parsedWineSchema = z.object({
   producer: z.string(),
   wineName: z.string(),
-  vintage: z.number().int().nullable(),
-  color: z.enum(['red', 'white', 'rose', 'sparkling', 'dessert', 'fortified']),
-  region: z.string().nullable(),
-  appellation: z.string().nullable(),
+  vintage: z.union([z.number().int(), z.string(), z.null()]).transform(v => {
+    if (v === null || v === '' || v === 'null') return null
+    const n = typeof v === 'string' ? parseInt(v, 10) : v
+    return isNaN(n) ? null : n
+  }),
+  color: z.string().transform(normalizeColor),
+  region: z.string().nullable().optional().default(null),
+  appellation: z.string().nullable().optional().default(null),
 })
 
 export default defineEventHandler(async (event) => {
@@ -76,6 +86,7 @@ export default defineEventHandler(async (event) => {
 
   const validatedResponse = parsedWineSchema.safeParse(parsedResponse)
   if (!validatedResponse.success) {
+    console.error('[ai-search] Schema validation failed:', JSON.stringify(parsedResponse), validatedResponse.error.flatten())
     throw createError({
       statusCode: 502,
       message: 'Anthropic response did not match expected schema',
