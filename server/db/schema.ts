@@ -450,3 +450,31 @@ export type AllocationItem = typeof allocationItems.$inferSelect
 export type WineValuation = typeof wineValuations.$inferSelect
 export type WineCriticScore = typeof wineCriticScores.$inferSelect
 export type WishlistItem = typeof wishlistItems.$inferSelect
+
+// ─── Global Wine Reference (shared maturity data across all users) ───
+export const wineReferences = pgTable('wine_references', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+
+  // Canonical wine identity (normalized lowercase for matching)
+  producerName: text('producer_name').notNull(),
+  wineName: text('wine_name').notNull(),
+  color: wineColorEnum('color').notNull(),
+  region: text('region'),
+  appellation: text('appellation'),
+  grapes: text('grapes'),
+
+  // AI-estimated drinking window (years after vintage)
+  drinkFromYears: integer('drink_from_years').notNull(),
+  drinkUntilYears: integer('drink_until_years').notNull(),
+  confidence: text('confidence').notNull().default('medium'), // high, medium, low
+  reasoning: text('reasoning'),
+
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  uniqueRef: unique().on(table.producerName, table.wineName, table.color),
+  producerIdx: index('wine_ref_producer_idx').on(table.producerName),
+  nameIdx: index('wine_ref_name_idx').on(table.wineName),
+}))
+
+export type WineReference = typeof wineReferences.$inferSelect

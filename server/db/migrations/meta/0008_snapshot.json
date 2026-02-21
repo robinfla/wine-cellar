@@ -1,6 +1,6 @@
 {
-  "id": "4b45b15c-4a7d-4e20-9004-b560c7092cc0",
-  "prevId": "e7068214-a923-4e74-a634-15f8a5dc9bea",
+  "id": "f84676ec-623d-47cc-b1a3-97eed26d0a7d",
+  "prevId": "4b45b15c-4a7d-4e20-9004-b560c7092cc0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1855,6 +1855,134 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.wine_critic_scores": {
+      "name": "wine_critic_scores",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "wine_critic_scores_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "wine_id": {
+          "name": "wine_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vintage": {
+          "name": "vintage",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "critic": {
+          "name": "critic",
+          "type": "critic",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "score": {
+          "name": "score",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'manual'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "critic_scores_wine_idx": {
+          "name": "critic_scores_wine_idx",
+          "columns": [
+            {
+              "expression": "wine_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "wine_critic_scores_wine_id_wines_id_fk": {
+          "name": "wine_critic_scores_wine_id_wines_id_fk",
+          "tableFrom": "wine_critic_scores",
+          "tableTo": "wines",
+          "columnsFrom": [
+            "wine_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "wine_critic_scores_wine_id_vintage_critic_unique": {
+          "name": "wine_critic_scores_wine_id_vintage_critic_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "wine_id",
+            "vintage",
+            "critic"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.wine_grapes": {
       "name": "wine_grapes",
       "schema": "",
@@ -1932,6 +2060,153 @@
           "columns": [
             "wine_id",
             "grape_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.wine_references": {
+      "name": "wine_references",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "wine_references_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "producer_name": {
+          "name": "producer_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "wine_name": {
+          "name": "wine_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "color": {
+          "name": "color",
+          "type": "wine_color",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "region": {
+          "name": "region",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "appellation": {
+          "name": "appellation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "grapes": {
+          "name": "grapes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "drink_from_years": {
+          "name": "drink_from_years",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "drink_until_years": {
+          "name": "drink_until_years",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'medium'"
+        },
+        "reasoning": {
+          "name": "reasoning",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "wine_ref_producer_idx": {
+          "name": "wine_ref_producer_idx",
+          "columns": [
+            {
+              "expression": "producer_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "wine_ref_name_idx": {
+          "name": "wine_ref_name_idx",
+          "columns": [
+            {
+              "expression": "wine_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "wine_references_producer_name_wine_name_color_unique": {
+          "name": "wine_references_producer_name_wine_name_color_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "producer_name",
+            "wine_name",
+            "color"
           ]
         }
       },
@@ -2331,6 +2606,209 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "public.wishlist_items": {
+      "name": "wishlist_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "wishlist_items_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "item_type": {
+          "name": "item_type",
+          "type": "wishlist_item_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "wine_id": {
+          "name": "wine_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "producer_id": {
+          "name": "producer_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "region_id": {
+          "name": "region_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vintage": {
+          "name": "vintage",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "wines_of_interest": {
+          "name": "wines_of_interest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_target": {
+          "name": "price_target",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_currency": {
+          "name": "price_currency",
+          "type": "currency",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'EUR'"
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "wishlist_user_idx": {
+          "name": "wishlist_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "wishlist_item_type_idx": {
+          "name": "wishlist_item_type_idx",
+          "columns": [
+            {
+              "expression": "item_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "wishlist_items_user_id_users_id_fk": {
+          "name": "wishlist_items_user_id_users_id_fk",
+          "tableFrom": "wishlist_items",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "wishlist_items_wine_id_wines_id_fk": {
+          "name": "wishlist_items_wine_id_wines_id_fk",
+          "tableFrom": "wishlist_items",
+          "tableTo": "wines",
+          "columnsFrom": [
+            "wine_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "wishlist_items_producer_id_producers_id_fk": {
+          "name": "wishlist_items_producer_id_producers_id_fk",
+          "tableFrom": "wishlist_items",
+          "tableTo": "producers",
+          "columnsFrom": [
+            "producer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "wishlist_items_region_id_regions_id_fk": {
+          "name": "wishlist_items_region_id_regions_id_fk",
+          "tableFrom": "wishlist_items",
+          "tableTo": "regions",
+          "columnsFrom": [
+            "region_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -2343,6 +2821,20 @@
         "on_the_way",
         "received",
         "cancelled"
+      ]
+    },
+    "public.critic": {
+      "name": "critic",
+      "schema": "public",
+      "values": [
+        "robert_parker",
+        "wine_spectator",
+        "james_suckling",
+        "decanter",
+        "jancis_robinson",
+        "wine_enthusiast",
+        "vinous",
+        "other"
       ]
     },
     "public.currency": {
@@ -2402,6 +2894,14 @@
         "sparkling",
         "dessert",
         "fortified"
+      ]
+    },
+    "public.wishlist_item_type": {
+      "name": "wishlist_item_type",
+      "schema": "public",
+      "values": [
+        "wine",
+        "producer"
       ]
     }
   },

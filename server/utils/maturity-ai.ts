@@ -1,4 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { eq, and, sql } from 'drizzle-orm'
+import { db } from '~/server/utils/db'
+import { wineReferences } from '~/server/db/schema'
 
 interface MaturityEstimateInput {
   wineName: string
@@ -15,13 +18,49 @@ interface MaturityEstimate {
   drinkUntilYears: number
   confidence: 'high' | 'medium' | 'low'
   reasoning: string
+  fromReference: boolean
 }
 
 /**
- * Use Claude to estimate the drinking window for a wine based on its characteristics.
- * Returns years after vintage (e.g. drinkFromYears=3 means vintage+3).
+ * Normalize strings for matching (lowercase, trim, collapse whitespace)
+ */
+function normalize(s: string): string {
+  return s.toLowerCase().trim().replace(/\s+/g, ' ')
+}
+
+/**
+ * Look up existing wine reference, or estimate with AI and store the result.
+ * Returns null only if AI is unavailable AND no reference exists.
  */
 export async function estimateMaturity(input: MaturityEstimateInput): Promise<MaturityEstimate | null> {
+  const normProducer = normalize(input.producer)
+  const normWine = normalize(input.wineName)
+  const normColor = input.color.toLowerCase() as any
+
+  // 1. Check global reference table first
+  const [existing] = await db
+    .select()
+    .from(wineReferences)
+    .where(
+      and(
+        sql`lower(${wineReferences.producerName}) = ${normProducer}`,
+        sql`lower(${wineReferences.wineName}) = ${normWine}`,
+        eq(wineReferences.color, normColor),
+      ),
+    )
+    .limit(1)
+
+  if (existing) {
+    return {
+      drinkFromYears: existing.drinkFromYears,
+      drinkUntilYears: existing.drinkUntilYears,
+      confidence: existing.confidence as 'high' | 'medium' | 'low',
+      reasoning: existing.reasoning || '',
+      fromReference: true,
+    }
+  }
+
+  // 2. No reference found — estimate with AI
   const config = useRuntimeConfig()
   if (!config.anthropicApiKey) return null
 
@@ -66,12 +105,32 @@ Respond ONLY with the JSON object.`
 
     const parsed = JSON.parse(jsonText)
 
-    return {
+    const estimate = {
       drinkFromYears: Math.max(0, Math.round(parsed.drinkFromYears)),
       drinkUntilYears: Math.max(1, Math.round(parsed.drinkUntilYears)),
-      confidence: ['high', 'medium', 'low'].includes(parsed.confidence) ? parsed.confidence : 'low',
+      confidence: (['high', 'medium', 'low'].includes(parsed.confidence) ? parsed.confidence : 'low') as 'high' | 'medium' | 'low',
       reasoning: parsed.reasoning || '',
     }
+
+    // 3. Store in reference table for future lookups
+    try {
+      await db.insert(wineReferences).values({
+        producerName: input.producer.trim(),
+        wineName: input.wineName.trim(),
+        color: normColor,
+        region: input.region?.trim() || null,
+        appellation: input.appellation?.trim() || null,
+        grapes: input.grapes?.trim() || null,
+        drinkFromYears: estimate.drinkFromYears,
+        drinkUntilYears: estimate.drinkUntilYears,
+        confidence: estimate.confidence,
+        reasoning: estimate.reasoning,
+      }).onConflictDoNothing()
+    } catch (e) {
+      console.error('[maturity-ai] Failed to store reference:', e)
+    }
+
+    return { ...estimate, fromReference: false }
   } catch (e) {
     console.error('[maturity-ai] Failed to estimate:', e)
     return null
