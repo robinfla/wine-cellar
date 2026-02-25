@@ -64,6 +64,13 @@
       "when": 1771694721486,
       "tag": "0009_wine_references",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1772023620636,
+      "tag": "0010_heavy_millenium_guard",
+      "breakpoints": true
     }
   ]
 }

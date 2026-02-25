@@ -478,3 +478,63 @@ export const wineReferences = pgTable('wine_references', {
 }))
 
 export type WineReference = typeof wineReferences.$inferSelect
+
+// ─── Cellar Spaces (rooms, fridges, cabinets) ───
+export const cellarSpaces = pgTable('cellar_spaces', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  cellarId: integer('cellar_id').references(() => cellars.id, { onDelete: 'cascade' }).notNull(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  name: text('name').notNull(),
+  type: text('type').notNull(), // 'room' | 'fridge'
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  cellarIdx: index('spaces_cellar_idx').on(table.cellarId),
+  userIdx: index('spaces_user_idx').on(table.userId),
+}))
+
+export type CellarSpace = typeof cellarSpaces.$inferSelect
+
+// ─── Space Walls (only for room-type spaces) ───
+export const spaceWalls = pgTable('space_walls', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  spaceId: integer('space_id').references(() => cellarSpaces.id, { onDelete: 'cascade' }).notNull(),
+  position: text('position').notNull(), // 'left' | 'right' | 'back' | 'front' | 'floor'
+}, (table) => ({
+  spaceIdx: index('walls_space_idx').on(table.spaceId),
+  uniqueWall: unique().on(table.spaceId, table.position),
+}))
+
+export type SpaceWall = typeof spaceWalls.$inferSelect
+
+// ─── Cellar Racks ───
+export const cellarRacks = pgTable('cellar_racks', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  spaceId: integer('space_id').references(() => cellarSpaces.id, { onDelete: 'cascade' }).notNull(),
+  wallId: integer('wall_id').references(() => spaceWalls.id, { onDelete: 'set null' }),
+  columns: integer('columns').notNull(),
+  rows: integer('rows').notNull(),
+  depth: integer('depth').notNull().default(1),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  spaceIdx: index('racks_space_idx').on(table.spaceId),
+}))
+
+export type CellarRack = typeof cellarRacks.$inferSelect
+
+// ─── Rack Slots (1 slot = 1 bottle position) ───
+export const rackSlots = pgTable('rack_slots', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  rackId: integer('rack_id').references(() => cellarRacks.id, { onDelete: 'cascade' }).notNull(),
+  row: integer('row').notNull(),
+  column: integer('column').notNull(),
+  depthPosition: integer('depth_position').notNull().default(1),
+  inventoryLotId: integer('inventory_lot_id').references(() => inventoryLots.id, { onDelete: 'set null' }),
+}, (table) => ({
+  rackIdx: index('slots_rack_idx').on(table.rackId),
+  lotIdx: index('slots_lot_idx').on(table.inventoryLotId),
+  uniqueSlot: unique().on(table.rackId, table.row, table.column, table.depthPosition),
+}))
+
+export type RackSlot = typeof rackSlots.$inferSelect
+

@@ -1,6 +1,6 @@
 {
-  "id": "deca5216-2258-43d0-8e75-776ecd7ed391",
-  "prevId": "4b45b15c-4a7d-4e20-9004-b560c7092cc0",
+  "id": "6a1ff089-cdc1-4541-9040-912d76b98bc4",
+  "prevId": "deca5216-2258-43d0-8e75-776ecd7ed391",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -498,6 +498,243 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.cellar_racks": {
+      "name": "cellar_racks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "cellar_racks_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "space_id": {
+          "name": "space_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "wall_id": {
+          "name": "wall_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "columns": {
+          "name": "columns",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rows": {
+          "name": "rows",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "depth": {
+          "name": "depth",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "racks_space_idx": {
+          "name": "racks_space_idx",
+          "columns": [
+            {
+              "expression": "space_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "cellar_racks_space_id_cellar_spaces_id_fk": {
+          "name": "cellar_racks_space_id_cellar_spaces_id_fk",
+          "tableFrom": "cellar_racks",
+          "tableTo": "cellar_spaces",
+          "columnsFrom": [
+            "space_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "cellar_racks_wall_id_space_walls_id_fk": {
+          "name": "cellar_racks_wall_id_space_walls_id_fk",
+          "tableFrom": "cellar_racks",
+          "tableTo": "space_walls",
+          "columnsFrom": [
+            "wall_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.cellar_spaces": {
+      "name": "cellar_spaces",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "cellar_spaces_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "cellar_id": {
+          "name": "cellar_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "spaces_cellar_idx": {
+          "name": "spaces_cellar_idx",
+          "columns": [
+            {
+              "expression": "cellar_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "spaces_user_idx": {
+          "name": "spaces_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "cellar_spaces_cellar_id_cellars_id_fk": {
+          "name": "cellar_spaces_cellar_id_cellars_id_fk",
+          "tableFrom": "cellar_spaces",
+          "tableTo": "cellars",
+          "columnsFrom": [
+            "cellar_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "cellar_spaces_user_id_users_id_fk": {
+          "name": "cellar_spaces_user_id_users_id_fk",
+          "tableFrom": "cellar_spaces",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1531,6 +1768,136 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.rack_slots": {
+      "name": "rack_slots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "rack_slots_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "rack_id": {
+          "name": "rack_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row": {
+          "name": "row",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "column": {
+          "name": "column",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "depth_position": {
+          "name": "depth_position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "inventory_lot_id": {
+          "name": "inventory_lot_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "slots_rack_idx": {
+          "name": "slots_rack_idx",
+          "columns": [
+            {
+              "expression": "rack_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "slots_lot_idx": {
+          "name": "slots_lot_idx",
+          "columns": [
+            {
+              "expression": "inventory_lot_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "rack_slots_rack_id_cellar_racks_id_fk": {
+          "name": "rack_slots_rack_id_cellar_racks_id_fk",
+          "tableFrom": "rack_slots",
+          "tableTo": "cellar_racks",
+          "columnsFrom": [
+            "rack_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "rack_slots_inventory_lot_id_inventory_lots_id_fk": {
+          "name": "rack_slots_inventory_lot_id_inventory_lots_id_fk",
+          "tableFrom": "rack_slots",
+          "tableTo": "inventory_lots",
+          "columnsFrom": [
+            "inventory_lot_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "rack_slots_rack_id_row_column_depth_position_unique": {
+          "name": "rack_slots_rack_id_row_column_depth_position_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "rack_id",
+            "row",
+            "column",
+            "depth_position"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.regions": {
       "name": "regions",
       "schema": "",
@@ -1668,6 +2035,87 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.space_walls": {
+      "name": "space_walls",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "space_walls_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "space_id": {
+          "name": "space_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "walls_space_idx": {
+          "name": "walls_space_idx",
+          "columns": [
+            {
+              "expression": "space_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "space_walls_space_id_cellar_spaces_id_fk": {
+          "name": "space_walls_space_id_cellar_spaces_id_fk",
+          "tableFrom": "space_walls",
+          "tableTo": "cellar_spaces",
+          "columnsFrom": [
+            "space_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "space_walls_space_id_position_unique": {
+          "name": "space_walls_space_id_position_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "space_id",
+            "position"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1855,6 +2303,134 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.wine_critic_scores": {
+      "name": "wine_critic_scores",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "wine_critic_scores_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "wine_id": {
+          "name": "wine_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vintage": {
+          "name": "vintage",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "critic": {
+          "name": "critic",
+          "type": "critic",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "score": {
+          "name": "score",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'manual'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "critic_scores_wine_idx": {
+          "name": "critic_scores_wine_idx",
+          "columns": [
+            {
+              "expression": "wine_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "wine_critic_scores_wine_id_wines_id_fk": {
+          "name": "wine_critic_scores_wine_id_wines_id_fk",
+          "tableFrom": "wine_critic_scores",
+          "tableTo": "wines",
+          "columnsFrom": [
+            "wine_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "wine_critic_scores_wine_id_vintage_critic_unique": {
+          "name": "wine_critic_scores_wine_id_vintage_critic_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "wine_id",
+            "vintage",
+            "critic"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.wine_grapes": {
       "name": "wine_grapes",
       "schema": "",
@@ -1932,6 +2508,153 @@
           "columns": [
             "wine_id",
             "grape_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.wine_references": {
+      "name": "wine_references",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "wine_references_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "producer_name": {
+          "name": "producer_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "wine_name": {
+          "name": "wine_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "color": {
+          "name": "color",
+          "type": "wine_color",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "region": {
+          "name": "region",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "appellation": {
+          "name": "appellation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "grapes": {
+          "name": "grapes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "drink_from_years": {
+          "name": "drink_from_years",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "drink_until_years": {
+          "name": "drink_until_years",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'medium'"
+        },
+        "reasoning": {
+          "name": "reasoning",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "wine_ref_producer_idx": {
+          "name": "wine_ref_producer_idx",
+          "columns": [
+            {
+              "expression": "producer_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "wine_ref_name_idx": {
+          "name": "wine_ref_name_idx",
+          "columns": [
+            {
+              "expression": "wine_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "wine_references_producer_name_wine_name_color_unique": {
+          "name": "wine_references_producer_name_wine_name_color_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "producer_name",
+            "wine_name",
+            "color"
           ]
         }
       },
@@ -2332,8 +3055,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.wine_references": {
-      "name": "wine_references",
+    "public.wishlist_items": {
+      "name": "wishlist_items",
       "schema": "",
       "columns": {
         "id": {
@@ -2343,7 +3066,7 @@
           "notNull": true,
           "identity": {
             "type": "always",
-            "name": "wine_references_id_seq",
+            "name": "wishlist_items_id_seq",
             "schema": "public",
             "increment": "1",
             "startWith": "1",
@@ -2353,64 +3076,77 @@
             "cycle": false
           }
         },
-        "producer_name": {
-          "name": "producer_name",
-          "type": "text",
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "wine_name": {
-          "name": "wine_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "color": {
-          "name": "color",
-          "type": "wine_color",
+        "item_type": {
+          "name": "item_type",
+          "type": "wishlist_item_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
-        "region": {
-          "name": "region",
+        "name": {
+          "name": "name",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "appellation": {
-          "name": "appellation",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "grapes": {
-          "name": "grapes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "drink_from_years": {
-          "name": "drink_from_years",
-          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "drink_until_years": {
-          "name": "drink_until_years",
+        "wine_id": {
+          "name": "wine_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "confidence": {
-          "name": "confidence",
+        "producer_id": {
+          "name": "producer_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "region_id": {
+          "name": "region_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vintage": {
+          "name": "vintage",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'medium'"
+          "notNull": false
         },
-        "reasoning": {
-          "name": "reasoning",
+        "wines_of_interest": {
+          "name": "wines_of_interest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_target": {
+          "name": "price_target",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price_currency": {
+          "name": "price_currency",
+          "type": "currency",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'EUR'"
+        },
+        "url": {
+          "name": "url",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -2431,15 +3167,14 @@
         }
       },
       "indexes": {
-        "wine_ref_producer_idx": {
-          "name": "wine_ref_producer_idx",
+        "wishlist_user_idx": {
+          "name": "wishlist_user_idx",
           "columns": [
             {
-              "expression": "producer_name",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2447,15 +3182,14 @@
           "method": "btree",
           "with": {}
         },
-        "wine_ref_name_idx": {
-          "name": "wine_ref_name_idx",
+        "wishlist_item_type_idx": {
+          "name": "wishlist_item_type_idx",
           "columns": [
             {
-              "expression": "wine_name",
+              "expression": "item_type",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "text_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -2464,19 +3198,62 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "wine_references_producer_name_wine_name_color_unique": {
-          "name": "wine_references_producer_name_wine_name_color_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "producer_name",
-            "wine_name",
-            "color"
-          ]
+      "foreignKeys": {
+        "wishlist_items_user_id_users_id_fk": {
+          "name": "wishlist_items_user_id_users_id_fk",
+          "tableFrom": "wishlist_items",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "wishlist_items_wine_id_wines_id_fk": {
+          "name": "wishlist_items_wine_id_wines_id_fk",
+          "tableFrom": "wishlist_items",
+          "tableTo": "wines",
+          "columnsFrom": [
+            "wine_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "wishlist_items_producer_id_producers_id_fk": {
+          "name": "wishlist_items_producer_id_producers_id_fk",
+          "tableFrom": "wishlist_items",
+          "tableTo": "producers",
+          "columnsFrom": [
+            "producer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "wishlist_items_region_id_regions_id_fk": {
+          "name": "wishlist_items_region_id_regions_id_fk",
+          "tableFrom": "wishlist_items",
+          "tableTo": "regions",
+          "columnsFrom": [
+            "region_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -2492,6 +3269,20 @@
         "on_the_way",
         "received",
         "cancelled"
+      ]
+    },
+    "public.critic": {
+      "name": "critic",
+      "schema": "public",
+      "values": [
+        "robert_parker",
+        "wine_spectator",
+        "james_suckling",
+        "decanter",
+        "jancis_robinson",
+        "wine_enthusiast",
+        "vinous",
+        "other"
       ]
     },
     "public.currency": {
@@ -2551,6 +3342,14 @@
         "sparkling",
         "dessert",
         "fortified"
+      ]
+    },
+    "public.wishlist_item_type": {
+      "name": "wishlist_item_type",
+      "schema": "public",
+      "values": [
+        "wine",
+        "producer"
       ]
     }
   },
