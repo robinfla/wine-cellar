@@ -488,10 +488,11 @@ export function getDrinkingWindow(input: MaturityInput): DrinkingWindow {
     ;[drinkFrom, drinkUntil, source] = resolveByRegion(vintage, lColor, regionName, grapeName)
   }
 
-  // Calculate peak (20%-80% of window)
+  // Split drinking window into thirds: approaching | peak | past_prime
   const windowLength = drinkUntil - drinkFrom
-  const peakStart = drinkFrom + Math.floor(windowLength * 0.2)
-  const peakEnd = drinkUntil - Math.floor(windowLength * 0.2)
+  const thirdLength = Math.max(1, Math.round(windowLength / 3))
+  const peakStart = drinkFrom + thirdLength
+  const peakEnd = drinkFrom + thirdLength * 2
 
   // Determine status
   let status: MaturityStatus
@@ -499,22 +500,22 @@ export function getDrinkingWindow(input: MaturityInput): DrinkingWindow {
   let yearsUntilReady: number | undefined
   let yearsPastPeak: number | undefined
 
-  if (currentYear < peakStart - 2) {
-    // Before approaching peak — cellar it
+  if (currentYear < drinkFrom) {
+    // Before the drinking window — cellar it
     status = 'to_age'
-    yearsUntilReady = peakStart - currentYear
-    message = `To age - ${yearsUntilReady} year${yearsUntilReady > 1 ? 's' : ''} until peak`
+    yearsUntilReady = drinkFrom - currentYear
+    message = `To age - ${yearsUntilReady} year${yearsUntilReady > 1 ? 's' : ''} until drinking window`
   } else if (currentYear < peakStart) {
-    // Within 2 years of peak — getting close
+    // First third of window — approaching peak
     status = 'approaching'
     yearsUntilReady = peakStart - currentYear
     message = `Approaching peak - ${yearsUntilReady} year${yearsUntilReady > 1 ? 's' : ''} to go`
-  } else if (currentYear >= peakStart && currentYear <= peakEnd) {
-    // In the sweet spot
+  } else if (currentYear <= peakEnd) {
+    // Middle third — peak
     status = 'peak'
     message = 'At peak - ideal drinking window'
-  } else if (currentYear > peakEnd && currentYear <= drinkUntil) {
-    // Past peak but still within drinking window
+  } else if (currentYear <= drinkUntil) {
+    // Last third — past prime
     status = 'past_prime'
     yearsPastPeak = currentYear - peakEnd
     message = `Past prime - still drinkable but ${yearsPastPeak} year${yearsPastPeak > 1 ? 's' : ''} past peak`
