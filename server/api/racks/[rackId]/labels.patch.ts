@@ -4,7 +4,8 @@ import { db } from '~/server/utils/db'
 import { cellarRacks, cellarSpaces } from '~/server/db/schema'
 
 const labelsSchema = z.object({
-  binLabels: z.record(z.string(), z.string()), // {"1-2": "Loire", "2-3": "Bordeaux"}
+  binLabels: z.record(z.string(), z.string()).optional(),
+  name: z.string().max(100).nullable().optional(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -25,8 +26,12 @@ export default defineEventHandler(async (event) => {
     .where(and(eq(cellarRacks.id, rackId), eq(cellarSpaces.userId, userId)))
   if (!rack) throw createError({ statusCode: 404, message: 'Rack not found' })
 
+  const updates: Record<string, any> = {}
+  if (parsed.data.binLabels !== undefined) updates.binLabels = JSON.stringify(parsed.data.binLabels)
+  if (parsed.data.name !== undefined) updates.name = parsed.data.name
+
   const [updated] = await db.update(cellarRacks)
-    .set({ binLabels: JSON.stringify(parsed.data.binLabels) })
+    .set(updates)
     .where(eq(cellarRacks.id, rackId))
     .returning()
 
