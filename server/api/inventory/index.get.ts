@@ -8,6 +8,7 @@ import {
   regions,
   cellars,
   formats,
+  maturityOverrides,
 } from '~/server/db/schema'
 import { getDrinkingWindow, type MaturityStatus } from '~/server/utils/maturity'
 
@@ -93,6 +94,8 @@ export default defineEventHandler(async (event) => {
       defaultDrinkFromYears: wines.defaultDrinkFromYears,
       defaultDrinkUntilYears: wines.defaultDrinkUntilYears,
       primaryGrape: sql<string | null>`(SELECT g.name FROM wine_grapes wg JOIN grapes g ON g.id = wg.grape_id WHERE wg.wine_id = ${wines.id} LIMIT 1)`.as('primary_grape'),
+      overrideDrinkFromYear: maturityOverrides.drinkFromYear,
+      overrideDrinkUntilYear: maturityOverrides.drinkUntilYear,
       notes: inventoryLots.notes,
       createdAt: inventoryLots.createdAt,
     })
@@ -104,6 +107,7 @@ export default defineEventHandler(async (event) => {
     .leftJoin(appellations, eq(wines.appellationId, appellations.id))
     .leftJoin(regions, eq(producers.regionId, regions.id))
     .leftJoin(sql`${regions} as wr`, sql`wr.id = ${wines.regionId}`)
+    .leftJoin(maturityOverrides, eq(maturityOverrides.lotId, inventoryLots.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(inventoryLots.createdAt))
     .limit(limit)
@@ -119,6 +123,8 @@ export default defineEventHandler(async (event) => {
       grapeName: lot.primaryGrape,
       defaultDrinkFromYears: lot.defaultDrinkFromYears,
       defaultDrinkUntilYears: lot.defaultDrinkUntilYears,
+      overrideDrinkFromYear: lot.overrideDrinkFromYear,
+      overrideDrinkUntilYear: lot.overrideDrinkUntilYear,
     })
     return {
       ...lot,
