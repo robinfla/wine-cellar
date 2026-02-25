@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import { db } from '~/server/utils/db'
 import { wines, producers, regions } from '~/server/db/schema'
-import { eq, ilike, and, or, sql } from 'drizzle-orm'
+import { eq, ilike, and, or } from 'drizzle-orm'
 
 const searchRequestSchema = z.object({
   text: z.string().min(1).max(500),

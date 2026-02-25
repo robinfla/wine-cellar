@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { validateImportRows, type ImportRow } from '~/server/services/import.service'
+import { validateImportRows } from '~/server/services/import.service'
 
 const importRowSchema = z.object({
   cellar: z.string(),

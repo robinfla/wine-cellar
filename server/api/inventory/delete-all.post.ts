@@ -8,7 +8,7 @@ import {
   wines,
   producers,
 } from '~/server/db/schema'
-import { getDrinkingWindow, type MaturityStatus } from '~/server/utils/maturity'
+import { getDrinkingWindow } from '~/server/utils/maturity'
 
 export default defineEventHandler(async (event) => {
   const userId = event.context.user?.id

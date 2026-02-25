@@ -1,4 +1,4 @@
-import { eq, and, isNull, sql } from 'drizzle-orm'
+import { eq, and, isNull } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import { wines, producers, regions, appellations, grapes, wineGrapes } from '~/server/db/schema'
 import { estimateMaturity } from '~/server/utils/maturity-ai'

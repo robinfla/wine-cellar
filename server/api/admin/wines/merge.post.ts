@@ -1,4 +1,4 @@
-import { eq, inArray, and, isNull, sql } from 'drizzle-orm'
+import { eq, inArray, and, isNull } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import { wines, inventoryLots, allocationItems, wineGrapes } from '~/server/db/schema'
 import { z } from 'zod'

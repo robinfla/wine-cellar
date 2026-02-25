@@ -1,4 +1,3 @@
-import { eq } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import { users } from '~/server/db/schema'
 import { fetchValuationForWine, getWinesNeedingValuation } from '~/server/services/valuation'

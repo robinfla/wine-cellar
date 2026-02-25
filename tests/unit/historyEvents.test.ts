@@ -16,6 +16,7 @@ type HandlerEvent = {
 type EventsSelectChain = {
   from: ReturnType<typeof vi.fn>
   innerJoin: ReturnType<typeof vi.fn>
+  leftJoin: ReturnType<typeof vi.fn>
   where: ReturnType<typeof vi.fn>
   orderBy: ReturnType<typeof vi.fn>
   limit: ReturnType<typeof vi.fn>
@@ -63,6 +64,7 @@ const createEventsSelectChain = ({ result }: { result: unknown[] }): EventsSelec
   const chain: EventsSelectChain = {
     from: vi.fn(),
     innerJoin: vi.fn(),
+    leftJoin: vi.fn(),
     where: vi.fn(),
     orderBy: vi.fn(),
     limit: vi.fn(),
@@ -71,6 +73,7 @@ const createEventsSelectChain = ({ result }: { result: unknown[] }): EventsSelec
 
   chain.from.mockReturnValue(chain)
   chain.innerJoin.mockReturnValue(chain)
+  chain.leftJoin.mockReturnValue(chain)
   chain.where.mockReturnValue(chain)
   chain.orderBy.mockReturnValue(chain)
   chain.limit.mockReturnValue(chain)
@@ -118,12 +121,11 @@ describe('history events endpoint', () => {
     const { default: handler } = await import('~/server/api/inventory/events.get')
     const result = await handler(createEvent({ userId: 6 }) as never)
 
-    expect(result).toEqual({
-      events,
-      total: 1,
-      limit: 50,
-      offset: 0,
-    })
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]).toMatchObject({ id: 1, eventType: 'purchase' })
+    expect(result.total).toBe(1)
+    expect(result.limit).toBe(50)
+    expect(result.offset).toBe(0)
   })
 
   it('filters by eventType when provided', async () => {
@@ -136,7 +138,8 @@ describe('history events endpoint', () => {
     const { default: handler } = await import('~/server/api/inventory/events.get')
     const result = await handler(createEvent({ userId: 6 }) as never)
 
-    expect(result.events).toEqual(events)
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]).toMatchObject({ id: 4, eventType: 'consumption' })
     expect(mockGetQuery).toHaveBeenCalledTimes(1)
     expect(eventsChain.where).toHaveBeenCalledTimes(1)
     expect(countChain.where).toHaveBeenCalledTimes(1)

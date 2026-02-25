@@ -2,7 +2,7 @@ import { and, eq, isNull, lt, or, sql } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import { inventoryLots, producers, wineCriticScores, wines } from '~/server/db/schema'
 import { mapCriticNameToEnum } from './mapper'
-import { REVIEW_THRESHOLD, findBestMatch, type MatchCandidate } from '../valuation/matcher'
+import { REVIEW_THRESHOLD, findBestMatch } from '../valuation/matcher'
 import { searchWineSearcherCriticScoresWithMeta } from './wineSearcher'
 
 const STALE_DAYS = 30

@@ -1,6 +1,6 @@
 import { eq, and, sql } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
-import { cellarSpaces, cellars } from '~/server/db/schema'
+import { cellars } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
   const userId = event.context.user?.id
