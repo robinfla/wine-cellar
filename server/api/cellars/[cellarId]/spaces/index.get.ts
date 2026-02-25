@@ -23,8 +23,10 @@ export default defineEventHandler(async (event) => {
       cs.created_at as "createdAt",
       (SELECT count(*)::int FROM space_walls sw WHERE sw.space_id = cs.id) as "wallCount",
       (SELECT count(*)::int FROM cellar_racks cr WHERE cr.space_id = cs.id) as "rackCount",
-      (SELECT count(*)::int FROM rack_slots rs INNER JOIN cellar_racks cr ON cr.id = rs.rack_id WHERE cr.space_id = cs.id) as "totalSlots",
-      (SELECT count(*)::int FROM rack_slots rs INNER JOIN cellar_racks cr ON cr.id = rs.rack_id WHERE cr.space_id = cs.id AND rs.inventory_lot_id IS NOT NULL) as "filledSlots"
+      (SELECT count(*)::int FROM rack_slots rs INNER JOIN cellar_racks cr ON cr.id = rs.rack_id WHERE cr.space_id = cs.id)
+        + (SELECT COALESCE(sum(cr.columns * cr.rows * cr.capacity), 0)::int FROM cellar_racks cr WHERE cr.space_id = cs.id AND cr.type = 'bin') as "totalSlots",
+      (SELECT count(*)::int FROM rack_slots rs INNER JOIN cellar_racks cr ON cr.id = rs.rack_id WHERE cr.space_id = cs.id AND rs.inventory_lot_id IS NOT NULL)
+        + (SELECT count(*)::int FROM bin_bottles bb INNER JOIN cellar_racks cr ON cr.id = bb.rack_id WHERE cr.space_id = cs.id) as "filledSlots"
     FROM cellar_spaces cs
     WHERE cs.cellar_id = ${cellarId} AND cs.user_id = ${userId}
     ORDER BY cs.created_at
