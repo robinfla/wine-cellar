@@ -90,6 +90,9 @@ export default defineEventHandler(async (event) => {
       purchaseCurrency: inventoryLots.purchaseCurrency,
       purchaseSource: inventoryLots.purchaseSource,
       binLocation: inventoryLots.binLocation,
+      defaultDrinkFromYears: wines.defaultDrinkFromYears,
+      defaultDrinkUntilYears: wines.defaultDrinkUntilYears,
+      primaryGrape: sql<string | null>`(SELECT g.name FROM wine_grapes wg JOIN grapes g ON g.id = wg.grape_id WHERE wg.wine_id = ${wines.id} LIMIT 1)`.as('primary_grape'),
       notes: inventoryLots.notes,
       createdAt: inventoryLots.createdAt,
     })
@@ -111,6 +114,11 @@ export default defineEventHandler(async (event) => {
     const maturityInfo = getDrinkingWindow({
       vintage: lot.vintage,
       color: lot.wineColor,
+      appellationName: lot.appellationName,
+      regionName: lot.regionName,
+      grapeName: lot.primaryGrape,
+      defaultDrinkFromYears: lot.defaultDrinkFromYears,
+      defaultDrinkUntilYears: lot.defaultDrinkUntilYears,
     })
     return {
       ...lot,
