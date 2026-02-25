@@ -128,9 +128,15 @@ export default defineEventHandler(async (event) => {
 
   // Filter by maturity status if specified
   const maturityStatusMap: Record<string, MaturityStatus[]> = {
-    ready: ['ready', 'peak', 'approaching'],
-    past: ['declining', 'past'],
-    young: ['too_early'],
+    peak: ['peak'],
+    approaching: ['approaching'],
+    to_age: ['to_age'],
+    past_prime: ['past_prime'],
+    declining: ['declining'],
+    // Convenience aliases
+    ready: ['peak', 'approaching'],
+    drinkable: ['peak', 'approaching', 'past_prime'],
+    cellar: ['to_age'],
   }
 
   let filteredLots = lotsWithMaturity

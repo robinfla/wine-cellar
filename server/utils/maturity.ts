@@ -1,4 +1,4 @@
-export type MaturityStatus = 'too_early' | 'approaching' | 'ready' | 'peak' | 'declining' | 'past' | 'unknown'
+export type MaturityStatus = 'to_age' | 'approaching' | 'peak' | 'past_prime' | 'declining' | 'unknown'
 
 export interface DrinkingWindow {
   status: MaturityStatus
@@ -499,28 +499,30 @@ export function getDrinkingWindow(input: MaturityInput): DrinkingWindow {
   let yearsUntilReady: number | undefined
   let yearsPastPeak: number | undefined
 
-  if (currentYear < drinkFrom - 2) {
-    status = 'too_early'
-    yearsUntilReady = drinkFrom - currentYear
-    message = `Too young - wait ${yearsUntilReady} more year${yearsUntilReady > 1 ? 's' : ''}`
-  } else if (currentYear < drinkFrom) {
+  if (currentYear < peakStart - 2) {
+    // Before approaching peak — cellar it
+    status = 'to_age'
+    yearsUntilReady = peakStart - currentYear
+    message = `To age - ${yearsUntilReady} year${yearsUntilReady > 1 ? 's' : ''} until peak`
+  } else if (currentYear < peakStart) {
+    // Within 2 years of peak — getting close
     status = 'approaching'
-    yearsUntilReady = drinkFrom - currentYear
-    message = `Approaching - ready in ${yearsUntilReady} year${yearsUntilReady > 1 ? 's' : ''}`
+    yearsUntilReady = peakStart - currentYear
+    message = `Approaching peak - ${yearsUntilReady} year${yearsUntilReady > 1 ? 's' : ''} to go`
   } else if (currentYear >= peakStart && currentYear <= peakEnd) {
+    // In the sweet spot
     status = 'peak'
     message = 'At peak - ideal drinking window'
-  } else if (currentYear >= drinkFrom && currentYear <= drinkUntil) {
-    status = 'ready'
-    message = 'Ready to drink'
-  } else if (currentYear <= drinkUntil + 3) {
+  } else if (currentYear > peakEnd && currentYear <= drinkUntil) {
+    // Past peak but still within drinking window
+    status = 'past_prime'
+    yearsPastPeak = currentYear - peakEnd
+    message = `Past prime - still drinkable but ${yearsPastPeak} year${yearsPastPeak > 1 ? 's' : ''} past peak`
+  } else {
+    // Beyond the drinking window
     status = 'declining'
     yearsPastPeak = currentYear - drinkUntil
-    message = `Past peak but still enjoyable - ${yearsPastPeak} year${yearsPastPeak > 1 ? 's' : ''} past optimal`
-  } else {
-    status = 'past'
-    yearsPastPeak = currentYear - drinkUntil
-    message = `Past its prime - ${yearsPastPeak} years past optimal window`
+    message = `Declining - ${yearsPastPeak} year${yearsPastPeak > 1 ? 's' : ''} past drinking window`
   }
 
   return {
