@@ -1,6 +1,9 @@
 services:
   app:
     build: .
+    container_name: wine-cellar
+    expose:
+      - "3000"
     ports:
       - "3000:3000"
     environment:
@@ -10,6 +13,20 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - default
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cellar.rule=Host(`cellar.zubi.wine`)"
+      - "traefik.http.routers.cellar.entrypoints=https"
+      - "traefik.http.routers.cellar.tls=true"
+      - "traefik.http.routers.cellar.tls.certresolver=letsencrypt"
+      - "traefik.http.services.cellar.loadbalancer.server.port=3000"
+      - "traefik.http.routers.cellar-http.rule=Host(`cellar.zubi.wine`)"
+      - "traefik.http.routers.cellar-http.entrypoints=http"
+      - "traefik.http.routers.cellar-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
 
   db:
     image: postgres:16-alpine
@@ -27,6 +44,10 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+
+networks:
+  coolify:
+    external: true
 
 volumes:
   postgres_data:
