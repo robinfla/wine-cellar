@@ -160,11 +160,13 @@ watch(
 )
 
 // Maturity tabs
-const maturityTabs = computed(() => [ // TODO: add i18n key inventory.allMaturity, inventory.readyToDrink, inventory.pastPrime, inventory.toAge
+const maturityTabs = computed(() => [
   { value: '', label: t('inventory.allMaturity') },
-  { value: 'ready', label: t('inventory.readyToDrink') },
-  { value: 'past', label: t('inventory.pastPrime') },
-  { value: 'young', label: t('inventory.toAge') },
+  { value: 'to_age', label: 'To Age' },
+  { value: 'approaching', label: 'Approaching' },
+  { value: 'peak', label: 'Peak' },
+  { value: 'past_prime', label: 'Past Prime' },
+  { value: 'declining', label: 'Declining' },
 ])
 
 // Color options
@@ -194,26 +196,24 @@ const _getColorLabel = (c: string) => t(`colors.${c}`)
 
 const getMaturityStatusColor = (status: string) => {
   const colors: Record<string, string> = {
-    peak: 'bg-secondary-100 text-secondary-700',
-    ready: 'bg-secondary-100 text-secondary-700',
-    approaching: 'bg-primary-100 text-primary-700',
-    declining: 'bg-accent-100 text-accent-700',
-    too_early: 'bg-muted-200 text-muted-700',
-    past: 'bg-red-100 text-red-700',
+    to_age: 'bg-blue-100 text-blue-700',
+    approaching: 'bg-amber-100 text-amber-700',
+    peak: 'bg-green-100 text-green-700',
+    past_prime: 'bg-orange-100 text-orange-700',
+    declining: 'bg-red-100 text-red-700',
     unknown: 'bg-muted-200 text-muted-700',
   }
   return colors[status] || colors.unknown
 }
 
-const getMaturityStatusLabel = (status: string) => { // TODO: add i18n key inventory.maturityPeak, inventory.maturityReady, inventory.maturityApproaching, inventory.maturityDeclining, inventory.maturityTooEarly, inventory.maturityPast, inventory.maturityUnknown
+const getMaturityStatusLabel = (status: string) => {
   const labels: Record<string, string> = {
-    peak: t('inventory.maturityPeak'),
-    ready: t('inventory.maturityReady'),
-    approaching: t('inventory.maturityApproaching'),
-    declining: t('inventory.maturityDeclining'),
-    too_early: t('inventory.maturityTooEarly'),
-    past: t('inventory.maturityPast'),
-    unknown: t('inventory.maturityUnknown'),
+    to_age: 'To Age',
+    approaching: 'Approaching',
+    peak: 'Peak',
+    past_prime: 'Past Prime',
+    declining: 'Declining',
+    unknown: 'Unknown',
   }
   return labels[status] || status
 }
