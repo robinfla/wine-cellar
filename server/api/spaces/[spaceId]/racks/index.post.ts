@@ -1,47 +1,54 @@
 import { z } from 'zod'
 import { eq, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
-import { cellarSpaces, cellarRacks } from '~/server/db/schema'
+import { cellarSpaces, cellarRacks, rackSlots } from '~/server/db/schema'
 
-const createRackSchema = z.object({
-  wallId: z.number().int().positive().optional().nullable(),
-  columns: z.number().int().min(1),
-  rows: z.number().int().min(1),
-  depth: z.number().int().min(1).optional(),
+const createSchema = z.object({
+  wallId: z.number().int().optional(),
+  columns: z.number().int().min(1).max(50),
+  rows: z.number().int().min(1).max(50),
+  depth: z.number().int().min(1).max(10).optional().default(1),
 })
 
 export default defineEventHandler(async (event) => {
   const userId = event.context.user?.id
-  if (!userId) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
+  if (!userId) throw createError({ statusCode: 401, message: 'Unauthorized' })
 
-  const spaceId = Number(event.context.params?.spaceId)
-  if (!spaceId) {
-    throw createError({ statusCode: 400, message: 'Invalid space ID' })
-  }
+  const spaceId = Number(getRouterParam(event, 'spaceId'))
+  if (isNaN(spaceId)) throw createError({ statusCode: 400, message: 'Invalid space ID' })
 
-  // Verify space ownership
-  const space = await db.select({ id: cellarSpaces.id }).from(cellarSpaces)
+  const [space] = await db.select().from(cellarSpaces)
     .where(and(eq(cellarSpaces.id, spaceId), eq(cellarSpaces.userId, userId)))
-    .limit(1)
-  if (!space.length) {
-    throw createError({ statusCode: 404, message: 'Space not found' })
-  }
+  if (!space) throw createError({ statusCode: 404, message: 'Space not found' })
 
   const body = await readBody(event)
-  const parsed = createRackSchema.safeParse(body)
-  if (!parsed.success) {
-    throw createError({ statusCode: 400, message: 'Invalid input', data: parsed.error.flatten() })
-  }
+  const parsed = createSchema.safeParse(body)
+  if (!parsed.success) throw createError({ statusCode: 400, message: 'Invalid data', data: parsed.error.flatten() })
 
+  const { wallId, columns, rows, depth } = parsed.data
+
+  // Create rack
   const [rack] = await db.insert(cellarRacks).values({
     spaceId,
-    wallId: parsed.data.wallId ?? null,
-    columns: parsed.data.columns,
-    rows: parsed.data.rows,
-    depth: parsed.data.depth ?? 1,
+    wallId: wallId ?? null,
+    columns,
+    rows,
+    depth,
   }).returning()
 
-  return rack
+  // Pre-create all slots (empty)
+  const slotValues: Array<{ rackId: number; row: number; column: number; depthPosition: number }> = []
+  for (let r = 1; r <= rows; r++) {
+    for (let c = 1; c <= columns; c++) {
+      for (let d = 1; d <= depth; d++) {
+        slotValues.push({ rackId: rack.id, row: r, column: c, depthPosition: d })
+      }
+    }
+  }
+
+  if (slotValues.length > 0) {
+    await db.insert(rackSlots).values(slotValues)
+  }
+
+  return { ...rack, totalSlots: slotValues.length }
 })
