@@ -517,6 +517,7 @@ export const cellarRacks = pgTable('cellar_racks', {
   rows: integer('rows').notNull(),
   depth: integer('depth').notNull().default(1),
   capacity: integer('capacity'), // per-bin capacity (bin type only)
+  binLabels: text('bin_labels'), // JSON: {"row-col": "label"} for naming bins
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => ({

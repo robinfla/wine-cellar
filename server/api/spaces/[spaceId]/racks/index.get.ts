@@ -27,6 +27,7 @@ export default defineEventHandler(async (event) => {
     rows: cellarRacks.rows,
     depth: cellarRacks.depth,
     capacity: cellarRacks.capacity,
+    binLabels: cellarRacks.binLabels,
     sortOrder: cellarRacks.sortOrder,
   })
   .from(cellarRacks)
