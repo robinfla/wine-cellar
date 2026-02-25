@@ -8,6 +8,45 @@ const { t } = useI18n({ useScope: 'global' })
 
 const { data: statsData, pending, refresh: refreshStats } = await useFetch('/api/reports/stats')
 
+// Maturity breakdown
+interface MaturityBreakdown {
+  status: string
+  bottles: number
+  label: string
+  color: string
+}
+
+const maturityBreakdown = ref<MaturityBreakdown[]>([])
+
+const fetchMaturityBreakdown = async () => {
+  try {
+    const data = await $fetch<{ lots: Array<{ quantity: number; maturity?: { status: string } | null }> }>('/api/inventory', {
+      query: { inStock: 'true', limit: 2000 },
+    })
+    const counts: Record<string, number> = {}
+    for (const lot of data.lots) {
+      const status = lot.maturity?.status ?? 'unknown'
+      counts[status] = (counts[status] ?? 0) + lot.quantity
+    }
+    const config: Record<string, { label: string; color: string }> = {
+      to_age: { label: 'To Age', color: '#3b82f6' },
+      approaching: { label: 'Approaching', color: '#f59e0b' },
+      peak: { label: 'Peak', color: '#22c55e' },
+      past_prime: { label: 'Past Prime', color: '#f97316' },
+      declining: { label: 'Declining', color: '#ef4444' },
+    }
+    maturityBreakdown.value = Object.entries(config)
+      .filter(([key]) => (counts[key] ?? 0) > 0)
+      .map(([key, cfg]) => ({ status: key, bottles: counts[key] ?? 0, ...cfg }))
+  } catch {
+    // non-critical
+  }
+}
+
+onMounted(() => {
+  fetchMaturityBreakdown()
+})
+
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('en-EU', {
     style: 'currency',
@@ -133,6 +172,7 @@ const handleConsume = async () => {
 
     consumeSuccess.value = true
     await refreshStats()
+    fetchMaturityBreakdown()
 
     setTimeout(() => {
       closeConsumeModal()
@@ -300,6 +340,40 @@ const grapeChartData = computed(() => {
 })
 
 const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5)
+
+// Maturity pie chart helpers
+const maturityTotal = computed(() => maturityBreakdown.value.reduce((sum, s) => sum + s.bottles, 0))
+
+const maturityPieSlices = computed(() => {
+  const total = maturityTotal.value
+  if (total === 0) return []
+
+  const cx = 90, cy = 90, r = 86
+  let currentAngle = -Math.PI / 2
+
+  return maturityBreakdown.value.map((item) => {
+    const sliceAngle = (item.bottles / total) * Math.PI * 2
+    const startAngle = currentAngle
+    const endAngle = currentAngle + sliceAngle
+    currentAngle = endAngle
+
+    const x1 = cx + r * Math.cos(startAngle)
+    const y1 = cy + r * Math.sin(startAngle)
+    const x2 = cx + r * Math.cos(endAngle)
+    const y2 = cy + r * Math.sin(endAngle)
+    const largeArc = sliceAngle > Math.PI ? 1 : 0
+
+    const path = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`
+
+    return {
+      path,
+      color: item.color,
+      label: item.label,
+      bottles: item.bottles,
+      pct: Math.round((item.bottles / total) * 100),
+    }
+  })
+})
 </script>
 
 <template>
@@ -464,6 +538,31 @@ const hasMoreGrapes = computed(() => (statsData.value?.byGrape?.length || 0) > 5
         <div class="card">
           <p class="text-sm font-semibold text-muted-500">{{ $t('home.purchaseValue') }}</p>
           <p class="mt-1 text-3xl font-bold text-primary">{{ formatCurrency(statsData?.totals?.estimatedValue || 0) }}</p>
+        </div>
+      </div>
+
+      <!-- Maturity Pie Chart -->
+      <div v-if="maturityBreakdown.length > 0" class="card p-6 mb-8">
+        <h3 class="text-sm font-semibold text-muted-500 mb-4">Cellar Maturity</h3>
+        <div class="flex items-center gap-8">
+          <!-- SVG Pie Chart -->
+          <div class="flex-shrink-0">
+            <svg width="180" height="180" viewBox="0 0 180 180">
+              <template v-for="(slice, i) in maturityPieSlices" :key="i">
+                <path :d="slice.path" :fill="slice.color" class="transition-opacity hover:opacity-80 cursor-pointer">
+                  <title>{{ slice.label }}: {{ slice.bottles }} bottles ({{ slice.pct }}%)</title>
+                </path>
+              </template>
+            </svg>
+          </div>
+          <!-- Legend -->
+          <div class="flex flex-col gap-3">
+            <div v-for="item in maturityBreakdown" :key="item.status" class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: item.color }" />
+              <span class="text-sm text-muted-700 font-medium">{{ item.label }}</span>
+              <span class="text-sm text-muted-500">{{ item.bottles }} ({{ Math.round((item.bottles / maturityTotal) * 100) }}%)</span>
+            </div>
+          </div>
         </div>
       </div>
 
