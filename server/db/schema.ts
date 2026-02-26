@@ -166,8 +166,14 @@ export const wines = pgTable('wines', {
   defaultDrinkFromYears: integer('default_drink_from_years'),
   defaultDrinkUntilYears: integer('default_drink_until_years'),
 
-  // Taste profile
+  // Taste profile (generic tags)
   tasteProfile: text('taste_profile'), // JSON array: ["Bold", "Earthy", "Structured"]
+  
+  // Taste characteristics (0-100 scale for sliders)
+  bodyWeight: integer('body_weight'), // 0 = Light, 100 = Heavy
+  tanninLevel: integer('tannin_level'), // 0 = Flexible, 100 = Tannic
+  sweetnessLevel: integer('sweetness_level'), // 0 = Dry, 100 = Sweet
+  acidityLevel: integer('acidity_level'), // 0 = Soft, 100 = Acid
   
   // Serving guide
   servingTempCelsius: integer('serving_temp_celsius'), // e.g., 16
