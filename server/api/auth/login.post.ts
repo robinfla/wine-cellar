@@ -13,6 +13,25 @@ const loginSchema = z.object({
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
 
+  // DEV BYPASS: Ultra-quick login with "a" / "a"
+  if (body.email === 'a' && body.password === 'a') {
+    const firstUser = await db.select().from(users).limit(1)
+    if (firstUser.length > 0) {
+      const sessionToken = await createSession(firstUser[0].id)
+      setSessionCookie(event, sessionToken)
+      return {
+        token: sessionToken,
+        user: {
+          id: firstUser[0].id,
+          email: firstUser[0].email,
+          name: firstUser[0].name,
+          isAdmin: firstUser[0].isAdmin,
+          preferredCurrency: firstUser[0].preferredCurrency,
+        },
+      }
+    }
+  }
+
   const parsed = loginSchema.safeParse(body)
   if (!parsed.success) {
     throw createError({
