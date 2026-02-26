@@ -177,6 +177,9 @@ export const wines = pgTable('wines', {
   // Food pairings
   foodPairings: text('food_pairings'), // JSON array: ["Grilled steak", "Aged cheese"]
 
+  // Bottle image
+  bottleImageUrl: text('bottle_image_url'), // URL to bottle photo
+
   notes: text('notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
