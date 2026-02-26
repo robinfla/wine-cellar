@@ -1,4 +1,4 @@
-import { eq, and, desc, sql } from 'drizzle-orm'
+import { eq, and, desc, sql, inArray } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import {
   wines,
@@ -162,7 +162,7 @@ export default defineEventHandler(async (event) => {
       drinkUntilYear: maturityOverrides.drinkUntilYear,
     })
     .from(maturityOverrides)
-    .where(sql`${maturityOverrides.lotId} = ANY(${lotIds})`)
+    .where(inArray(maturityOverrides.lotId, lotIds))
     : []
 
   const overridesMap = new Map(overrides.map(o => [o.lotId, o]))
