@@ -12,7 +12,9 @@ import {
   grapes,
   formats,
   cellars,
+  maturityOverrides,
 } from '~/server/db/schema'
+import { getDrinkingWindow } from '~/server/utils/maturity'
 
 export default defineEventHandler(async (event) => {
   const userId = event.context.user?.id
@@ -151,6 +153,46 @@ export default defineEventHandler(async (event) => {
     .orderBy(desc(inventoryEvents.eventDate))
     .limit(50)
 
+  // Get maturity overrides for all lots
+  const lotIds = vintages.map(v => v.id)
+  const overrides = lotIds.length > 0 ? await db
+    .select({
+      lotId: maturityOverrides.lotId,
+      drinkFromYear: maturityOverrides.drinkFromYear,
+      drinkUntilYear: maturityOverrides.drinkUntilYear,
+    })
+    .from(maturityOverrides)
+    .where(sql`${maturityOverrides.lotId} = ANY(${lotIds})`)
+    : []
+
+  const overridesMap = new Map(overrides.map(o => [o.lotId, o]))
+
+  // Calculate maturity for each vintage
+  const vintagesWithMaturity = vintages.map((v) => {
+    const override = overridesMap.get(v.id)
+    const maturity = getDrinkingWindow({
+      vintage: v.vintage,
+      color: wine.color,
+      appellationName: wine.appellation?.name,
+      regionName: wine.region?.name,
+      defaultDrinkFromYears: wine.defaultDrinkFromYears,
+      defaultDrinkUntilYears: wine.defaultDrinkUntilYears,
+      overrideDrinkFromYear: override?.drinkFromYear,
+      overrideDrinkUntilYear: override?.drinkUntilYear,
+    })
+
+    return {
+      ...v,
+      valuation: valuations.find((val) => val.vintage === v.vintage) || null,
+      maturity: {
+        status: maturity.status,
+        message: maturity.message,
+        drinkFrom: maturity.drinkFrom,
+        drinkUntil: maturity.drinkUntil,
+      },
+    }
+  })
+
   // Parse JSON fields
   const tasteProfile = wine.tasteProfile ? JSON.parse(wine.tasteProfile) : null
   const foodPairings = wine.foodPairings ? JSON.parse(wine.foodPairings) : null
@@ -160,10 +202,7 @@ export default defineEventHandler(async (event) => {
     tasteProfile,
     foodPairings,
     grapes: grapeResults,
-    vintages: vintages.map((v) => ({
-      ...v,
-      valuation: valuations.find((val) => val.vintage === v.vintage) || null,
-    })),
+    vintages: vintagesWithMaturity,
     history,
   }
 })
