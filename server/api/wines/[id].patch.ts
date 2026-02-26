@@ -11,6 +11,11 @@ const updateWineSchema = z.object({
   color: z.enum(['red', 'white', 'rose', 'sparkling', 'dessert', 'fortified']).optional(),
   defaultDrinkFromYears: z.number().int().min(0).nullable().optional(),
   defaultDrinkUntilYears: z.number().int().min(0).nullable().optional(),
+  tasteProfile: z.array(z.string()).nullable().optional(),
+  servingTempCelsius: z.number().int().nullable().optional(),
+  decantMinutes: z.number().int().nullable().optional(),
+  glassType: z.string().nullable().optional(),
+  foodPairings: z.array(z.string()).nullable().optional(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -81,6 +86,26 @@ export default defineEventHandler(async (event) => {
 
   if (parsed.data.defaultDrinkUntilYears !== undefined) {
     updates.defaultDrinkUntilYears = parsed.data.defaultDrinkUntilYears
+  }
+
+  if (parsed.data.tasteProfile !== undefined) {
+    updates.tasteProfile = parsed.data.tasteProfile ? JSON.stringify(parsed.data.tasteProfile) : null
+  }
+
+  if (parsed.data.servingTempCelsius !== undefined) {
+    updates.servingTempCelsius = parsed.data.servingTempCelsius
+  }
+
+  if (parsed.data.decantMinutes !== undefined) {
+    updates.decantMinutes = parsed.data.decantMinutes
+  }
+
+  if (parsed.data.glassType !== undefined) {
+    updates.glassType = parsed.data.glassType
+  }
+
+  if (parsed.data.foodPairings !== undefined) {
+    updates.foodPairings = parsed.data.foodPairings ? JSON.stringify(parsed.data.foodPairings) : null
   }
 
   // Update wine

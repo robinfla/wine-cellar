@@ -540,6 +540,30 @@ export function getDrinkingWindow(input: MaturityInput): DrinkingWindow {
 }
 
 /**
+ * Map maturity status to design phase with emoji
+ */
+export function getAgingPhase(status: MaturityStatus): {
+  emoji: string
+  label: string
+  phase: string
+} {
+  switch (status) {
+    case 'to_age':
+      return { emoji: '🍇', label: 'Youth', phase: 'to_age' }
+    case 'approaching':
+      return { emoji: '😊', label: 'Maturity', phase: 'approaching' }
+    case 'peak':
+      return { emoji: '😍', label: 'Peak', phase: 'peak' }
+    case 'past_prime':
+      return { emoji: '📉', label: 'Past Prime', phase: 'past_prime' }
+    case 'declining':
+      return { emoji: '⚠️', label: 'Declining', phase: 'declining' }
+    default:
+      return { emoji: '❓', label: 'Unknown', phase: 'unknown' }
+  }
+}
+
+/**
  * Resolve drinking window by region + grape, then region, then color fallback.
  * Returns [drinkFrom, drinkUntil, source]
  */

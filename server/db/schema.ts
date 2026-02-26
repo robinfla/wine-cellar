@@ -166,6 +166,17 @@ export const wines = pgTable('wines', {
   defaultDrinkFromYears: integer('default_drink_from_years'),
   defaultDrinkUntilYears: integer('default_drink_until_years'),
 
+  // Taste profile
+  tasteProfile: text('taste_profile'), // JSON array: ["Bold", "Earthy", "Structured"]
+  
+  // Serving guide
+  servingTempCelsius: integer('serving_temp_celsius'), // e.g., 16
+  decantMinutes: integer('decant_minutes'), // e.g., 60
+  glassType: text('glass_type'), // e.g., "Bordeaux glass"
+  
+  // Food pairings
+  foodPairings: text('food_pairings'), // JSON array: ["Grilled steak", "Aged cheese"]
+
   notes: text('notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
