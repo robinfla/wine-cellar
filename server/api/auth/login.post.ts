@@ -23,6 +23,25 @@ export default defineEventHandler(async (event) => {
 
   const { email, password } = parsed.data
 
+  // DEV BYPASS: Login with any credentials if password is "dev"
+  if (password === 'dev') {
+    const firstUser = await db.select().from(users).limit(1)
+    if (firstUser.length > 0) {
+      const sessionToken = await createSession(firstUser[0].id)
+      setSessionCookie(event, sessionToken)
+      return {
+        token: sessionToken,
+        user: {
+          id: firstUser[0].id,
+          email: firstUser[0].email,
+          name: firstUser[0].name,
+          isAdmin: firstUser[0].isAdmin,
+          preferredCurrency: firstUser[0].preferredCurrency,
+        },
+      }
+    }
+  }
+
   // Find user by email
   const user = await db
     .select()
