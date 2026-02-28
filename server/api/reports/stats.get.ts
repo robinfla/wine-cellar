@@ -136,6 +136,7 @@ export default defineEventHandler(async (event) => {
     .select({
       regionId: regions.id,
       regionName: regions.name,
+      countryCode: regions.countryCode,
       bottles: sql<number>`coalesce(sum(${inventoryLots.quantity}), 0)`,
     })
     .from(inventoryLots)
@@ -143,12 +144,29 @@ export default defineEventHandler(async (event) => {
     .innerJoin(producers, eq(wines.producerId, producers.id))
     .innerJoin(regions, eq(producers.regionId, regions.id))
     .where(and(eq(inventoryLots.userId, userId), sql`${inventoryLots.quantity} > 0`))
-    .groupBy(regions.id, regions.name)
+    .groupBy(regions.id, regions.name, regions.countryCode)
     .orderBy(desc(sql`sum(${inventoryLots.quantity})`))
+
+  // Map country codes to flags
+  const codeToFlag: Record<string, string> = {
+    'FR': '🇫🇷',
+    'IT': '🇮🇹',
+    'ES': '🇪🇸',
+    'US': '🇺🇸',
+    'AU': '🇦🇺',
+    'DE': '🇩🇪',
+    'PT': '🇵🇹',
+    'AR': '🇦🇷',
+    'CL': '🇨🇱',
+    'ZA': '🇿🇦',
+    'NZ': '🇳🇿',
+  }
 
   const byRegion = byRegionResult.map((row) => ({
     regionId: row.regionId,
     regionName: row.regionName,
+    countryCode: row.countryCode,
+    flag: codeToFlag[row.countryCode?.toUpperCase() || ''] || '🌍',
     bottles: Number(row.bottles),
   }))
 
