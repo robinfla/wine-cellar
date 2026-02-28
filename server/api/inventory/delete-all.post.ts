@@ -74,9 +74,9 @@ export default defineEventHandler(async (event) => {
     .where(and(...conditions))
 
   const maturityStatusMap: Record<string, MaturityStatus[]> = {
-    ready: ['ready', 'peak', 'approaching'],
-    past: ['declining', 'past'],
-    young: ['too_early'],
+    ready: ['peak', 'approaching'],
+    past: ['declining', 'past_prime'],
+    young: ['to_age'],
   }
 
   let filteredLots = userLots

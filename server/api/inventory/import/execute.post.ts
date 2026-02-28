@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { executeImport } from '~/server/services/import.service'
+import { executeImport, type ValidatedRow } from '~/server/services/import.service'
 
 const executeSchema = z.object({
   rows: z.array(z.any()),

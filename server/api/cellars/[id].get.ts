@@ -20,9 +20,6 @@ export default defineEventHandler(async (event) => {
       countryCode: cellars.countryCode,
       isVirtual: cellars.isVirtual,
       notes: cellars.notes,
-      rows: cellars.rows,
-      columns: cellars.columns,
-      layoutConfig: cellars.layoutConfig,
       createdAt: cellars.createdAt,
       bottleCount: sql<number>`COALESCE(SUM(${inventoryLots.quantity}), 0)::int`,
     })
