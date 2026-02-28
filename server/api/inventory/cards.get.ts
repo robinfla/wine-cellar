@@ -88,6 +88,7 @@ export default defineEventHandler(async (event) => {
   const search = query.search as string | undefined
   const cellarId = query.cellarId ? Number(query.cellarId) : undefined
   const color = query.color as string | undefined
+  const maturityFilter = query.maturity as string | undefined // 'ready' for peak/approaching wines
 
   // Build conditions
   const conditions = [
@@ -220,7 +221,14 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const cards = Array.from(wineMap.values())
+  let cards = Array.from(wineMap.values())
+
+  // Apply maturity filter if requested
+  if (maturityFilter === 'ready') {
+    cards = cards.filter((wine) =>
+      wine.vintages.some((v) => v.maturityStatus === 'peak' || v.maturityStatus === 'approaching')
+    )
+  }
 
   // Sort by total bottles descending
   cards.sort((a, b) => b.totalBottles - a.totalBottles)
