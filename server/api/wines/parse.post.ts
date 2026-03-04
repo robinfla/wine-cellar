@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
+import { tryParseFromKnowledge, enrichWithKnowledge } from '~/server/utils/knowledge'
 
 const parseRequestSchema = z.object({
   text: z.string().min(1).max(500),
@@ -31,6 +32,18 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Step 1: Try knowledge base first (free, instant)
+  const kbResult = tryParseFromKnowledge(parsedBody.data.text)
+  if (kbResult) {
+    console.log('[parse] Knowledge base hit — skipping LLM')
+    return {
+      success: true,
+      parsed: kbResult,
+      source: 'knowledge-base',
+    }
+  }
+
+  // Step 2: Fall back to Anthropic API
   const config = useRuntimeConfig()
   if (!config.anthropicApiKey) {
     throw createError({
@@ -78,8 +91,12 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Step 3: Enrich AI result with knowledge base data
+  const enriched = enrichWithKnowledge(validatedResponse.data)
+
   return {
     success: true,
-    parsed: validatedResponse.data,
+    parsed: enriched,
+    source: 'anthropic',
   }
 })

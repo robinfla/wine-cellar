@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { db } from '~/server/utils/db'
 import { wines, producers, regions } from '~/server/db/schema'
 import { eq, ilike, and, or } from 'drizzle-orm'
+import { enrichWithKnowledge, searchKnowledge } from '~/server/utils/knowledge'
 
 const scanRequestSchema = z.object({
   image: z.string().min(1),
@@ -99,9 +100,10 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const parsed = validatedResponse.data
+  // Enrich AI vision result with knowledge base data
+  const parsed = enrichWithKnowledge(validatedResponse.data)
 
-  // Step 2: Search existing wines for matches (copied from ai-search.post.ts)
+  // Step 2: Search existing wines for matches
   const matches = await db
     .select({
       wine: wines,
@@ -152,8 +154,20 @@ export default defineEventHandler(async (event) => {
   // Sort by score descending
   scoredMatches.sort((a, b) => b.score - a.score)
 
+  // Knowledge base suggestions (wines known to exist globally)
+  const searchTerms = [parsed.producer, parsed.wineName].filter(Boolean).join(' ')
+  const kbSuggestions = searchKnowledge(searchTerms, 5).map(r => ({
+    producer: r.producer_name,
+    wineName: r.wine_name,
+    region: r.region_name,
+    country: r.country_name,
+    appellation: r.appellation_name,
+    color: r.color,
+  }))
+
   return {
     parsed,
     matches: scoredMatches,
+    suggestions: kbSuggestions,
   }
 })

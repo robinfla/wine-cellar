@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { db } from '~/server/utils/db'
 import { wines, producers, regions } from '~/server/db/schema'
 import { eq, ilike, and, or } from 'drizzle-orm'
+import { tryParseFromKnowledge, enrichWithKnowledge, searchKnowledge } from '~/server/utils/knowledge'
 
 const searchRequestSchema = z.object({
   text: z.string().min(1).max(500),
@@ -44,57 +45,68 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const config = useRuntimeConfig()
-  if (!config.anthropicApiKey) {
-    throw createError({
-      statusCode: 503,
-      message: 'Anthropic API key is not configured',
-    })
-  }
+  // Step 1: Try knowledge base first (free, instant)
+  const kbParsed = tryParseFromKnowledge(parsedBody.data.text)
+  
+  let parsed: z.infer<typeof parsedWineSchema>
+  let source = 'knowledge-base'
 
-  // Step 1: Parse with AI (reuse parse.post.ts logic)
-  const anthropic = new Anthropic({ apiKey: config.anthropicApiKey })
-
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 1024,
-    system: 'You extract structured wine information from short free-text inputs. When a value is unknown, use null for nullable fields. Keep producer and wineName concise and normalized. Respond ONLY with a JSON object matching this schema: { "producer": string, "wineName": string, "vintage": integer|null, "color": "red"|"white"|"rose"|"sparkling"|"dessert"|"fortified", "region": string|null, "appellation": string|null }',
-    messages: [
-      {
-        role: 'user',
-        content: parsedBody.data.text,
-      },
-    ],
-  })
-
-  const contentBlock = message.content[0]
-  if (!contentBlock || contentBlock.type !== 'text') {
-    throw createError({ statusCode: 502, message: 'Anthropic returned an empty response' })
-  }
-
-  let parsedResponse: unknown
-  try {
-    // Strip markdown code fences if present
-    let jsonText = contentBlock.text.trim()
-    if (jsonText.startsWith('```')) {
-      jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
+  if (kbParsed) {
+    console.log('[ai-search] Knowledge base hit — skipping LLM')
+    parsed = kbParsed as z.infer<typeof parsedWineSchema>
+  } else {
+    // Step 2: Fall back to Anthropic API
+    source = 'anthropic'
+    const config = useRuntimeConfig()
+    if (!config.anthropicApiKey) {
+      throw createError({
+        statusCode: 503,
+        message: 'Anthropic API key is not configured',
+      })
     }
-    parsedResponse = JSON.parse(jsonText)
-  } catch {
-    throw createError({ statusCode: 502, message: 'Anthropic returned invalid JSON' })
-  }
 
-  const validatedResponse = parsedWineSchema.safeParse(parsedResponse)
-  if (!validatedResponse.success) {
-    console.error('[ai-search] Schema validation failed:', JSON.stringify(parsedResponse), validatedResponse.error.flatten())
-    throw createError({
-      statusCode: 502,
-      message: 'Anthropic response did not match expected schema',
-      data: validatedResponse.error.flatten(),
+    const anthropic = new Anthropic({ apiKey: config.anthropicApiKey })
+
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5-20250929',
+      max_tokens: 1024,
+      system: 'You extract structured wine information from short free-text inputs. When a value is unknown, use null for nullable fields. Keep producer and wineName concise and normalized. Respond ONLY with a JSON object matching this schema: { "producer": string, "wineName": string, "vintage": integer|null, "color": "red"|"white"|"rose"|"sparkling"|"dessert"|"fortified", "region": string|null, "appellation": string|null }',
+      messages: [
+        {
+          role: 'user',
+          content: parsedBody.data.text,
+        },
+      ],
     })
-  }
 
-  const parsed = validatedResponse.data
+    const contentBlock = message.content[0]
+    if (!contentBlock || contentBlock.type !== 'text') {
+      throw createError({ statusCode: 502, message: 'Anthropic returned an empty response' })
+    }
+
+    let parsedResponse: unknown
+    try {
+      let jsonText = contentBlock.text.trim()
+      if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
+      }
+      parsedResponse = JSON.parse(jsonText)
+    } catch {
+      throw createError({ statusCode: 502, message: 'Anthropic returned invalid JSON' })
+    }
+
+    const validatedResponse = parsedWineSchema.safeParse(parsedResponse)
+    if (!validatedResponse.success) {
+      console.error('[ai-search] Schema validation failed:', JSON.stringify(parsedResponse), validatedResponse.error.flatten())
+      throw createError({
+        statusCode: 502,
+        message: 'Anthropic response did not match expected schema',
+        data: validatedResponse.error.flatten(),
+      })
+    }
+
+    parsed = enrichWithKnowledge(validatedResponse.data) as z.infer<typeof parsedWineSchema>
+  }
 
   // Step 2: Search existing wines for matches
   const matches = await db
@@ -147,8 +159,20 @@ export default defineEventHandler(async (event) => {
   // Sort by score descending
   scoredMatches.sort((a, b) => b.score - a.score)
 
+  // Also include knowledge base suggestions (wines not in user's cellar but known to exist)
+  const kbSuggestions = searchKnowledge(parsedBody.data.text, 5).map(r => ({
+    producer: r.producer_name,
+    wineName: r.wine_name,
+    region: r.region_name,
+    country: r.country_name,
+    appellation: r.appellation_name,
+    color: r.color,
+  }))
+
   return {
     parsed,
     matches: scoredMatches,
+    suggestions: kbSuggestions,
+    source,
   }
 })
