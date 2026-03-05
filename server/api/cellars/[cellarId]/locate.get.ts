@@ -24,6 +24,8 @@ export default defineEventHandler(async (event) => {
       binColumn: binBottles.binColumn,
       rackId: binBottles.rackId,
       rackName: cellarRacks.name,
+      spaceId: cellarSpaces.id,
+      spaceName: cellarSpaces.name,
       quantity: inventoryLots.quantity,
       vintage: inventoryLots.vintage,
       wineName: wines.name,
@@ -57,6 +59,7 @@ export default defineEventHandler(async (event) => {
   const firstBin = binAssignments[0]
   const position = { row: firstBin.binRow, column: firstBin.binColumn }
   const rackId = firstBin.rackId
+  const spaceId = firstBin.spaceId
 
   // Get grape info for filter context
   const grapeData = await db
@@ -126,6 +129,8 @@ export default defineEventHandler(async (event) => {
   return {
     cellarId,
     cellarName: firstBin.cellarName,
+    spaceId,
+    spaceName: firstBin.spaceName,
     rackId,
     rackName: firstBin.rackName || '10×9 Rack',
     position,
