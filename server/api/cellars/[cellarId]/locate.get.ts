@@ -126,6 +126,7 @@ export default defineEventHandler(async (event) => {
   return {
     cellarId,
     cellarName: firstBin.cellarName,
+    rackId,
     rackName: firstBin.rackName || '10×9 Rack',
     position,
     wineColor,
