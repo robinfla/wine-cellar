@@ -1,6 +1,6 @@
 import { eq, and, sql } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
-import { inventoryLots, wines, cellars, binBottles } from '~/server/db/schema'
+import { inventoryLots, wines, cellars, binBottles, cellarRacks, cellarSpaces } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
   const userId = event.context.user?.id
@@ -25,10 +25,12 @@ export default defineEventHandler(async (event) => {
     .from(binBottles)
     .innerJoin(inventoryLots, eq(binBottles.inventoryLotId, inventoryLots.id))
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
+    .innerJoin(cellarRacks, eq(binBottles.rackId, cellarRacks.id))
+    .innerJoin(cellarSpaces, eq(cellarRacks.spaceId, cellarSpaces.id))
     .where(
       and(
         eq(inventoryLots.userId, userId),
-        eq(inventoryLots.cellarId, cellarId),
+        eq(cellarSpaces.cellarId, cellarId), // Filter by cellar through spaces
         sql`${inventoryLots.quantity} > 0`
       )
     )
