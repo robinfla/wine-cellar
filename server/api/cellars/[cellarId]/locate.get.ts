@@ -1,6 +1,6 @@
 import { eq, and, sql } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
-import { inventoryLots, wines, producers, cellars, wineGrapes, grapes } from '~/server/db/schema'
+import { inventoryLots, wines, producers, cellars, wineGrapes, grapes, binBottles, cellarRacks } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
   const userId = event.context.user?.id
@@ -16,36 +16,46 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'wineId query param required' })
   }
 
-  // Find the lot in this cellar
-  const lots = await db
+  // Find bottles for this wine that are assigned to bins
+  const binAssignments = await db
     .select({
       lotId: inventoryLots.id,
-      binLocation: inventoryLots.binLocation,
+      binRow: binBottles.binRow,
+      binColumn: binBottles.binColumn,
+      rackId: binBottles.rackId,
+      rackName: cellarRacks.name,
       quantity: inventoryLots.quantity,
       vintage: inventoryLots.vintage,
       wineName: wines.name,
       producerName: producers.name,
       cellarName: cellars.name,
     })
-    .from(inventoryLots)
+    .from(binBottles)
+    .innerJoin(inventoryLots, eq(binBottles.inventoryLotId, inventoryLots.id))
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
     .innerJoin(producers, eq(wines.producerId, producers.id))
     .innerJoin(cellars, eq(inventoryLots.cellarId, cellars.id))
+    .innerJoin(cellarRacks, eq(binBottles.rackId, cellarRacks.id))
     .where(
       and(
         eq(inventoryLots.userId, userId),
         eq(inventoryLots.cellarId, cellarId),
-        eq(inventoryLots.wineId, wineId)
+        eq(inventoryLots.wineId, wineId),
+        sql`${inventoryLots.quantity} > 0`
       )
     )
-    .limit(10)
+    .limit(1)
 
-  if (lots.length === 0) {
+  if (binAssignments.length === 0) {
     throw createError({
       statusCode: 404,
-      message: "This wine hasn't been assigned a location yet",
+      message: "This wine hasn't been assigned a bin location yet",
     })
   }
+
+  const firstBin = binAssignments[0]
+  const position = { row: firstBin.binRow, column: firstBin.binColumn }
+  const rackId = firstBin.rackId
 
   // Get grape info for filter context
   const grapeData = await db
@@ -56,17 +66,6 @@ export default defineEventHandler(async (event) => {
     .innerJoin(grapes, eq(wineGrapes.grapeId, grapes.id))
     .where(eq(wineGrapes.wineId, wineId))
     .limit(1)
-
-  const firstLot = lots[0]
-
-  // Parse binLocation as "row-column" format
-  let position = { row: 1, column: 1 }
-  if (firstLot.binLocation) {
-    const match = firstLot.binLocation.match(/(\d+)-(\d+)/)
-    if (match) {
-      position = { row: Number(match[1]), column: Number(match[2]) }
-    }
-  }
 
   // Get wine color for highlighting
   const wineData = await db
@@ -87,50 +86,43 @@ export default defineEventHandler(async (event) => {
   const columnStart = Math.max(1, targetCol - 2)
   const columnEnd = columnStart + 4
 
-  // Get all bottles in zoom window
+  // Get all bottles in the same rack within zoom window
   const zoomBottles = await db
     .select({
       lotId: inventoryLots.id,
       wineId: inventoryLots.wineId,
-      binLocation: inventoryLots.binLocation,
+      binRow: binBottles.binRow,
+      binColumn: binBottles.binColumn,
       color: wines.color,
     })
-    .from(inventoryLots)
+    .from(binBottles)
+    .innerJoin(inventoryLots, eq(binBottles.inventoryLotId, inventoryLots.id))
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
     .where(
       and(
         eq(inventoryLots.userId, userId),
-        eq(inventoryLots.cellarId, cellarId),
-        sql`${inventoryLots.quantity} > 0`
+        eq(binBottles.rackId, rackId),
+        sql`${inventoryLots.quantity} > 0`,
+        sql`${binBottles.binRow} >= ${rowStart}`,
+        sql`${binBottles.binRow} <= ${rowEnd}`,
+        sql`${binBottles.binColumn} >= ${columnStart}`,
+        sql`${binBottles.binColumn} <= ${columnEnd}`
       )
     )
 
-  // Parse bottles and filter to zoom window
-  const bottlesInZoom = zoomBottles
-    .map((bottle) => {
-      const match = bottle.binLocation?.match(/(\d+)-(\d+)/)
-      if (!match) return null
-      
-      const row = Number(match[1])
-      const col = Number(match[2])
-      
-      if (row >= rowStart && row <= rowEnd && col >= columnStart && col <= columnEnd) {
-        return {
-          row,
-          column: col,
-          wineId: bottle.wineId,
-          color: bottle.color,
-          highlighted: bottle.wineId === wineId,
-        }
-      }
-      return null
-    })
-    .filter((b) => b !== null)
+  // Format bottles for response
+  const bottlesInZoom = zoomBottles.map((bottle) => ({
+    row: bottle.binRow,
+    column: bottle.binColumn,
+    wineId: bottle.wineId,
+    color: bottle.color,
+    highlighted: bottle.wineId === wineId,
+  }))
 
   return {
     cellarId,
-    cellarName: firstLot.cellarName,
-    rackName: '10×9 Rack', // Default name, can be customized later
+    cellarName: firstBin.cellarName,
+    rackName: firstBin.rackName || '10×9 Rack',
     position,
     wineColor,
     zoomContext: {
@@ -141,9 +133,9 @@ export default defineEventHandler(async (event) => {
       bottles: bottlesInZoom,
     },
     filters: {
-      wineName: `${firstLot.producerName} ${firstLot.wineName}`,
+      wineName: `${firstBin.producerName} ${firstBin.wineName}`,
       grape: grapeData[0]?.grapeName || null,
-      vintage: firstLot.vintage,
+      vintage: firstBin.vintage,
     },
   }
 })
