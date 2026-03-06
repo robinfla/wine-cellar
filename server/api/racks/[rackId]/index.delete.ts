@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
     .where(and(eq(cellarRacks.id, rackId), eq(cellarSpaces.userId, userId)))
   if (!rack) throw createError({ statusCode: 404, message: 'Rack not found' })
 
-  // CASCADE will clean up slots and bin_bottles
+  // CASCADE will clean up rack_slots
   await db.delete(cellarRacks).where(eq(cellarRacks.id, rackId))
 
   return { ok: true }

@@ -563,17 +563,3 @@ export const rackSlots = pgTable('rack_slots', {
 export type RackSlot = typeof rackSlots.$inferSelect
 
 // ─── Bin Bottles (for bin-type racks: multiple bottles per bin) ───
-export const binBottles = pgTable('bin_bottles', {
-  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-  rackId: integer('rack_id').references(() => cellarRacks.id, { onDelete: 'cascade' }).notNull(),
-  binRow: integer('bin_row').notNull(), // which bin (row in the grid of bins)
-  binColumn: integer('bin_column').notNull(), // which bin (column in the grid of bins)
-  inventoryLotId: integer('inventory_lot_id').references(() => inventoryLots.id, { onDelete: 'set null' }),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-}, (table) => ({
-  rackIdx: index('bin_bottles_rack_idx').on(table.rackId),
-  lotIdx: index('bin_bottles_lot_idx').on(table.inventoryLotId),
-}))
-
-export type BinBottle = typeof binBottles.$inferSelect
-
