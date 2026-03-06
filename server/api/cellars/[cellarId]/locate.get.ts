@@ -101,10 +101,15 @@ export default defineEventHandler(async (event) => {
       binColumn: rackSlots.column,
       color: wines.color,
       vintage: inventoryLots.vintage,
+      wineName: wines.name,
+      producerName: producers.name,
+      regionName: sql<string>`COALESCE((SELECT r.name FROM regions r JOIN appellations a ON a.region_id = r.id WHERE a.id = ${wines.appellationId}), 'Unknown')`,
+      quantity: inventoryLots.quantity,
     })
     .from(rackSlots)
     .innerJoin(inventoryLots, eq(rackSlots.inventoryLotId, inventoryLots.id))
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
+    .innerJoin(producers, eq(wines.producerId, producers.id))
     .innerJoin(cellarRacks, eq(rackSlots.rackId, cellarRacks.id))
     .innerJoin(cellarSpaces, eq(cellarRacks.spaceId, cellarSpaces.id))
     .where(
@@ -125,7 +130,13 @@ export default defineEventHandler(async (event) => {
     row: bottle.binRow,
     column: bottle.binColumn,
     wineId: bottle.wineId,
+    lotId: bottle.lotId,
     color: bottle.color,
+    wineName: bottle.wineName,
+    producerName: bottle.producerName,
+    vintage: bottle.vintage,
+    region: bottle.regionName,
+    stock: bottle.quantity,
     // Highlight if wine matches AND vintage matches (if vintage filter provided)
     highlighted: bottle.wineId === wineId && (!vintage || bottle.vintage === vintage),
   }))
