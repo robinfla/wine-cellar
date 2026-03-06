@@ -1,6 +1,6 @@
 import { eq, and, sql } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
-import { inventoryLots, wines, cellars, binBottles, cellarRacks, cellarSpaces } from '~/server/db/schema'
+import { inventoryLots, wines, cellars, rackSlots, cellarRacks, cellarSpaces } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
   const userId = event.context.user?.id
@@ -12,20 +12,20 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const highlightWineId = query.highlightWineId ? Number(query.highlightWineId) : undefined
 
-  // Get all bottles assigned to bins in this cellar
-  const bottlesInBins = await db
+  // Get all bottles assigned to rack slots in this cellar
+  const bottlesInSlots = await db
     .select({
       lotId: inventoryLots.id,
       wineId: inventoryLots.wineId,
-      binRow: binBottles.binRow,
-      binColumn: binBottles.binColumn,
+      binRow: rackSlots.row,
+      binColumn: rackSlots.column,
       quantity: inventoryLots.quantity,
       wineColor: wines.color,
     })
-    .from(binBottles)
-    .innerJoin(inventoryLots, eq(binBottles.inventoryLotId, inventoryLots.id))
+    .from(rackSlots)
+    .innerJoin(inventoryLots, eq(rackSlots.inventoryLotId, inventoryLots.id))
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
-    .innerJoin(cellarRacks, eq(binBottles.rackId, cellarRacks.id))
+    .innerJoin(cellarRacks, eq(rackSlots.rackId, cellarRacks.id))
     .innerJoin(cellarSpaces, eq(cellarRacks.spaceId, cellarSpaces.id))
     .where(
       and(
@@ -35,10 +35,10 @@ export default defineEventHandler(async (event) => {
       )
     )
 
-  // Build grid from bin positions
+  // Build grid from rack slot positions
   const gridMap: Record<number, Record<number, any>> = {}
   
-  bottlesInBins.forEach((bottle) => {
+  bottlesInSlots.forEach((bottle) => {
     const row = bottle.binRow
     const col = bottle.binColumn
 

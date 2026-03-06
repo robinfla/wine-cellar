@@ -1,6 +1,6 @@
 import { eq, and, sql } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
-import { inventoryLots, wines, producers, cellars, wineGrapes, grapes, binBottles, cellarRacks, cellarSpaces } from '~/server/db/schema'
+import { inventoryLots, wines, producers, cellars, wineGrapes, grapes, rackSlots, cellarRacks, cellarSpaces } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
   const userId = event.context.user?.id
@@ -17,13 +17,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'wineId query param required' })
   }
 
-  // Find bottles for this wine that are assigned to bins
-  const binAssignments = await db
+  // Find bottles for this wine that are assigned to rack slots
+  const slotAssignments = await db
     .select({
       lotId: inventoryLots.id,
-      binRow: binBottles.binRow,
-      binColumn: binBottles.binColumn,
-      rackId: binBottles.rackId,
+      binRow: rackSlots.row,
+      binColumn: rackSlots.column,
+      rackId: rackSlots.rackId,
       rackName: cellarRacks.name,
       spaceId: cellarSpaces.id,
       spaceName: cellarSpaces.name,
@@ -33,12 +33,12 @@ export default defineEventHandler(async (event) => {
       producerName: producers.name,
       cellarName: cellars.name,
     })
-    .from(binBottles)
-    .innerJoin(inventoryLots, eq(binBottles.inventoryLotId, inventoryLots.id))
+    .from(rackSlots)
+    .innerJoin(inventoryLots, eq(rackSlots.inventoryLotId, inventoryLots.id))
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
     .innerJoin(producers, eq(wines.producerId, producers.id))
     .innerJoin(cellars, eq(inventoryLots.cellarId, cellars.id))
-    .innerJoin(cellarRacks, eq(binBottles.rackId, cellarRacks.id))
+    .innerJoin(cellarRacks, eq(rackSlots.rackId, cellarRacks.id))
     .innerJoin(cellarSpaces, eq(cellarRacks.spaceId, cellarSpaces.id))
     .where(
       and(
@@ -51,17 +51,17 @@ export default defineEventHandler(async (event) => {
     )
     .limit(1)
 
-  if (binAssignments.length === 0) {
+  if (slotAssignments.length === 0) {
     throw createError({
       statusCode: 404,
-      message: "This wine hasn't been assigned a bin location yet",
+      message: "This wine hasn't been assigned a rack location yet",
     })
   }
 
-  const firstBin = binAssignments[0]
-  const position = { row: firstBin.binRow, column: firstBin.binColumn }
-  const rackId = firstBin.rackId
-  const spaceId = firstBin.spaceId
+  const firstSlot = slotAssignments[0]
+  const position = { row: firstSlot.binRow, column: firstSlot.binColumn }
+  const rackId = firstSlot.rackId
+  const spaceId = firstSlot.spaceId
 
   // Get grape info for filter context
   const grapeData = await db
@@ -97,26 +97,26 @@ export default defineEventHandler(async (event) => {
     .select({
       lotId: inventoryLots.id,
       wineId: inventoryLots.wineId,
-      binRow: binBottles.binRow,
-      binColumn: binBottles.binColumn,
+      binRow: rackSlots.row,
+      binColumn: rackSlots.column,
       color: wines.color,
       vintage: inventoryLots.vintage,
     })
-    .from(binBottles)
-    .innerJoin(inventoryLots, eq(binBottles.inventoryLotId, inventoryLots.id))
+    .from(rackSlots)
+    .innerJoin(inventoryLots, eq(rackSlots.inventoryLotId, inventoryLots.id))
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
-    .innerJoin(cellarRacks, eq(binBottles.rackId, cellarRacks.id))
+    .innerJoin(cellarRacks, eq(rackSlots.rackId, cellarRacks.id))
     .innerJoin(cellarSpaces, eq(cellarRacks.spaceId, cellarSpaces.id))
     .where(
       and(
         eq(inventoryLots.userId, userId),
         eq(cellarSpaces.cellarId, cellarId), // Filter by cellar
-        eq(binBottles.rackId, rackId),
+        eq(rackSlots.rackId, rackId),
         sql`${inventoryLots.quantity} > 0`,
-        sql`${binBottles.binRow} >= ${rowStart}`,
-        sql`${binBottles.binRow} <= ${rowEnd}`,
-        sql`${binBottles.binColumn} >= ${columnStart}`,
-        sql`${binBottles.binColumn} <= ${columnEnd}`
+        sql`${rackSlots.row} >= ${rowStart}`,
+        sql`${rackSlots.row} <= ${rowEnd}`,
+        sql`${rackSlots.column} >= ${columnStart}`,
+        sql`${rackSlots.column} <= ${columnEnd}`
       )
     )
 
@@ -132,11 +132,11 @@ export default defineEventHandler(async (event) => {
 
   return {
     cellarId,
-    cellarName: firstBin.cellarName,
+    cellarName: firstSlot.cellarName,
     spaceId,
-    spaceName: firstBin.spaceName,
+    spaceName: firstSlot.spaceName,
     rackId,
-    rackName: firstBin.rackName || '10×9 Rack',
+    rackName: firstSlot.rackName || '10×9 Rack',
     position,
     wineColor,
     zoomContext: {
@@ -147,9 +147,9 @@ export default defineEventHandler(async (event) => {
       bottles: bottlesInZoom,
     },
     filters: {
-      wineName: `${firstBin.producerName} ${firstBin.wineName}`,
+      wineName: `${firstSlot.producerName} ${firstSlot.wineName}`,
       grape: grapeData[0]?.grapeName || null,
-      vintage: firstBin.vintage,
+      vintage: firstSlot.vintage,
     },
   }
 })
