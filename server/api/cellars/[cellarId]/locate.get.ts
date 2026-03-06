@@ -11,6 +11,7 @@ export default defineEventHandler(async (event) => {
   const cellarId = Number(event.context.params?.cellarId)
   const query = getQuery(event)
   const wineId = query.wineId ? Number(query.wineId) : undefined
+  const vintage = query.vintage ? Number(query.vintage) : undefined
 
   if (!wineId) {
     throw createError({ statusCode: 400, message: 'wineId query param required' })
@@ -44,6 +45,7 @@ export default defineEventHandler(async (event) => {
         eq(inventoryLots.userId, userId),
         eq(cellarSpaces.cellarId, cellarId), // Filter by cellar through spaces
         eq(inventoryLots.wineId, wineId),
+        vintage ? eq(inventoryLots.vintage, vintage) : undefined, // Optional vintage filter
         sql`${inventoryLots.quantity} > 0`
       )
     )
@@ -98,6 +100,7 @@ export default defineEventHandler(async (event) => {
       binRow: binBottles.binRow,
       binColumn: binBottles.binColumn,
       color: wines.color,
+      vintage: inventoryLots.vintage,
     })
     .from(binBottles)
     .innerJoin(inventoryLots, eq(binBottles.inventoryLotId, inventoryLots.id))
@@ -123,7 +126,8 @@ export default defineEventHandler(async (event) => {
     column: bottle.binColumn,
     wineId: bottle.wineId,
     color: bottle.color,
-    highlighted: bottle.wineId === wineId,
+    // Highlight if wine matches AND vintage matches (if vintage filter provided)
+    highlighted: bottle.wineId === wineId && (!vintage || bottle.vintage === vintage),
   }))
 
   return {
