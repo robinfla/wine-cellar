@@ -94,9 +94,10 @@ describe('API Integration Tests', () => {
       for (const c of cellars) {
         const { status, body } = await authed(`/api/cellars/${c.id}/spaces`)
         expect(status).toBe(200)
-        expect(Array.isArray(body)).toBe(true)
-        if (body.length > 0) {
-          const space = body[0]
+        expect(body).toHaveProperty('spaces')
+        expect(Array.isArray(body.spaces)).toBe(true)
+        if (body.spaces.length > 0) {
+          const space = body.spaces[0]
           expect(space).toHaveProperty('id')
           expect(space).toHaveProperty('name')
           spaceId = space.id

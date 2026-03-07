@@ -46,7 +46,8 @@ describe('API integration tests', () => {
       const res = await apiFetch('/api/cellars/3/spaces')
       expect(res.ok).toBe(true)
       const data = await res.json()
-      expect(Array.isArray(data)).toBe(true)
+      expect(data).toHaveProperty('spaces')
+      expect(Array.isArray(data.spaces)).toBe(true)
     })
   })
 
@@ -119,16 +120,32 @@ describe('API integration tests', () => {
     })
   })
 
-  describe('POST /api/inventory/:id/unassign', () => {
-    it('returns 404 for non-existent lot', async () => {
-      const res = await apiFetch('/api/inventory/999999/unassign', {
+  describe('POST /api/inventory/unassign', () => {
+    it('returns 400 for invalid lotId', async () => {
+      const res = await apiFetch('/api/inventory/unassign', {
         method: 'POST',
-        body: JSON.stringify({ quantity: 1 }),
+        body: JSON.stringify({ lotId: 'invalid', quantity: 1 }),
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 400 for missing quantity', async () => {
+      const res = await apiFetch('/api/inventory/unassign', {
+        method: 'POST',
+        body: JSON.stringify({ lotId: 1 }),
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 404 for non-existent lot', async () => {
+      const res = await apiFetch('/api/inventory/unassign', {
+        method: 'POST',
+        body: JSON.stringify({ lotId: 999999, quantity: 1 }),
       })
       expect(res.status).toBe(404)
     })
 
-    it('validates endpoint exists and requires authentication', async () => {
+    it('validates endpoint accepts valid requests', async () => {
       // Get a valid lot ID
       const invRes = await apiFetch('/api/inventory?limit=1')
       expect(invRes.ok).toBe(true)
@@ -137,12 +154,12 @@ describe('API integration tests', () => {
         const lotId = invData.lots[0].id
         
         // Test endpoint accepts POST requests
-        const res = await apiFetch(`/api/inventory/${lotId}/unassign`, {
+        const res = await apiFetch('/api/inventory/unassign', {
           method: 'POST',
-          body: JSON.stringify({ quantity: 1 }),
+          body: JSON.stringify({ lotId, quantity: 1 }),
         })
         // Should return 400 (insufficient bottles) or 200 (success) - not 404
-        expect(res.status).not.toBe(404)
+        expect([400, 200]).toContain(res.status)
       }
     })
   })
