@@ -14,6 +14,18 @@ export default defineEventHandler(async (event) => {
     .where(and(eq(cellars.id, cellarId), eq(cellars.userId, userId)))
   if (!cellar) throw createError({ statusCode: 404, message: 'Cellar not found' })
 
+  // Get unplaced wine count for this cellar
+  const unplacedResult = await db.execute(sql`
+    SELECT count(DISTINCT il.id)::int as count
+    FROM inventory_lots il
+    LEFT JOIN rack_slots rs ON rs.inventory_lot_id = il.id
+    WHERE il.cellar_id = ${cellarId}
+      AND il.user_id = ${userId}
+      AND il.quantity > 0
+      AND rs.id IS NULL
+  `)
+  const unplacedCount = unplacedResult[0]?.count || 0
+
   // Simple query first, then enrich with raw SQL
   const spaces = await db.execute(sql`
     SELECT
@@ -31,5 +43,9 @@ export default defineEventHandler(async (event) => {
     ORDER BY cs.created_at
   `)
 
-  return spaces
+  return {
+    cellarId,
+    unplacedCount,
+    spaces,
+  }
 })
