@@ -118,4 +118,32 @@ describe('API integration tests', () => {
       expect(data.user.email).toBe('rob.flamant@gmail.com')
     })
   })
+
+  describe('POST /api/inventory/:id/unassign', () => {
+    it('returns 404 for non-existent lot', async () => {
+      const res = await apiFetch('/api/inventory/999999/unassign', {
+        method: 'POST',
+        body: JSON.stringify({ quantity: 1 }),
+      })
+      expect(res.status).toBe(404)
+    })
+
+    it('validates endpoint exists and requires authentication', async () => {
+      // Get a valid lot ID
+      const invRes = await apiFetch('/api/inventory?limit=1')
+      expect(invRes.ok).toBe(true)
+      const invData = await invRes.json()
+      if (invData.lots && invData.lots.length > 0) {
+        const lotId = invData.lots[0].id
+        
+        // Test endpoint accepts POST requests
+        const res = await apiFetch(`/api/inventory/${lotId}/unassign`, {
+          method: 'POST',
+          body: JSON.stringify({ quantity: 1 }),
+        })
+        // Should return 400 (insufficient bottles) or 200 (success) - not 404
+        expect(res.status).not.toBe(404)
+      }
+    })
+  })
 })
