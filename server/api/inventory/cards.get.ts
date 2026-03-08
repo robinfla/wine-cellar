@@ -89,6 +89,8 @@ export default defineEventHandler(async (event) => {
   const cellarId = query.cellarId ? Number(query.cellarId) : undefined
   const color = query.color as string | undefined
   const maturityFilter = query.maturity as string | undefined // 'ready' for peak/approaching wines
+  const lotIdsParam = query.lotIds as string | undefined
+  const lotIds = lotIdsParam ? lotIdsParam.split(',').map(id => Number(id)).filter(id => !isNaN(id)) : undefined
 
   // Build conditions
   const conditions = [
@@ -112,6 +114,10 @@ export default defineEventHandler(async (event) => {
 
   if (color) {
     conditions.push(eq(wines.color, color as any))
+  }
+
+  if (lotIds && lotIds.length > 0) {
+    conditions.push(inArray(inventoryLots.id, lotIds))
   }
 
   // Fetch all lots grouped by wine + vintage
@@ -224,10 +230,17 @@ export default defineEventHandler(async (event) => {
   let cards = Array.from(wineMap.values())
 
   // Apply maturity filter if requested
-  if (maturityFilter === 'ready') {
-    cards = cards.filter((wine) =>
-      wine.vintages.some((v) => v.maturityStatus === 'peak' || v.maturityStatus === 'approaching')
-    )
+  if (maturityFilter) {
+    if (maturityFilter === 'ready') {
+      cards = cards.filter((wine) =>
+        wine.vintages.some((v) => v.maturityStatus === 'peak' || v.maturityStatus === 'approaching')
+      )
+    } else {
+      // Filter by specific maturity status
+      cards = cards.filter((wine) =>
+        wine.vintages.some((v) => v.maturityStatus === maturityFilter)
+      )
+    }
   }
 
   // Sort by total bottles descending
