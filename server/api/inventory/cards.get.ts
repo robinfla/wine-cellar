@@ -231,16 +231,30 @@ export default defineEventHandler(async (event) => {
 
   // Apply maturity filter if requested
   if (maturityFilter) {
-    if (maturityFilter === 'ready') {
-      cards = cards.filter((wine) =>
-        wine.vintages.some((v) => v.maturityStatus === 'peak' || v.maturityStatus === 'approaching')
-      )
-    } else {
-      // Filter by specific maturity status
-      cards = cards.filter((wine) =>
-        wine.vintages.some((v) => v.maturityStatus === maturityFilter)
-      )
-    }
+    cards = cards
+      .map((wine) => {
+        // Filter vintages to only matching maturity status
+        let matchingVintages
+        if (maturityFilter === 'ready') {
+          matchingVintages = wine.vintages.filter(
+            (v) => v.maturityStatus === 'peak' || v.maturityStatus === 'approaching'
+          )
+        } else {
+          matchingVintages = wine.vintages.filter((v) => v.maturityStatus === maturityFilter)
+        }
+
+        if (matchingVintages.length === 0) return null
+
+        // Recalculate total bottles for filtered vintages only
+        const totalBottles = matchingVintages.reduce((sum, v) => sum + v.bottleCount, 0)
+
+        return {
+          ...wine,
+          vintages: matchingVintages,
+          totalBottles,
+        }
+      })
+      .filter((wine) => wine !== null)
   }
 
   // Sort by total bottles descending
