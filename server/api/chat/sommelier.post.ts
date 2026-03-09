@@ -51,18 +51,21 @@ export default defineEventHandler(async (event) => {
   // 4. Load user's cellar wines for context
   const cellarWines = await db.execute(sql`
     SELECT 
+      w.id as wine_id,
       w.name as name,
       p.name as producer,
       w.color::text as color,
       SUM(il.quantity)::int as quantity,
       il.vintage,
-      a.name as appellation
+      a.name as appellation,
+      r.name as region
     FROM inventory_lots il
     JOIN wines w ON il.wine_id = w.id
     JOIN producers p ON w.producer_id = p.id
     LEFT JOIN appellations a ON w.appellation_id = a.id
+    LEFT JOIN regions r ON a.region_id = r.id
     WHERE il.user_id = ${userId} AND il.quantity > 0
-    GROUP BY w.id, w.name, p.name, w.color, il.vintage, a.name
+    GROUP BY w.id, w.name, p.name, w.color, il.vintage, a.name, r.name
     ORDER BY SUM(il.quantity) DESC
     LIMIT 50
   `) as any[]
@@ -134,33 +137,33 @@ async function extractAndUpdatePreferences(
 function extractSuggestions(
   response: string,
   cellarWines: any[],
-): Array<{ name: string; producer: string; color: string; quantity: number; vintage?: number }> {
+): Array<{ wineId: number; name: string; region: string; pairingNote: string; imageUrl?: string | null }> {
   const suggestions: any[] = []
   const responseLower = response.toLowerCase()
 
   for (const wine of cellarWines) {
     // Check if the response mentions this wine's producer or name
+    // Only match if producer + wine name appear together (more specific)
+    const producerName = `${wine.producer} ${wine.name}`.toLowerCase()
     const producerMatch = wine.producer && responseLower.includes(wine.producer.toLowerCase())
-    const nameMatch = wine.name && responseLower.includes(wine.name.toLowerCase())
+    const fullNameMatch = responseLower.includes(producerName)
 
-    if (producerMatch || nameMatch) {
+    if (fullNameMatch || (producerMatch && responseLower.includes(wine.name.toLowerCase().split(' ')[0]))) {
       suggestions.push({
-        name: wine.name,
-        producer: wine.producer,
-        color: wine.color,
-        quantity: wine.quantity,
-        vintage: wine.vintage,
-        appellation: wine.appellation,
+        wineId: wine.wine_id,
+        name: `${wine.producer} ${wine.name}` + (wine.vintage ? ` ${wine.vintage}` : ''),
+        region: wine.region || wine.appellation || 'Unknown',
+        pairingNote: '', // Extract context from response later
+        imageUrl: null,
       })
     }
   }
 
-  // Deduplicate by producer+name and return max 5
-  const seen = new Set<string>()
+  // Deduplicate by wineId and return max 5
+  const seen = new Set<number>()
   return suggestions.filter(s => {
-    const key = `${s.producer}-${s.name}`
-    if (seen.has(key)) return false
-    seen.add(key)
+    if (seen.has(s.wineId)) return false
+    seen.add(s.wineId)
     return true
   }).slice(0, 5)
 }
