@@ -72,10 +72,16 @@ export function routeModel(message: string): ModelTier {
  * Build the full system prompt with user context.
  */
 export function buildSystemPrompt(
+  userName: string | undefined,
   profile: TasteProfile | null,
   cellarWines: Array<{ name: string; producer: string; color: string; quantity: number; vintage?: number; appellation?: string }>,
 ): string {
   const parts: string[] = [SOMMELIER_PERSONALITY]
+
+  // Inject user name
+  if (userName) {
+    parts.push(`\nUser's name: ${userName}`)
+  }
 
   // Inject taste profile
   if (profile) {
@@ -87,7 +93,7 @@ export function buildSystemPrompt(
   // Inject relevant cellar wines (compact format)
   if (cellarWines.length > 0) {
     const wineList = cellarWines
-      .slice(0, 30) // cap at 30 to control tokens
+      .slice(0, 50) // cap at 50 to control tokens (SQL already limits to 50)
       .map(w => {
         const parts = [w.producer, w.name]
         if (w.vintage) parts.push(String(w.vintage))
@@ -145,6 +151,50 @@ export async function chat(
     tokensIn: result.usage.input_tokens,
     tokensOut: result.usage.output_tokens,
     model: config.model,
+  }
+}
+
+/**
+ * Stream Claude response with callbacks.
+ */
+export async function chatStream(
+  systemPrompt: string,
+  history: ConversationMessage[],
+  userMessage: string,
+  tier: ModelTier,
+  onChunk: (text: string) => void,
+  onUsage: (usage: { input_tokens: number; output_tokens: number }) => void,
+): Promise<void> {
+  const config = MODELS[tier]
+
+  const messages: Array<{ role: 'user' | 'assistant'; content: string }> = []
+
+  for (const msg of history) {
+    if (msg.role === 'user' || msg.role === 'assistant') {
+      messages.push({ role: msg.role, content: msg.content })
+    }
+  }
+
+  messages.push({ role: 'user', content: userMessage })
+
+  const stream = await anthropic.messages.stream({
+    model: config.model,
+    max_tokens: config.maxTokens,
+    system: systemPrompt,
+    messages,
+  })
+
+  for await (const chunk of stream) {
+    if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+      onChunk(chunk.delta.text)
+    }
+    if (chunk.type === 'message_stop') {
+      const message = await stream.finalMessage()
+      onUsage({
+        input_tokens: message.usage.input_tokens,
+        output_tokens: message.usage.output_tokens,
+      })
+    }
   }
 }
 

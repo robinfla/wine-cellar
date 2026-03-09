@@ -24,6 +24,7 @@ import type { TasteProfile } from '~/server/utils/taste-profile'
 
 export default defineEventHandler(async (event) => {
   const userId = event.context.user?.id
+  const userName = event.context.user?.name
   if (!userId) {
     throw createError({ statusCode: 401, message: 'Unauthorized' })
   }
@@ -67,7 +68,7 @@ export default defineEventHandler(async (event) => {
   `) as any[]
 
   // 5. Build system prompt
-  const systemPrompt = buildSystemPrompt(tasteProfile, cellarWines)
+  const systemPrompt = buildSystemPrompt(userName, tasteProfile, cellarWines)
 
   // 6. Route to model
   const tier = routeModel(message)
