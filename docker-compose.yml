@@ -20,6 +20,7 @@ services:
       - coolify
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
       - "traefik.http.routers.cellar.rule=Host(`cellar.zubi.wine`)"
       - "traefik.http.routers.cellar.entrypoints=https"
       - "traefik.http.routers.cellar.tls=true"
