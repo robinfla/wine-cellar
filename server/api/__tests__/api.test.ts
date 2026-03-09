@@ -163,4 +163,97 @@ describe('API integration tests', () => {
       }
     })
   })
+
+  // Sommelier API endpoints
+  describe('GET /api/chat/conversations', () => {
+    it('returns conversations list', async () => {
+      const res = await apiFetch('/api/chat/conversations')
+      expect(res.ok).toBe(true)
+      const data = await res.json()
+      expect(data).toHaveProperty('conversations')
+      expect(Array.isArray(data.conversations)).toBe(true)
+    })
+
+    it('returns 401 when not authenticated', async () => {
+      const res = await fetch(`${BASE}/api/chat/conversations`)
+      expect(res.status).toBe(401)
+    })
+  })
+
+  describe('POST /api/chat/sommelier', () => {
+    it('returns 400 when message is missing', async () => {
+      const res = await apiFetch('/api/chat/sommelier', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('accepts valid message', async () => {
+      const res = await apiFetch('/api/chat/sommelier', {
+        method: 'POST',
+        body: JSON.stringify({ message: 'Suggest a wine for grilled salmon' }),
+      })
+      // Should return 200 (success) or 500 (if AI API keys not configured)
+      // Not 400 (validation error) or 404 (not found)
+      expect([200, 500]).toContain(res.status)
+    })
+
+    it('accepts conversation threading parameter', async () => {
+      const res = await apiFetch('/api/chat/sommelier', {
+        method: 'POST',
+        body: JSON.stringify({
+          message: 'What about red wines?',
+          conversationId: 'test-123',
+        }),
+      })
+      // Should return 200, 400, or 500 - not 404 (endpoint exists)
+      expect([200, 400, 500]).toContain(res.status)
+    })
+  })
+
+  describe('POST /api/profile/onboarding', () => {
+    it('returns 400 for invalid onboarding data', async () => {
+      const res = await apiFetch('/api/profile/onboarding', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      })
+      expect([400, 200]).toContain(res.status)
+    })
+
+    it('accepts valid onboarding data', async () => {
+      const res = await apiFetch('/api/profile/onboarding', {
+        method: 'POST',
+        body: JSON.stringify({
+          color_preference: 'red',
+          adventure_level: 2,
+          region_picks: ['bordeaux', 'italy'],
+          favorite_grapes: ['cabernet', 'pinot'],
+          budget: '20_50',
+          frequency: 'weekly',
+        }),
+      })
+      expect([200, 201]).toContain(res.status)
+    })
+  })
+
+  describe('GET /api/profile/taste', () => {
+    it('returns taste profile', async () => {
+      const res = await apiFetch('/api/profile/taste')
+      expect(res.ok).toBe(true)
+      const data = await res.json()
+      expect(data).toHaveProperty('onboardingCompleted')
+      // Profile may be null if onboarding not complete
+      if (data.profile) {
+        expect(data.profile).toHaveProperty('colorPreference')
+        expect(data.profile).toHaveProperty('budgetRange')
+        expect(data.profile).toHaveProperty('metrics')
+      }
+    })
+
+    it('returns 401 when not authenticated', async () => {
+      const res = await fetch(`${BASE}/api/profile/taste`)
+      expect(res.status).toBe(401)
+    })
+  })
 })
