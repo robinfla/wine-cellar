@@ -69,6 +69,88 @@ export function routeModel(message: string): ModelTier {
 }
 
 /**
+ * Build personality-specific prompt overlay.
+ */
+function buildPersonalityPrompt(personality: any): string {
+  if (!personality) return ''
+
+  const parts: string[] = ['\n## Personality Customization']
+
+  // Tone
+  const toneMap: Record<string, string> = {
+    professional: 'Maintain a professional, expert sommelier tone with refined language',
+    friendly: 'Be warm and approachable like a wine buddy',
+    casual: 'Keep it laid-back and conversational, like chatting with a friend',
+    playful: 'Be fun and enthusiastic, celebrate the joy of wine',
+  }
+  if (personality.tone && toneMap[personality.tone]) {
+    parts.push(`Tone: ${toneMap[personality.tone]}`)
+  }
+
+  // Verbosity
+  const verbosityMap: Record<string, string> = {
+    concise: 'Keep responses brief and to the point (1-2 sentences)',
+    balanced: 'Provide right amount of detail (2-3 paragraphs)',
+    detailed: 'Give thorough explanations with context and background',
+  }
+  if (personality.verbosity && verbosityMap[personality.verbosity]) {
+    parts.push(`Detail Level: ${verbosityMap[personality.verbosity]}`)
+  }
+
+  // Formality
+  const formalityMap: Record<string, string> = {
+    formal: 'Use traditional sommelier terminology and formal service language',
+    casual: 'Talk like a friend, avoid stuffy wine jargon',
+    expert: 'Use technical wine terminology and precise descriptions',
+  }
+  if (personality.formality && formalityMap[personality.formality]) {
+    parts.push(`Formality: ${formalityMap[personality.formality]}`)
+  }
+
+  // Teaching Style
+  const teachingMap: Record<string, string> = {
+    skip: 'Assume user knows wine basics, skip educational content',
+    explain: 'Teach concepts when relevant, explain why recommendations work',
+    deep: 'Always educate about regions, grapes, techniques, and history',
+  }
+  if (personality.teachingStyle && teachingMap[personality.teachingStyle]) {
+    parts.push(`Teaching: ${teachingMap[personality.teachingStyle]}`)
+  }
+
+  // Recommendation Style
+  const recoMap: Record<string, string> = {
+    safe: 'Suggest classic, crowd-pleasing wines they\'ll definitely enjoy',
+    adventurous: 'Push them to try unusual grapes, regions, and styles',
+    balanced: 'Mix familiar favorites with occasional new discoveries',
+  }
+  if (personality.recommendationStyle && recoMap[personality.recommendationStyle]) {
+    parts.push(`Recommendations: ${recoMap[personality.recommendationStyle]}`)
+  }
+
+  // Price Sensitivity
+  const priceMap: Record<string, string> = {
+    budget: 'Focus on value wines under €20, emphasize affordability',
+    value: 'Recommend wines with best quality-to-price ratio',
+    premium: 'Don\'t hesitate to suggest premium wines when appropriate',
+  }
+  if (personality.priceSensitivity && priceMap[personality.priceSensitivity]) {
+    parts.push(`Price Approach: ${priceMap[personality.priceSensitivity]}`)
+  }
+
+  // Regional Preference
+  const regionMap: Record<string, string> = {
+    classic: 'Prioritize Old World wines (France, Italy, Spain)',
+    modern: 'Lean toward New World wines (US, Australia, South Africa)',
+    balanced: 'Draw equally from all wine regions worldwide',
+  }
+  if (personality.regionalPreference && regionMap[personality.regionalPreference]) {
+    parts.push(`Regional Focus: ${regionMap[personality.regionalPreference]}`)
+  }
+
+  return parts.join('\n')
+}
+
+/**
  * Build the full system prompt with user context.
  */
 export function buildSystemPrompt(
@@ -76,8 +158,17 @@ export function buildSystemPrompt(
   profile: TasteProfile | null,
   cellarWines: Array<{ name: string; producer: string; color: string; quantity: number; vintage?: number; appellation?: string; cellar_name?: string }>,
   cellarName?: string,
+  personality?: any,
 ): string {
   const parts: string[] = [SOMMELIER_PERSONALITY]
+
+  // Inject personality customization
+  if (personality) {
+    const personalityPrompt = buildPersonalityPrompt(personality)
+    if (personalityPrompt) {
+      parts.push(personalityPrompt)
+    }
+  }
 
   // Inject user name
   if (userName) {

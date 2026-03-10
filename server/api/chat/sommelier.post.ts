@@ -48,11 +48,12 @@ export default defineEventHandler(async (event) => {
   const messageLower = message.toLowerCase()
   const detectedCellar = cellars.find(c => messageLower.includes(c.name.toLowerCase()))
 
-  // 4. Load taste profile
+  // 4. Load taste profile and personality
   const [profileRow] = await db.execute(sql`
-    SELECT profile FROM taste_profiles WHERE user_id = ${userId}
+    SELECT profile, personality FROM taste_profiles WHERE user_id = ${userId}
   `) as any[]
   const tasteProfile: TasteProfile | null = profileRow?.profile || null
+  const personality = profileRow?.personality || null
 
   // 5. Load conversation history (last 10 messages)
   const history = await loadMessages(conversationId, 10)
@@ -104,8 +105,8 @@ export default defineEventHandler(async (event) => {
         LIMIT 50
       `) as any[]
 
-  // 7. Build system prompt
-  const systemPrompt = buildSystemPrompt(userName, tasteProfile, cellarWines, detectedCellar?.name)
+  // 7. Build system prompt with personality config
+  const systemPrompt = buildSystemPrompt(userName, tasteProfile, cellarWines, detectedCellar?.name, personality)
 
   // 6. Route to model
   const tier = routeModel(message)
