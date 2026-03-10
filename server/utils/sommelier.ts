@@ -74,7 +74,8 @@ export function routeModel(message: string): ModelTier {
 export function buildSystemPrompt(
   userName: string | undefined,
   profile: TasteProfile | null,
-  cellarWines: Array<{ name: string; producer: string; color: string; quantity: number; vintage?: number; appellation?: string }>,
+  cellarWines: Array<{ name: string; producer: string; color: string; quantity: number; vintage?: number; appellation?: string; cellar_name?: string }>,
+  cellarName?: string,
 ): string {
   const parts: string[] = [SOMMELIER_PERSONALITY]
 
@@ -103,9 +104,16 @@ export function buildSystemPrompt(
       })
       .join('\n')
 
-    parts.push(`\n## User's Cellar (${cellarWines.length} wines)\n${wineList}`)
+    const cellarHeader = cellarName 
+      ? `## User's ${cellarName} Cellar (${cellarWines.length} wines)\nNote: User specifically asked about their ${cellarName} cellar. Only show wines from this location.`
+      : `## User's Cellar (${cellarWines.length} wines)`
+    
+    parts.push(`\n${cellarHeader}\n${wineList}`)
   } else {
-    parts.push('\nUser has no wines in their cellar yet.')
+    const emptyMessage = cellarName
+      ? `User has no wines in their ${cellarName} cellar.`
+      : 'User has no wines in their cellar yet.'
+    parts.push(`\n${emptyMessage}`)
   }
 
   return parts.join('\n')

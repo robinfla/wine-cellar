@@ -39,39 +39,73 @@ export default defineEventHandler(async (event) => {
   // 1. Get or create conversation
   const conversationId = await getOrCreateConversation(userId, inputConversationId)
 
-  // 2. Load taste profile
+  // 2. Load user's cellars
+  const cellars = await db.execute(sql`
+    SELECT id, name FROM cellars WHERE user_id = ${userId}
+  `) as Array<{ id: number; name: string }>
+
+  // 3. Detect cellar name in message (case-insensitive)
+  const messageLower = message.toLowerCase()
+  const detectedCellar = cellars.find(c => messageLower.includes(c.name.toLowerCase()))
+
+  // 4. Load taste profile
   const [profileRow] = await db.execute(sql`
     SELECT profile FROM taste_profiles WHERE user_id = ${userId}
   `) as any[]
   const tasteProfile: TasteProfile | null = profileRow?.profile || null
 
-  // 3. Load conversation history (last 10 messages)
+  // 5. Load conversation history (last 10 messages)
   const history = await loadMessages(conversationId, 10)
 
-  // 4. Load user's cellar wines for context
-  const cellarWines = await db.execute(sql`
-    SELECT 
-      w.id as wine_id,
-      w.name as name,
-      p.name as producer,
-      w.color::text as color,
-      SUM(il.quantity)::int as quantity,
-      il.vintage,
-      a.name as appellation,
-      r.name as region
-    FROM inventory_lots il
-    JOIN wines w ON il.wine_id = w.id
-    JOIN producers p ON w.producer_id = p.id
-    LEFT JOIN appellations a ON w.appellation_id = a.id
-    LEFT JOIN regions r ON a.region_id = r.id
-    WHERE il.user_id = ${userId} AND il.quantity > 0
-    GROUP BY w.id, w.name, p.name, w.color, il.vintage, a.name, r.name
-    ORDER BY SUM(il.quantity) DESC
-    LIMIT 50
-  `) as any[]
+  // 6. Load user's cellar wines for context (filter by cellar if detected)
+  const cellarWines = detectedCellar
+    ? await db.execute(sql`
+        SELECT 
+          w.id as wine_id,
+          w.name as name,
+          p.name as producer,
+          w.color::text as color,
+          SUM(il.quantity)::int as quantity,
+          il.vintage,
+          a.name as appellation,
+          r.name as region,
+          c.name as cellar_name
+        FROM inventory_lots il
+        JOIN wines w ON il.wine_id = w.id
+        JOIN producers p ON w.producer_id = p.id
+        JOIN cellars c ON il.cellar_id = c.id
+        LEFT JOIN appellations a ON w.appellation_id = a.id
+        LEFT JOIN regions r ON a.region_id = r.id
+        WHERE il.user_id = ${userId} AND il.quantity > 0 AND il.cellar_id = ${detectedCellar.id}
+        GROUP BY w.id, w.name, p.name, w.color, il.vintage, a.name, r.name, c.name
+        ORDER BY SUM(il.quantity) DESC
+        LIMIT 50
+      `) as any[]
+    : await db.execute(sql`
+        SELECT 
+          w.id as wine_id,
+          w.name as name,
+          p.name as producer,
+          w.color::text as color,
+          SUM(il.quantity)::int as quantity,
+          il.vintage,
+          a.name as appellation,
+          r.name as region,
+          c.name as cellar_name
+        FROM inventory_lots il
+        JOIN wines w ON il.wine_id = w.id
+        JOIN producers p ON w.producer_id = p.id
+        JOIN cellars c ON il.cellar_id = c.id
+        LEFT JOIN appellations a ON w.appellation_id = a.id
+        LEFT JOIN regions r ON a.region_id = r.id
+        WHERE il.user_id = ${userId} AND il.quantity > 0
+        GROUP BY w.id, w.name, p.name, w.color, il.vintage, a.name, r.name, c.name
+        ORDER BY SUM(il.quantity) DESC
+        LIMIT 50
+      `) as any[]
 
-  // 5. Build system prompt
-  const systemPrompt = buildSystemPrompt(userName, tasteProfile, cellarWines)
+  // 7. Build system prompt
+  const systemPrompt = buildSystemPrompt(userName, tasteProfile, cellarWines, detectedCellar?.name)
 
   // 6. Route to model
   const tier = routeModel(message)
@@ -159,11 +193,11 @@ function extractSuggestions(
     }
   }
 
-  // Deduplicate by wineId and return max 5
+  // Deduplicate by wineId and return max 3
   const seen = new Set<number>()
   return suggestions.filter(s => {
     if (seen.has(s.wineId)) return false
     seen.add(s.wineId)
     return true
-  }).slice(0, 5)
+  }).slice(0, 3)
 }
