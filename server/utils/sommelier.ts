@@ -38,7 +38,7 @@ interface ModelConfig {
 
 const MODELS: Record<ModelTier, ModelConfig> = {
   haiku: { model: 'claude-3-haiku-20240307', maxTokens: 1024 },
-  sonnet: { model: 'claude-3-5-sonnet-20241022', maxTokens: 2048 },
+  sonnet: { model: 'claude-3-5-sonnet-20240620', maxTokens: 2048 },
 }
 
 /**
