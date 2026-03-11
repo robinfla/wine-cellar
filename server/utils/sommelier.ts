@@ -43,8 +43,15 @@ const MODELS: Record<ModelTier, ModelConfig> = {
 
 /**
  * Route to the appropriate model based on query complexity.
+ * 
+ * Note: Currently using Haiku for all queries since Sonnet 3.5 model names
+ * keep changing. Will re-enable Sonnet routing once stable model names confirmed.
  */
 export function routeModel(message: string): ModelTier {
+  // Use Haiku for everything until Sonnet model name issue resolved
+  return 'haiku'
+  
+  /* Disabled Sonnet routing - uncomment when model name fixed
   const lower = message.toLowerCase()
 
   // Sonnet: personalized recommendations, complex analysis
@@ -66,6 +73,7 @@ export function routeModel(message: string): ModelTier {
 
   // Everything else: Haiku (pairing, Q&A, facts, definitions)
   return 'haiku'
+  */
 }
 
 /**
