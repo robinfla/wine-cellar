@@ -13,6 +13,7 @@ import {
   formats,
   cellars,
   maturityOverrides,
+  vintages,
 } from '~/server/db/schema'
 import { getDrinkingWindow } from '~/server/utils/maturity'
 
@@ -31,7 +32,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Get wine with producer, region, appellation
+  // Get wine with producer, region, appellation (including new enrichment fields)
   const [wine] = await db
     .select({
       id: wines.id,
@@ -50,15 +51,28 @@ export default defineEventHandler(async (event) => {
       decantMinutes: wines.decantMinutes,
       glassType: wines.glassType,
       foodPairings: wines.foodPairings,
+      // New enrichment fields
+      styleDescription: wines.styleDescription,
+      isNatural: wines.isNatural,
+      isOrganic: wines.isOrganic,
+      isBiodynamic: wines.isBiodynamic,
+      dataSource: wines.dataSource,
       producer: {
         id: producers.id,
         name: producers.name,
         website: producers.website,
+        // Producer enrichment
+        foundedYear: producers.foundedYear,
+        description: producers.description,
+        isOrganic: producers.isOrganic,
+        isBiodynamic: producers.isBiodynamic,
+        isNatural: producers.isNatural,
       },
       region: {
         id: regions.id,
         name: regions.name,
         countryCode: regions.countryCode,
+        description: regions.description,
       },
       appellation: {
         id: appellations.id,
@@ -79,12 +93,13 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Get grapes
+  // Get grapes (with enrichment)
   const grapeResults = await db
     .select({
       id: grapes.id,
       name: grapes.name,
       color: grapes.color,
+      description: grapes.description,
       percentage: wineGrapes.percentage,
     })
     .from(wineGrapes)
@@ -92,16 +107,23 @@ export default defineEventHandler(async (event) => {
     .where(eq(wineGrapes.wineId, id))
     .orderBy(desc(wineGrapes.percentage))
 
-  // Get inventory lots (vintages) with quantity and cellar info
-  const vintages = await db
+  // Get inventory lots with vintage data via vintages table
+  const lotsData = await db
     .select({
       id: inventoryLots.id,
-      vintage: inventoryLots.vintage,
+      vintageId: inventoryLots.vintageId,
+      vintage: vintages.year,
       quantity: inventoryLots.quantity,
       binLocation: inventoryLots.binLocation,
       purchaseDate: inventoryLots.purchaseDate,
       purchasePricePerBottle: inventoryLots.purchasePricePerBottle,
       purchaseCurrency: inventoryLots.purchaseCurrency,
+      // Vintage enrichment data
+      ratingsCount: vintages.ratingsCount,
+      ratingsAverage: vintages.ratingsAverage,
+      vintageDrinkFrom: vintages.drinkFromYear,
+      vintageDrinkUntil: vintages.drinkUntilYear,
+      vintageDrinkPeak: vintages.drinkPeakYear,
       format: {
         id: formats.id,
         name: formats.name,
@@ -113,10 +135,11 @@ export default defineEventHandler(async (event) => {
       },
     })
     .from(inventoryLots)
+    .leftJoin(vintages, eq(inventoryLots.vintageId, vintages.id))
     .leftJoin(formats, eq(inventoryLots.formatId, formats.id))
     .leftJoin(cellars, eq(inventoryLots.cellarId, cellars.id))
     .where(and(eq(inventoryLots.wineId, id), eq(inventoryLots.userId, userId)))
-    .orderBy(desc(inventoryLots.vintage))
+    .orderBy(desc(vintages.year))
 
   // Get valuations (current prices) for each vintage
   const valuations = await db
@@ -143,18 +166,19 @@ export default defineEventHandler(async (event) => {
       tastingNotes: inventoryEvents.tastingNotes,
       notes: inventoryEvents.notes,
       lotId: inventoryEvents.lotId,
-      vintage: inventoryLots.vintage,
+      vintage: vintages.year,
       cellarName: cellars.name,
     })
     .from(inventoryEvents)
     .innerJoin(inventoryLots, eq(inventoryEvents.lotId, inventoryLots.id))
+    .leftJoin(vintages, eq(inventoryLots.vintageId, vintages.id))
     .leftJoin(cellars, eq(inventoryLots.cellarId, cellars.id))
     .where(and(eq(inventoryLots.wineId, id), eq(inventoryLots.userId, userId)))
     .orderBy(desc(inventoryEvents.eventDate))
     .limit(50)
 
   // Get maturity overrides for all lots
-  const lotIds = vintages.map(v => v.id)
+  const lotIds = lotsData.map(v => v.id)
   const overrides = lotIds.length > 0 ? await db
     .select({
       lotId: maturityOverrides.lotId,
@@ -167,9 +191,11 @@ export default defineEventHandler(async (event) => {
 
   const overridesMap = new Map(overrides.map(o => [o.lotId, o]))
 
-  // Calculate maturity for each vintage
-  const vintagesWithMaturity = vintages.map((v) => {
+  // Calculate maturity for each lot (using vintage-specific data when available)
+  const vintagesWithMaturity = lotsData.map((v) => {
     const override = overridesMap.get(v.id)
+    
+    // Priority: lot override > vintage-specific > wine default
     const maturity = getDrinkingWindow({
       vintage: v.vintage,
       color: wine.color,
@@ -177,12 +203,25 @@ export default defineEventHandler(async (event) => {
       regionName: wine.region?.name,
       defaultDrinkFromYears: wine.defaultDrinkFromYears,
       defaultDrinkUntilYears: wine.defaultDrinkUntilYears,
-      overrideDrinkFromYear: override?.drinkFromYear,
-      overrideDrinkUntilYear: override?.drinkUntilYear,
+      overrideDrinkFromYear: override?.drinkFromYear ?? v.vintageDrinkFrom,
+      overrideDrinkUntilYear: override?.drinkUntilYear ?? v.vintageDrinkUntil,
     })
 
     return {
-      ...v,
+      id: v.id,
+      vintageId: v.vintageId,
+      vintage: v.vintage,
+      quantity: v.quantity,
+      binLocation: v.binLocation,
+      purchaseDate: v.purchaseDate,
+      purchasePricePerBottle: v.purchasePricePerBottle,
+      purchaseCurrency: v.purchaseCurrency,
+      format: v.format,
+      cellar: v.cellar,
+      // Vintage enrichment
+      ratingsCount: v.ratingsCount,
+      ratingsAverage: v.ratingsAverage ? Number(v.ratingsAverage) : null,
+      drinkPeakYear: v.vintageDrinkPeak,
       valuation: valuations.find((val) => val.vintage === v.vintage) || null,
       maturity: {
         status: maturity.status,

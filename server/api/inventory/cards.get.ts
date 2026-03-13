@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, or, ilike, gt } from 'drizzle-orm'
+import { eq, and, sql, desc, or, ilike, gt, inArray } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
 import {
   inventoryLots,
@@ -6,18 +6,22 @@ import {
   producers,
   appellations,
   regions,
-  maturityOverrides,
+  vintages,
 } from '~/server/db/schema'
 import { getDrinkingWindow, type MaturityStatus } from '~/server/utils/maturity'
 
 interface VintageData {
   vintage: number | null
+  vintageId: number | null
   bottleCount: number
   maturityStatus: MaturityStatus
   maturityLabel: string
   maturityColor: string
   drinkFrom?: number
   drinkUntil?: number
+  // Enrichment from vintages table
+  ratingsCount?: number | null
+  ratingsAverage?: number | null
 }
 
 interface WineCardData {
@@ -47,21 +51,6 @@ const getMaturityColor = (status: MaturityStatus): string => {
   }
 }
 
-const getMaturityBgColor = (status: MaturityStatus): string => {
-  switch (status) {
-    case 'peak':
-    case 'approaching':
-      return '#e8f5e9' // Peak: light green
-    case 'past_prime':
-    case 'declining':
-      return '#fff3e0' // Ready/past: light orange
-    case 'to_age':
-      return '#e3f2fd' // Young: light blue
-    default:
-      return '#f5f5f5' // Unknown: light gray
-  }
-}
-
 const getMaturityLabel = (status: MaturityStatus): string => {
   switch (status) {
     case 'peak':
@@ -88,7 +77,7 @@ export default defineEventHandler(async (event) => {
   const search = query.search as string | undefined
   const cellarId = query.cellarId ? Number(query.cellarId) : undefined
   const color = query.color as string | undefined
-  const maturityFilter = query.maturity as string | undefined // 'ready' for peak/approaching wines
+  const maturityFilter = query.maturity as string | undefined
   const lotIdsParam = query.lotIds as string | undefined
   const lotIds = lotIdsParam ? lotIdsParam.split(',').map(id => Number(id)).filter(id => !isNaN(id)) : undefined
 
@@ -120,7 +109,7 @@ export default defineEventHandler(async (event) => {
     conditions.push(inArray(inventoryLots.id, lotIds))
   }
 
-  // Fetch all lots grouped by wine + vintage
+  // Fetch all lots grouped by wine + vintage (now via vintages table)
   const lotsGrouped = await db
     .select({
       wineId: wines.id,
@@ -130,9 +119,15 @@ export default defineEventHandler(async (event) => {
       appellationName: appellations.name,
       wineColor: wines.color,
       bottleImageUrl: wines.bottleImageUrl,
-      vintage: inventoryLots.vintage,
+      // Vintage data from vintages table
+      vintageId: vintages.id,
+      vintage: vintages.year,
+      ratingsCount: vintages.ratingsCount,
+      ratingsAverage: vintages.ratingsAverage,
+      vintageDrinkFrom: vintages.drinkFromYear,
+      vintageDrinkUntil: vintages.drinkUntilYear,
       totalQuantity: sql<number>`SUM(${inventoryLots.quantity})`.as('total_quantity'),
-      // Maturity data
+      // Wine-level maturity defaults
       defaultDrinkFromYears: wines.defaultDrinkFromYears,
       defaultDrinkUntilYears: wines.defaultDrinkUntilYears,
       primaryGrape: sql<string | null>`(
@@ -143,7 +138,7 @@ export default defineEventHandler(async (event) => {
         ORDER BY wg.percentage DESC
         LIMIT 1
       )`.as('primary_grape'),
-      // For overrides, use the first lot's override if any exist
+      // Lot-level overrides
       overrideDrinkFromYear: sql<number | null>`(
         SELECT mo.drink_from_year 
         FROM maturity_overrides mo 
@@ -160,6 +155,7 @@ export default defineEventHandler(async (event) => {
     .from(inventoryLots)
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
     .innerJoin(producers, eq(wines.producerId, producers.id))
+    .leftJoin(vintages, eq(inventoryLots.vintageId, vintages.id))
     .leftJoin(appellations, eq(wines.appellationId, appellations.id))
     .leftJoin(sql`${regions} as wr`, sql`wr.id = ${wines.regionId}`)
     .leftJoin(sql`${regions} as pr`, sql`pr.id = ${producers.regionId}`)
@@ -175,15 +171,20 @@ export default defineEventHandler(async (event) => {
       sql`wr.name`,
       sql`pr.name`,
       appellations.name,
-      inventoryLots.vintage,
+      vintages.id,
+      vintages.year,
+      vintages.ratingsCount,
+      vintages.ratingsAverage,
+      vintages.drinkFromYear,
+      vintages.drinkUntilYear,
     )
-    .orderBy(producers.name, wines.name, desc(inventoryLots.vintage))
+    .orderBy(producers.name, wines.name, desc(vintages.year))
 
   // Group by wine, collecting all vintages
   const wineMap = new Map<number, WineCardData>()
 
   for (const row of lotsGrouped) {
-    // Calculate maturity for this vintage
+    // Maturity calculation: prefer vintage-specific > lot override > wine default
     const maturityInfo = getDrinkingWindow({
       vintage: row.vintage,
       color: row.wineColor,
@@ -192,27 +193,29 @@ export default defineEventHandler(async (event) => {
       grapeName: row.primaryGrape,
       defaultDrinkFromYears: row.defaultDrinkFromYears,
       defaultDrinkUntilYears: row.defaultDrinkUntilYears,
-      overrideDrinkFromYear: row.overrideDrinkFromYear,
-      overrideDrinkUntilYear: row.overrideDrinkUntilYear,
+      // Use vintage-specific drink window if available, else lot override
+      overrideDrinkFromYear: row.vintageDrinkFrom ?? row.overrideDrinkFromYear,
+      overrideDrinkUntilYear: row.vintageDrinkUntil ?? row.overrideDrinkUntilYear,
     })
 
     const vintageData: VintageData = {
       vintage: row.vintage,
+      vintageId: row.vintageId,
       bottleCount: Number(row.totalQuantity),
       maturityStatus: maturityInfo.status,
       maturityLabel: getMaturityLabel(maturityInfo.status),
       maturityColor: getMaturityColor(maturityInfo.status),
       drinkFrom: maturityInfo.drinkFrom,
       drinkUntil: maturityInfo.drinkUntil,
+      ratingsCount: row.ratingsCount,
+      ratingsAverage: row.ratingsAverage ? Number(row.ratingsAverage) : null,
     }
 
     if (wineMap.has(row.wineId)) {
-      // Add vintage to existing wine
       const wine = wineMap.get(row.wineId)!
       wine.vintages.push(vintageData)
       wine.totalBottles += vintageData.bottleCount
     } else {
-      // Create new wine entry
       wineMap.set(row.wineId, {
         wineId: row.wineId,
         wineName: row.wineName,
@@ -233,7 +236,6 @@ export default defineEventHandler(async (event) => {
   if (maturityFilter) {
     cards = cards
       .map((wine) => {
-        // Filter vintages to only matching maturity status
         let matchingVintages
         if (maturityFilter === 'ready') {
           matchingVintages = wine.vintages.filter(
@@ -245,7 +247,6 @@ export default defineEventHandler(async (event) => {
 
         if (matchingVintages.length === 0) return null
 
-        // Recalculate total bottles for filtered vintages only
         const totalBottles = matchingVintages.reduce((sum, v) => sum + v.bottleCount, 0)
 
         return {
@@ -257,7 +258,6 @@ export default defineEventHandler(async (event) => {
       .filter((wine) => wine !== null)
   }
 
-  // Sort by total bottles descending
   cards.sort((a, b) => b.totalBottles - a.totalBottles)
 
   return {

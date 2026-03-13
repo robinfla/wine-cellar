@@ -256,4 +256,361 @@ describe('API integration tests', () => {
       expect(res.status).toBe(401)
     })
   })
+
+  // ============================================================================
+  // Vintages & Enrichment Tests (Migration 0011)
+  // ============================================================================
+
+  describe('GET /api/inventory/cards (vintages)', () => {
+    it('returns cards with vintage data from vintages table', async () => {
+      const res = await apiFetch('/api/inventory/cards')
+      expect(res.ok).toBe(true)
+      const data = await res.json()
+      expect(data).toHaveProperty('cards')
+      expect(Array.isArray(data.cards)).toBe(true)
+      
+      if (data.cards.length > 0) {
+        const card = data.cards[0]
+        expect(card).toHaveProperty('vintages')
+        expect(Array.isArray(card.vintages)).toBe(true)
+        
+        if (card.vintages.length > 0) {
+          const vintage = card.vintages[0]
+          expect(vintage).toHaveProperty('vintage')
+          expect(vintage).toHaveProperty('vintageId')
+          expect(vintage).toHaveProperty('bottleCount')
+          expect(vintage).toHaveProperty('maturityStatus')
+          // Enrichment fields (may be null)
+          expect(vintage).toHaveProperty('ratingsCount')
+          expect(vintage).toHaveProperty('ratingsAverage')
+        }
+      }
+    })
+  })
+
+  describe('GET /api/inventory/:id (vintage enrichment)', () => {
+    it('returns lot with vintageId and enrichment data', async () => {
+      // Get a valid lot ID first
+      const invRes = await apiFetch('/api/inventory?limit=1')
+      expect(invRes.ok).toBe(true)
+      const invData = await invRes.json()
+      
+      if (invData.lots && invData.lots.length > 0) {
+        const lotId = invData.lots[0].id
+        const res = await apiFetch(`/api/inventory/${lotId}`)
+        expect(res.ok).toBe(true)
+        const data = await res.json()
+        
+        expect(data).toHaveProperty('vintageId')
+        expect(data).toHaveProperty('vintage')
+        expect(data).toHaveProperty('maturity')
+        // Enrichment fields
+        expect(data).toHaveProperty('ratingsCount')
+        expect(data).toHaveProperty('ratingsAverage')
+      }
+    })
+  })
+
+  describe('GET /api/wines/:id (enrichment fields)', () => {
+    it('returns wine with new enrichment fields', async () => {
+      // Get a valid wine ID
+      const cardsRes = await apiFetch('/api/inventory/cards?limit=1')
+      expect(cardsRes.ok).toBe(true)
+      const cardsData = await cardsRes.json()
+      
+      if (cardsData.cards && cardsData.cards.length > 0) {
+        const wineId = cardsData.cards[0].wineId
+        const res = await apiFetch(`/api/wines/${wineId}`)
+        expect(res.ok).toBe(true)
+        const data = await res.json()
+        
+        // Core fields
+        expect(data).toHaveProperty('id')
+        expect(data).toHaveProperty('name')
+        expect(data).toHaveProperty('color')
+        
+        // New enrichment fields
+        expect(data).toHaveProperty('styleDescription')
+        expect(data).toHaveProperty('isNatural')
+        expect(data).toHaveProperty('isOrganic')
+        expect(data).toHaveProperty('isBiodynamic')
+        expect(data).toHaveProperty('dataSource')
+        
+        // Producer enrichment
+        expect(data.producer).toHaveProperty('foundedYear')
+        expect(data.producer).toHaveProperty('description')
+        expect(data.producer).toHaveProperty('isOrganic')
+        
+        // Vintages with enrichment
+        expect(data).toHaveProperty('vintages')
+        if (data.vintages.length > 0) {
+          expect(data.vintages[0]).toHaveProperty('vintageId')
+          expect(data.vintages[0]).toHaveProperty('ratingsCount')
+          expect(data.vintages[0]).toHaveProperty('ratingsAverage')
+        }
+      }
+    })
+  })
+
+  describe('PATCH /api/wines/:id (enrichment fields)', () => {
+    it('accepts new enrichment fields', async () => {
+      // Get a valid wine ID
+      const cardsRes = await apiFetch('/api/inventory/cards?limit=1')
+      expect(cardsRes.ok).toBe(true)
+      const cardsData = await cardsRes.json()
+      
+      if (cardsData.cards && cardsData.cards.length > 0) {
+        const wineId = cardsData.cards[0].wineId
+        
+        const res = await apiFetch(`/api/wines/${wineId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            styleDescription: 'Test style description',
+            isNatural: false,
+            isOrganic: true,
+            isBiodynamic: false,
+          }),
+        })
+        expect(res.ok).toBe(true)
+        const data = await res.json()
+        
+        expect(data.styleDescription).toBe('Test style description')
+        expect(data.isOrganic).toBe(true)
+        
+        // Reset
+        await apiFetch(`/api/wines/${wineId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            styleDescription: null,
+            isNatural: false,
+            isOrganic: false,
+            isBiodynamic: false,
+          }),
+        })
+      }
+    })
+  })
+
+  describe('GET /api/producers/:id (enrichment fields)', () => {
+    it('returns producer with enrichment fields', async () => {
+      // Get a valid producer ID from a wine
+      const cardsRes = await apiFetch('/api/inventory/cards?limit=1')
+      expect(cardsRes.ok).toBe(true)
+      const cardsData = await cardsRes.json()
+      
+      if (cardsData.cards && cardsData.cards.length > 0) {
+        const wineId = cardsData.cards[0].wineId
+        const wineRes = await apiFetch(`/api/wines/${wineId}`)
+        const wineData = await wineRes.json()
+        
+        if (wineData.producer?.id) {
+          const res = await apiFetch(`/api/producers/${wineData.producer.id}`)
+          expect(res.ok).toBe(true)
+          const data = await res.json()
+          
+          expect(data).toHaveProperty('foundedYear')
+          expect(data).toHaveProperty('description')
+          expect(data).toHaveProperty('isOrganic')
+          expect(data).toHaveProperty('isBiodynamic')
+          expect(data).toHaveProperty('isNatural')
+          expect(data).toHaveProperty('latitude')
+          expect(data).toHaveProperty('longitude')
+          expect(data).toHaveProperty('dataSource')
+        }
+      }
+    })
+  })
+
+  describe('PATCH /api/producers/:id (enrichment fields)', () => {
+    it('accepts new enrichment fields', async () => {
+      // Get a valid producer ID
+      const cardsRes = await apiFetch('/api/inventory/cards?limit=1')
+      const cardsData = await cardsRes.json()
+      
+      if (cardsData.cards && cardsData.cards.length > 0) {
+        const wineId = cardsData.cards[0].wineId
+        const wineRes = await apiFetch(`/api/wines/${wineId}`)
+        const wineData = await wineRes.json()
+        
+        if (wineData.producer?.id) {
+          const producerId = wineData.producer.id
+          
+          const res = await apiFetch(`/api/producers/${producerId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              foundedYear: 1990,
+              description: 'Test producer description',
+              isOrganic: true,
+            }),
+          })
+          expect(res.ok).toBe(true)
+          const data = await res.json()
+          
+          expect(data.foundedYear).toBe(1990)
+          expect(data.description).toBe('Test producer description')
+          expect(data.isOrganic).toBe(true)
+          
+          // Reset
+          await apiFetch(`/api/producers/${producerId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              foundedYear: null,
+              description: null,
+              isOrganic: false,
+            }),
+          })
+        }
+      }
+    })
+  })
+
+  describe('GET /api/grapes (enrichment fields)', () => {
+    it('returns grapes with description field', async () => {
+      const res = await apiFetch('/api/grapes')
+      expect(res.ok).toBe(true)
+      const data = await res.json()
+      expect(Array.isArray(data)).toBe(true)
+      
+      if (data.length > 0) {
+        const grape = data[0]
+        expect(grape).toHaveProperty('id')
+        expect(grape).toHaveProperty('name')
+        expect(grape).toHaveProperty('description')
+        expect(grape).toHaveProperty('originCountry')
+        expect(grape).toHaveProperty('aliases')
+      }
+    })
+  })
+
+  describe('GET /api/regions (enrichment fields)', () => {
+    it('returns regions with enrichment fields', async () => {
+      const res = await apiFetch('/api/regions')
+      expect(res.ok).toBe(true)
+      const data = await res.json()
+      expect(Array.isArray(data)).toBe(true)
+      
+      if (data.length > 0) {
+        const region = data[0]
+        expect(region).toHaveProperty('id')
+        expect(region).toHaveProperty('name')
+        expect(region).toHaveProperty('description')
+        expect(region).toHaveProperty('latitude')
+        expect(region).toHaveProperty('longitude')
+        expect(region).toHaveProperty('climate')
+        expect(region).toHaveProperty('soilTypes')
+      }
+    })
+  })
+
+  describe('GET /api/inventory/search (vintages)', () => {
+    it('returns search results with vintageId', async () => {
+      const res = await apiFetch('/api/inventory/search?q=test')
+      expect(res.ok).toBe(true)
+      const data = await res.json()
+      expect(data).toHaveProperty('wines')
+      expect(Array.isArray(data.wines)).toBe(true)
+      
+      if (data.wines.length > 0) {
+        expect(data.wines[0]).toHaveProperty('vintageId')
+        expect(data.wines[0]).toHaveProperty('vintage')
+      }
+    })
+  })
+
+  describe('GET /api/inventory/events (vintages)', () => {
+    it('returns events with vintage from vintages table', async () => {
+      const res = await apiFetch('/api/inventory/events')
+      expect(res.ok).toBe(true)
+      const data = await res.json()
+      expect(data).toHaveProperty('events')
+      expect(Array.isArray(data.events)).toBe(true)
+      
+      if (data.events.length > 0) {
+        expect(data.events[0]).toHaveProperty('vintageId')
+        expect(data.events[0]).toHaveProperty('vintage')
+      }
+    })
+  })
+
+  describe('Inventory lot lifecycle (with vintages table)', () => {
+    let testWineId: number
+    let testProducerId: number
+    let testLotId: number
+    let testCellarId: number
+    
+    it('gets existing wine and cellar for test', async () => {
+      // Get existing inventory to find valid IDs
+      const cardsRes = await apiFetch('/api/inventory/cards?limit=1')
+      expect(cardsRes.ok).toBe(true)
+      const cardsData = await cardsRes.json()
+      
+      if (cardsData.cards && cardsData.cards.length > 0) {
+        testWineId = cardsData.cards[0].wineId
+        
+        // Get cellar
+        const cellarsRes = await apiFetch('/api/cellars')
+        expect(cellarsRes.ok).toBe(true)
+        const cellarsData = await cellarsRes.json()
+        if (cellarsData.cellars && cellarsData.cellars.length > 0) {
+          testCellarId = cellarsData.cellars[0].id
+        }
+      }
+    })
+    
+    it('creates inventory lot with vintage (creates vintages record)', async () => {
+      if (!testWineId || !testCellarId) return
+      
+      const res = await apiFetch('/api/inventory', {
+        method: 'POST',
+        body: JSON.stringify({
+          wineId: testWineId,
+          cellarId: testCellarId,
+          formatId: 1, // Standard 750ml
+          vintage: 2020,
+          quantity: 1,
+        }),
+      })
+      expect(res.ok).toBe(true)
+      const data = await res.json()
+      
+      testLotId = data.id
+      expect(data.vintageId).toBeDefined()
+      expect(data.vintage).toBe(2020)
+    })
+    
+    it('verifies lot has vintageId populated', async () => {
+      if (!testLotId) return
+      
+      const res = await apiFetch(`/api/inventory/${testLotId}`)
+      expect(res.ok).toBe(true)
+      const data = await res.json()
+      
+      expect(data.vintageId).toBeDefined()
+      expect(data.vintage).toBe(2020)
+    })
+    
+    it('updates vintage (creates new vintage record if needed)', async () => {
+      if (!testLotId) return
+      
+      const res = await apiFetch(`/api/inventory/${testLotId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ vintage: 2021 }),
+      })
+      expect(res.ok).toBe(true)
+      const data = await res.json()
+      
+      expect(data.vintage).toBe(2021)
+      // vintageId should have changed to new record
+      expect(data.vintageId).toBeDefined()
+    })
+    
+    it('cleans up test lot', async () => {
+      if (!testLotId) return
+      
+      const res = await apiFetch(`/api/inventory/${testLotId}`, {
+        method: 'DELETE',
+      })
+      expect(res.ok).toBe(true)
+    })
+  })
 })

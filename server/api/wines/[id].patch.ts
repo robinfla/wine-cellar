@@ -16,6 +16,19 @@ const updateWineSchema = z.object({
   decantMinutes: z.number().int().nullable().optional(),
   glassType: z.string().nullable().optional(),
   foodPairings: z.array(z.string()).nullable().optional(),
+  notes: z.string().nullable().optional(),
+  bottleImageUrl: z.string().url().nullable().optional(),
+  // New enrichment fields
+  styleDescription: z.string().nullable().optional(),
+  isNatural: z.boolean().optional(),
+  isOrganic: z.boolean().optional(),
+  isBiodynamic: z.boolean().optional(),
+  dataSource: z.string().nullable().optional(),
+  // Taste structure
+  bodyWeight: z.number().int().min(0).max(100).nullable().optional(),
+  tanninLevel: z.number().int().min(0).max(100).nullable().optional(),
+  sweetnessLevel: z.number().int().min(0).max(100).nullable().optional(),
+  acidityLevel: z.number().int().min(0).max(100).nullable().optional(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -60,48 +73,25 @@ export default defineEventHandler(async (event) => {
     updatedAt: new Date(),
   }
 
-  if (parsed.data.name !== undefined) {
-    updates.name = parsed.data.name
+  // Simple field mappings
+  const simpleFields = [
+    'name', 'producerId', 'appellationId', 'regionId', 'color',
+    'defaultDrinkFromYears', 'defaultDrinkUntilYears',
+    'servingTempCelsius', 'decantMinutes', 'glassType', 'notes',
+    'bottleImageUrl', 'styleDescription', 'dataSource',
+    'isNatural', 'isOrganic', 'isBiodynamic',
+    'bodyWeight', 'tanninLevel', 'sweetnessLevel', 'acidityLevel',
+  ] as const
+
+  for (const field of simpleFields) {
+    if (parsed.data[field] !== undefined) {
+      updates[field] = parsed.data[field]
+    }
   }
 
-  if (parsed.data.producerId !== undefined) {
-    updates.producerId = parsed.data.producerId
-  }
-
-  if (parsed.data.appellationId !== undefined) {
-    updates.appellationId = parsed.data.appellationId
-  }
-
-  if (parsed.data.regionId !== undefined) {
-    updates.regionId = parsed.data.regionId
-  }
-
-  if (parsed.data.color !== undefined) {
-    updates.color = parsed.data.color
-  }
-
-  if (parsed.data.defaultDrinkFromYears !== undefined) {
-    updates.defaultDrinkFromYears = parsed.data.defaultDrinkFromYears
-  }
-
-  if (parsed.data.defaultDrinkUntilYears !== undefined) {
-    updates.defaultDrinkUntilYears = parsed.data.defaultDrinkUntilYears
-  }
-
+  // JSON fields
   if (parsed.data.tasteProfile !== undefined) {
     updates.tasteProfile = parsed.data.tasteProfile ? JSON.stringify(parsed.data.tasteProfile) : null
-  }
-
-  if (parsed.data.servingTempCelsius !== undefined) {
-    updates.servingTempCelsius = parsed.data.servingTempCelsius
-  }
-
-  if (parsed.data.decantMinutes !== undefined) {
-    updates.decantMinutes = parsed.data.decantMinutes
-  }
-
-  if (parsed.data.glassType !== undefined) {
-    updates.glassType = parsed.data.glassType
   }
 
   if (parsed.data.foodPairings !== undefined) {

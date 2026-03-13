@@ -7,6 +7,7 @@ import {
   producers,
   cellars,
   tastingNotes,
+  vintages,
 } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
@@ -40,7 +41,8 @@ export default defineEventHandler(async (event) => {
       wineName: wines.name,
       wineColor: wines.color,
       producerName: producers.name,
-      vintage: inventoryLots.vintage,
+      vintageId: inventoryLots.vintageId,
+      vintage: vintages.year,
       cellarName: cellars.name,
       // From tasting_notes table
       tnScore: tastingNotes.score,
@@ -53,6 +55,7 @@ export default defineEventHandler(async (event) => {
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
     .innerJoin(producers, eq(wines.producerId, producers.id))
     .innerJoin(cellars, eq(inventoryLots.cellarId, cellars.id))
+    .leftJoin(vintages, eq(inventoryLots.vintageId, vintages.id))
     .leftJoin(tastingNotes, eq(inventoryEvents.lotId, tastingNotes.lotId))
     .where(and(...conditions))
     .orderBy(desc(inventoryEvents.eventDate), desc(inventoryEvents.id))

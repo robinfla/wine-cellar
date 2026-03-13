@@ -1,6 +1,7 @@
 import { z } from 'zod'
+import { eq, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
-import { inventoryLots, inventoryEvents } from '~/server/db/schema'
+import { inventoryLots, inventoryEvents, vintages } from '~/server/db/schema'
 
 const createInventoryLotSchema = z.object({
   wineId: z.number().int().positive(),
@@ -33,13 +34,44 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { purchaseDate, ...data } = parsed.data
+  const { purchaseDate, vintage, ...data } = parsed.data
+
+  // Find or create vintage record
+  let vintageId: number | null = null
+  if (data.wineId) {
+    // Check if vintage exists
+    const [existingVintage] = await db
+      .select({ id: vintages.id })
+      .from(vintages)
+      .where(and(
+        eq(vintages.wineId, data.wineId),
+        vintage !== null && vintage !== undefined
+          ? eq(vintages.year, vintage)
+          : eq(vintages.year, null as any), // NV wines
+      ))
+
+    if (existingVintage) {
+      vintageId = existingVintage.id
+    } else {
+      // Create new vintage record
+      const [newVintage] = await db
+        .insert(vintages)
+        .values({
+          wineId: data.wineId,
+          year: vintage ?? null,
+        })
+        .returning({ id: vintages.id })
+      vintageId = newVintage.id
+    }
+  }
 
   const [lot] = await db
     .insert(inventoryLots)
     .values({
       ...data,
       userId,
+      vintageId,
+      vintage: vintage ?? null, // Keep legacy field in sync for now
       purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
     })
     .returning()

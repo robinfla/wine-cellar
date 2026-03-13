@@ -8,6 +8,15 @@ const updateProducerSchema = z.object({
   regionId: z.number().int().positive().optional().nullable(),
   website: z.string().url().optional().nullable().or(z.literal('')),
   notes: z.string().optional().nullable(),
+  // Enrichment fields
+  foundedYear: z.number().int().min(1000).max(2100).optional().nullable(),
+  description: z.string().optional().nullable(),
+  isOrganic: z.boolean().optional(),
+  isBiodynamic: z.boolean().optional(),
+  isNatural: z.boolean().optional(),
+  latitude: z.number().optional().nullable(),
+  longitude: z.number().optional().nullable(),
+  dataSource: z.string().optional().nullable(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -45,17 +54,23 @@ export default defineEventHandler(async (event) => {
     updatedAt: new Date(),
   }
 
-  if (parsed.data.name !== undefined) {
-    updateData.name = parsed.data.name
+  // Simple field mappings
+  const fields = [
+    'name', 'regionId', 'notes',
+    'foundedYear', 'description',
+    'isOrganic', 'isBiodynamic', 'isNatural',
+    'latitude', 'longitude', 'dataSource',
+  ] as const
+
+  for (const field of fields) {
+    if (parsed.data[field] !== undefined) {
+      updateData[field] = parsed.data[field]
+    }
   }
-  if (parsed.data.regionId !== undefined) {
-    updateData.regionId = parsed.data.regionId
-  }
+
+  // Handle website separately (empty string → null)
   if (parsed.data.website !== undefined) {
     updateData.website = parsed.data.website || null
-  }
-  if (parsed.data.notes !== undefined) {
-    updateData.notes = parsed.data.notes
   }
 
   try {
@@ -81,6 +96,14 @@ export default defineEventHandler(async (event) => {
       regionName: regions.name,
       website: producers.website,
       notes: producers.notes,
+      foundedYear: producers.foundedYear,
+      description: producers.description,
+      isOrganic: producers.isOrganic,
+      isBiodynamic: producers.isBiodynamic,
+      isNatural: producers.isNatural,
+      latitude: producers.latitude,
+      longitude: producers.longitude,
+      dataSource: producers.dataSource,
       bottleCount: sql<number>`cast(coalesce(sum(${inventoryLots.quantity}), 0) as int)`,
       createdAt: producers.createdAt,
     })

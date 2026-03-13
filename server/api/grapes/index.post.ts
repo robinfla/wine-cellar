@@ -5,6 +5,10 @@ import { grapes } from '~/server/db/schema'
 const createSchema = z.object({
   name: z.string().min(1),
   color: z.enum(['red', 'white', 'rose', 'sparkling', 'dessert', 'fortified']).optional(),
+  // Enrichment fields
+  description: z.string().optional().nullable(),
+  originCountry: z.string().optional().nullable(),
+  aliases: z.array(z.string()).optional().nullable(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -19,11 +23,13 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  const { aliases, ...data } = parsed.data
+
   const [created] = await db
     .insert(grapes)
     .values({
-      name: parsed.data.name,
-      color: parsed.data.color as any,
+      ...data,
+      aliases: aliases ? JSON.stringify(aliases) : null,
     })
     .returning()
 

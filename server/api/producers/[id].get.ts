@@ -21,6 +21,16 @@ export default defineEventHandler(async (event) => {
       regionName: regions.name,
       website: producers.website,
       notes: producers.notes,
+      // Enrichment fields
+      foundedYear: producers.foundedYear,
+      description: producers.description,
+      isOrganic: producers.isOrganic,
+      isBiodynamic: producers.isBiodynamic,
+      isNatural: producers.isNatural,
+      latitude: producers.latitude,
+      longitude: producers.longitude,
+      dataSource: producers.dataSource,
+      // Aggregates
       bottleCount: sql<number>`cast(coalesce(sum(${inventoryLots.quantity}), 0) as int)`,
       createdAt: producers.createdAt,
     })

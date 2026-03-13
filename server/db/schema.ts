@@ -105,6 +105,11 @@ export const regions = pgTable('regions', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
   name: text('name').notNull(),
   countryCode: text('country_code').notNull(),
+  description: text('description'),
+  latitude: decimal('latitude', { precision: 10, scale: 7 }),
+  longitude: decimal('longitude', { precision: 10, scale: 7 }),
+  climate: text('climate'),
+  soilTypes: text('soil_types'), // JSON array
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => ({
   uniqueRegionCountry: unique().on(table.name, table.countryCode),
@@ -126,6 +131,9 @@ export const grapes = pgTable('grapes', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
   name: text('name').notNull().unique(),
   color: wineColorEnum('color'),
+  description: text('description'),
+  originCountry: text('origin_country'),
+  aliases: text('aliases'), // JSON array of alternative names
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
@@ -137,6 +145,17 @@ export const producers = pgTable('producers', {
   regionId: integer('region_id').references(() => regions.id),
   website: text('website'),
   notes: text('notes'),
+
+  // Enrichment from scraped sources
+  foundedYear: integer('founded_year'),
+  description: text('description'),
+  isOrganic: boolean('is_organic').default(false),
+  isBiodynamic: boolean('is_biodynamic').default(false),
+  isNatural: boolean('is_natural').default(false),
+  latitude: decimal('latitude', { precision: 10, scale: 7 }),
+  longitude: decimal('longitude', { precision: 10, scale: 7 }),
+  dataSource: text('data_source'),
+
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
@@ -186,6 +205,17 @@ export const wines = pgTable('wines', {
   // Bottle image
   bottleImageUrl: text('bottle_image_url'), // URL to bottle photo
 
+  // Style description (prose from Vivino/external sources)
+  styleDescription: text('style_description'),
+
+  // Certification flags
+  isNatural: boolean('is_natural').default(false),
+  isOrganic: boolean('is_organic').default(false),
+  isBiodynamic: boolean('is_biodynamic').default(false),
+
+  // Data provenance
+  dataSource: text('data_source'), // 'vivino', 'invintory', 'manual'
+
   notes: text('notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -206,6 +236,55 @@ export const wineGrapes = pgTable('wine_grapes', {
   uniqueWineGrape: unique().on(table.wineId, table.grapeId),
 }))
 
+// Vintages (first-class vintage data with aggregate ratings)
+export const vintages = pgTable('vintages', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  wineId: integer('wine_id').references(() => wines.id, { onDelete: 'cascade' }).notNull(),
+  year: integer('year'), // NULL = NV (non-vintage)
+
+  // Aggregate community ratings (from Vivino, etc.)
+  ratingsCount: integer('ratings_count'),
+  ratingsAverage: decimal('ratings_average', { precision: 3, scale: 2 }),
+
+  // Drink window for this specific vintage
+  drinkFromYear: integer('drink_from_year'),
+  drinkUntilYear: integer('drink_until_year'),
+  drinkPeakYear: integer('drink_peak_year'),
+
+  // Data provenance
+  dataSource: text('data_source'),
+
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  uniqueWineVintage: unique().on(table.wineId, table.year),
+  wineIdx: index('vintages_wine_idx').on(table.wineId),
+  yearIdx: index('vintages_year_idx').on(table.year),
+}))
+
+// Food categories (normalized food types for pairings)
+export const foodCategories = pgTable('food_categories', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  name: text('name').notNull().unique(), // 'beef', 'lamb', etc.
+  displayName: text('display_name').notNull(),
+  category: text('category'), // 'meat', 'seafood', 'vegetarian', etc.
+  imageUrl: text('image_url'),
+})
+
+// Wine-food pairing junction
+export const wineFoodPairings = pgTable('wine_food_pairings', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  wineId: integer('wine_id').references(() => wines.id, { onDelete: 'cascade' }).notNull(),
+  foodCategoryId: integer('food_category_id').references(() => foodCategories.id, { onDelete: 'cascade' }).notNull(),
+  strength: decimal('strength', { precision: 3, scale: 2 }).default('1.0'), // 0-1 pairing strength
+  dataSource: text('data_source'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  uniqueWineFood: unique().on(table.wineId, table.foodCategoryId),
+  wineIdx: index('wine_food_wine_idx').on(table.wineId),
+  foodIdx: index('wine_food_category_idx').on(table.foodCategoryId),
+}))
+
 // Inventory lots (actual bottles)
 export const inventoryLots = pgTable('inventory_lots', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
@@ -214,7 +293,10 @@ export const inventoryLots = pgTable('inventory_lots', {
   cellarId: integer('cellar_id').references(() => cellars.id).notNull(),
   formatId: integer('format_id').references(() => formats.id).notNull(),
 
-  vintage: integer('vintage'), // null for NV
+  // Vintage reference (preferred - links to vintages table)
+  vintageId: integer('vintage_id').references(() => vintages.id),
+  // Legacy vintage field (kept for backward compatibility during migration)
+  vintage: integer('vintage'), // DEPRECATED: use vintageId instead
   quantity: integer('quantity').notNull().default(0),
 
   // Purchase info
@@ -233,9 +315,12 @@ export const inventoryLots = pgTable('inventory_lots', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
+  // NOTE: unique constraint still uses vintage for backward compat during migration
+  // Will be updated to use vintageId in future migration
   uniqueLotUser: unique().on(table.wineId, table.cellarId, table.formatId, table.vintage, table.binLocation, table.userId),
   wineIdx: index('inventory_wine_idx').on(table.wineId),
   cellarIdx: index('inventory_cellar_idx').on(table.cellarId),
+  vintageIdIdx: index('inventory_vintage_id_idx').on(table.vintageId),
   importHashIdx: index('inventory_import_hash_idx').on(table.importHash),
   userIdx: index('inventory_user_idx').on(table.userId),
 }))
@@ -470,6 +555,9 @@ export type AllocationItem = typeof allocationItems.$inferSelect
 export type WineValuation = typeof wineValuations.$inferSelect
 export type WineCriticScore = typeof wineCriticScores.$inferSelect
 export type WishlistItem = typeof wishlistItems.$inferSelect
+export type Vintage = typeof vintages.$inferSelect
+export type FoodCategory = typeof foodCategories.$inferSelect
+export type WineFoodPairing = typeof wineFoodPairings.$inferSelect
 
 // ─── Global Wine Reference (shared maturity data across all users) ───
 export const wineReferences = pgTable('wine_references', {

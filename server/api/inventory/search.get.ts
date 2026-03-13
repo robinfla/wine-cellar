@@ -1,6 +1,6 @@
 import { eq, sql, like, and, or } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
-import { inventoryLots, wines, producers, regions } from '~/server/db/schema'
+import { inventoryLots, wines, producers, regions, vintages } from '~/server/db/schema'
 
 export default defineEventHandler(async (event) => {
   const userId = event.context.user?.id
@@ -23,7 +23,8 @@ export default defineEventHandler(async (event) => {
       wineId: wines.id,
       wineName: wines.name,
       producerName: producers.name,
-      vintage: inventoryLots.vintage,
+      vintageId: inventoryLots.vintageId,
+      vintage: vintages.year,
       regionName: regions.name,
       color: wines.color,
       stock: inventoryLots.quantity,
@@ -32,7 +33,8 @@ export default defineEventHandler(async (event) => {
     .from(inventoryLots)
     .innerJoin(wines, eq(inventoryLots.wineId, wines.id))
     .innerJoin(producers, eq(wines.producerId, producers.id))
-    .innerJoin(regions, eq(producers.regionId, regions.id))
+    .leftJoin(vintages, eq(inventoryLots.vintageId, vintages.id))
+    .leftJoin(regions, eq(producers.regionId, regions.id))
     .where(
       and(
         eq(inventoryLots.userId, userId),
@@ -52,6 +54,7 @@ export default defineEventHandler(async (event) => {
       id: row.lotId,
       wineId: row.wineId,
       name: `${row.producerName} ${row.wineName}`,
+      vintageId: row.vintageId,
       vintage: row.vintage,
       region: row.regionName,
       color: row.color,

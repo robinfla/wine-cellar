@@ -16,6 +16,23 @@ const createWineSchema = z.object({
     grapeId: z.number().int().positive(),
     percentage: z.number().int().min(0).max(100).optional(),
   })).optional(),
+  // Enrichment fields
+  styleDescription: z.string().optional().nullable(),
+  isNatural: z.boolean().optional(),
+  isOrganic: z.boolean().optional(),
+  isBiodynamic: z.boolean().optional(),
+  dataSource: z.string().optional().nullable(),
+  // Taste structure
+  bodyWeight: z.number().int().min(0).max(100).optional().nullable(),
+  tanninLevel: z.number().int().min(0).max(100).optional().nullable(),
+  sweetnessLevel: z.number().int().min(0).max(100).optional().nullable(),
+  acidityLevel: z.number().int().min(0).max(100).optional().nullable(),
+  // Serving
+  servingTempCelsius: z.number().int().optional().nullable(),
+  decantMinutes: z.number().int().optional().nullable(),
+  glassType: z.string().optional().nullable(),
+  foodPairings: z.array(z.string()).optional().nullable(),
+  bottleImageUrl: z.string().url().optional().nullable(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -35,7 +52,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { grapeIds, ...wineData } = parsed.data
+  const { grapeIds, foodPairings, ...wineData } = parsed.data
 
   const [existingWine] = await db
     .select()
@@ -52,7 +69,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // If no maturity data provided, estimate with AI
-  let finalWineData = { ...wineData }
+  let finalWineData: Record<string, any> = { ...wineData }
   if (finalWineData.defaultDrinkFromYears == null || finalWineData.defaultDrinkUntilYears == null) {
     try {
       // Resolve producer/region/appellation names for AI context
@@ -84,6 +101,11 @@ export default defineEventHandler(async (event) => {
     } catch (e) {
       console.error('[maturity-ai] Error during estimation, proceeding without:', e)
     }
+  }
+
+  // Handle JSON fields
+  if (foodPairings) {
+    finalWineData.foodPairings = JSON.stringify(foodPairings)
   }
 
   const [wine] = await db

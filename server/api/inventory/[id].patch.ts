@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { eq, and } from 'drizzle-orm'
 import { db } from '~/server/utils/db'
-import { inventoryLots } from '~/server/db/schema'
+import { inventoryLots, vintages } from '~/server/db/schema'
 
 const updateSchema = z.object({
   quantity: z.number().int().min(0).optional(),
@@ -63,8 +63,38 @@ export default defineEventHandler(async (event) => {
     updates.formatId = parsed.data.formatId
   }
 
+  // Handle vintage change - need to update vintage_id as well
   if (parsed.data.vintage !== undefined) {
-    updates.vintage = parsed.data.vintage
+    const newVintageYear = parsed.data.vintage
+
+    // Find or create vintage record
+    let vintageId: number | null = null
+    
+    const [existingVintage] = await db
+      .select({ id: vintages.id })
+      .from(vintages)
+      .where(and(
+        eq(vintages.wineId, lot.wineId),
+        newVintageYear !== null
+          ? eq(vintages.year, newVintageYear)
+          : eq(vintages.year, null as any),
+      ))
+
+    if (existingVintage) {
+      vintageId = existingVintage.id
+    } else {
+      const [newVintage] = await db
+        .insert(vintages)
+        .values({
+          wineId: lot.wineId,
+          year: newVintageYear,
+        })
+        .returning({ id: vintages.id })
+      vintageId = newVintage.id
+    }
+
+    updates.vintageId = vintageId
+    updates.vintage = newVintageYear // Keep legacy field in sync
   }
 
   if (parsed.data.purchaseDate !== undefined) {

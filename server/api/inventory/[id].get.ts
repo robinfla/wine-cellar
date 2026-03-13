@@ -9,6 +9,7 @@ import {
   cellars,
   formats,
   maturityOverrides,
+  vintages,
 } from '~/server/db/schema'
 import { getDrinkingWindow } from '~/server/utils/maturity'
 
@@ -41,7 +42,14 @@ export default defineEventHandler(async (event) => {
       formatId: inventoryLots.formatId,
       formatName: formats.name,
       formatVolumeMl: formats.volumeMl,
-      vintage: inventoryLots.vintage,
+      // Vintage via vintages table
+      vintageId: inventoryLots.vintageId,
+      vintage: vintages.year,
+      ratingsCount: vintages.ratingsCount,
+      ratingsAverage: vintages.ratingsAverage,
+      vintageDrinkFrom: vintages.drinkFromYear,
+      vintageDrinkUntil: vintages.drinkUntilYear,
+      vintageDrinkPeak: vintages.drinkPeakYear,
       quantity: inventoryLots.quantity,
       purchaseDate: inventoryLots.purchaseDate,
       purchasePricePerBottle: inventoryLots.purchasePricePerBottle,
@@ -61,6 +69,7 @@ export default defineEventHandler(async (event) => {
     .innerJoin(producers, eq(wines.producerId, producers.id))
     .innerJoin(cellars, eq(inventoryLots.cellarId, cellars.id))
     .innerJoin(formats, eq(inventoryLots.formatId, formats.id))
+    .leftJoin(vintages, eq(inventoryLots.vintageId, vintages.id))
     .leftJoin(appellations, eq(wines.appellationId, appellations.id))
     .leftJoin(regions, eq(producers.regionId, regions.id))
     .leftJoin(sql`${regions} as wr`, sql`wr.id = ${wines.regionId}`)
@@ -73,6 +82,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const lot = result[0]
+  
+  // Priority: lot override > vintage-specific > wine default
   const maturityInfo = getDrinkingWindow({
     vintage: lot.vintage,
     color: lot.wineColor,
@@ -81,12 +92,13 @@ export default defineEventHandler(async (event) => {
     grapeName: lot.primaryGrape,
     defaultDrinkFromYears: lot.defaultDrinkFromYears,
     defaultDrinkUntilYears: lot.defaultDrinkUntilYears,
-    overrideDrinkFromYear: lot.overrideDrinkFromYear,
-    overrideDrinkUntilYear: lot.overrideDrinkUntilYear,
+    overrideDrinkFromYear: lot.overrideDrinkFromYear ?? lot.vintageDrinkFrom,
+    overrideDrinkUntilYear: lot.overrideDrinkUntilYear ?? lot.vintageDrinkUntil,
   })
 
   return {
     ...lot,
+    ratingsAverage: lot.ratingsAverage ? Number(lot.ratingsAverage) : null,
     maturity: maturityInfo,
   }
 })

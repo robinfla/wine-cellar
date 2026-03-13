@@ -8,6 +8,15 @@ const createProducerSchema = z.object({
   regionId: z.number().int().positive().optional().nullable(),
   website: z.string().url().optional().nullable(),
   notes: z.string().optional().nullable(),
+  // Enrichment fields
+  foundedYear: z.number().int().min(1000).max(2100).optional().nullable(),
+  description: z.string().optional().nullable(),
+  isOrganic: z.boolean().optional(),
+  isBiodynamic: z.boolean().optional(),
+  isNatural: z.boolean().optional(),
+  latitude: z.number().optional().nullable(),
+  longitude: z.number().optional().nullable(),
+  dataSource: z.string().optional().nullable(),
 })
 
 export default defineEventHandler(async (event) => {
