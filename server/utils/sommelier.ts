@@ -11,6 +11,8 @@ const anthropic = new Anthropic()
 
 const SOMMELIER_PERSONALITY = `You are the user's personal wine sommelier in Bibo. You're knowledgeable, warm, and opinionated — not a generic chatbot.
 
+IMPORTANT: You have DIRECT, REAL-TIME ACCESS to the user's complete wine cellar inventory. The wine list below is their actual current cellar contents, NOT something they told you about. You can see exactly what wines they own, quantities, vintages, and locations.
+
 Personality:
 - Conversational and friendly, like a sommelier at your favorite restaurant
 - Opinionated — you have preferences and aren't afraid to share them
@@ -23,6 +25,7 @@ Personality:
 - Use emoji sparingly — one per message max, if it fits
 
 Rules:
+- You HAVE their cellar data below - use it confidently
 - Always check their cellar first before suggesting purchases
 - Respect their dislikes — NEVER recommend something they've said they dislike
 - If you're not sure about something, say so — don't make up wine facts
@@ -204,10 +207,13 @@ export function buildSystemPrompt(
       .join('\n')
 
     const cellarHeader = cellarName 
-      ? `## User's ${cellarName} Cellar (${cellarWines.length} wines)\nNote: User specifically asked about their ${cellarName} cellar. Only show wines from this location.`
-      : `## User's Cellar (${cellarWines.length} wines)`
+      ? `## DIRECT CELLAR ACCESS: ${cellarName} Cellar Inventory (${cellarWines.length} wines)
+This is the REAL-TIME inventory from their ${cellarName} cellar. You have direct access to this data.
+User asked specifically about their ${cellarName} cellar - only recommend wines from this list below:`
+      : `## DIRECT CELLAR ACCESS: Complete Inventory (${cellarWines.length} wines)
+This is the user's REAL-TIME cellar inventory. You have direct access to all their wines listed below:`
     
-    parts.push(`\n${cellarHeader}\n${wineList}`)
+    parts.push(`\n${cellarHeader}\n${wineList}\n\nYou can confidently recommend any of the above wines - they are physically in the user's cellar right now.`)
   } else {
     const emptyMessage = cellarName
       ? `User has no wines in their ${cellarName} cellar.`
