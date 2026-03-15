@@ -6,6 +6,7 @@ const PUBLIC_ROUTES = [
   '/api/auth/session',
   '/api/health',
   '/api/formats',
+  '/api/knowledge',  // Knowledge base search (public reference data)
 ]
 
 export default defineEventHandler(async (event) => {

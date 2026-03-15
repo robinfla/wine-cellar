@@ -258,3 +258,283 @@ export function knowledgeStats() {
     return null
   }
 }
+
+// ============================================================================
+// EXTENDED ENRICHMENT - Images, Tasting Notes, Food Pairings, Taste Structure
+// ============================================================================
+
+export interface WineEnrichment {
+  // Basic info
+  wineName: string
+  producer: string
+  region: string | null
+  country: string | null
+  countryCode: string | null
+  appellation: string | null
+  color: string | null
+  grape: string | null
+  
+  // Images
+  imageUrl: string | null
+  thumbnailUrl: string | null
+  
+  // Taste structure (1-5 scale)
+  acidity: number | null
+  intensity: number | null
+  sweetness: number | null
+  tannin: number | null
+  
+  // Aging windows (years from vintage)
+  agingPeakMin: number | null
+  agingPeakMax: number | null
+  agingDeclineMin: number | null
+  
+  // Food pairings
+  foodPairings: string[]
+  
+  // Critic reviews
+  criticReviews: {
+    vintage: number | null
+    score: number | null
+    tastingNote: string | null
+    critic: string | null
+    source: string
+  }[]
+}
+
+/**
+ * Get full enrichment data for a wine by ID.
+ */
+export function getWineEnrichment(wineId: number): WineEnrichment | null {
+  const db = getDb()
+  if (!db) return null
+
+  try {
+    const wine = db.prepare(`
+      SELECT 
+        w.name as wine_name,
+        w.color,
+        w.image_url,
+        w.thumbnail_url,
+        w.acidity,
+        w.intensity,
+        w.sweetness,
+        w.tannin,
+        w.aging_peak_min,
+        w.aging_peak_max,
+        w.aging_decline_min,
+        p.name as producer_name,
+        r.name as region_name,
+        c.name as country_name,
+        c.code as country_code,
+        a.name as appellation_name,
+        g.name as grape_name
+      FROM wines w
+      JOIN producers p ON w.producer_id = p.id
+      LEFT JOIN regions r ON p.region_id = r.id
+      LEFT JOIN countries c ON p.country_id = c.id
+      LEFT JOIN appellations a ON w.appellation_id = a.id
+      LEFT JOIN grapes g ON w.grape_id = g.id
+      WHERE w.id = ?
+    `).get(wineId) as any
+
+    if (!wine) return null
+
+    // Get food pairings
+    const pairings = db.prepare(`
+      SELECT fc.display_name
+      FROM wine_food_pairings wfp
+      JOIN food_categories fc ON wfp.food_category_id = fc.id
+      WHERE wfp.wine_id = ?
+    `).all(wineId) as { display_name: string }[]
+
+    // Get critic reviews
+    const reviews = db.prepare(`
+      SELECT vintage, score, tasting_note, critic, source
+      FROM critic_reviews
+      WHERE wine_id = ?
+      ORDER BY vintage DESC
+      LIMIT 10
+    `).all(wineId) as any[]
+
+    return {
+      wineName: wine.wine_name,
+      producer: wine.producer_name,
+      region: wine.region_name,
+      country: wine.country_name,
+      countryCode: wine.country_code,
+      appellation: wine.appellation_name,
+      color: wine.color,
+      grape: wine.grape_name,
+      imageUrl: wine.image_url,
+      thumbnailUrl: wine.thumbnail_url,
+      acidity: wine.acidity,
+      intensity: wine.intensity,
+      sweetness: wine.sweetness,
+      tannin: wine.tannin,
+      agingPeakMin: wine.aging_peak_min,
+      agingPeakMax: wine.aging_peak_max,
+      agingDeclineMin: wine.aging_decline_min,
+      foodPairings: pairings.map(p => p.display_name),
+      criticReviews: reviews.map(r => ({
+        vintage: r.vintage,
+        score: r.score,
+        tastingNote: r.tasting_note,
+        critic: r.critic,
+        source: r.source,
+      })),
+    }
+  } catch (e) {
+    console.warn('[knowledge] Enrichment error:', (e as Error).message)
+    return null
+  }
+}
+
+export interface KBSearchResult {
+  id: number
+  wineName: string
+  producer: string
+  region: string | null
+  country: string | null
+  countryCode: string | null
+  appellation: string | null
+  color: string | null
+  imageUrl: string | null
+  thumbnailUrl: string | null
+  // Preview data
+  score: number | null  // Best critic score
+  foodPairings: string[]  // First 3
+}
+
+/**
+ * Search knowledge base and return rich results for display.
+ */
+export function searchKnowledgeRich(text: string, limit = 20): KBSearchResult[] {
+  const db = getDb()
+  if (!db) return []
+
+  const cleaned = cleanQuery(text)
+  const terms = cleaned.split(/\s+/).filter(t => t.length > 1)
+  if (terms.length === 0) return []
+
+  // Strip vintage
+  const nonVintageTerms = terms.filter(t => !t.match(/^(19|20)\d{2}$/))
+  if (nonVintageTerms.length === 0) return []
+
+  try {
+    // FTS search with enrichment data
+    const prefix = nonVintageTerms.map(t => `${t}*`).join(' ')
+    
+    const results = db.prepare(`
+      SELECT DISTINCT
+        w.id,
+        w.name as wine_name,
+        w.color,
+        w.image_url,
+        w.thumbnail_url,
+        p.name as producer_name,
+        r.name as region_name,
+        c.name as country_name,
+        c.code as country_code,
+        a.name as appellation_name,
+        (SELECT MAX(score) FROM critic_reviews WHERE wine_id = w.id) as best_score
+      FROM wines_fts fts
+      JOIN wines w ON w.id = CAST(fts.rowid AS INTEGER)
+      JOIN producers p ON w.producer_id = p.id
+      LEFT JOIN regions r ON p.region_id = r.id
+      LEFT JOIN countries c ON p.country_id = c.id
+      LEFT JOIN appellations a ON w.appellation_id = a.id
+      WHERE wines_fts MATCH ?
+      ORDER BY 
+        CASE WHEN w.image_url IS NOT NULL THEN 0 ELSE 1 END,
+        fts.rank
+      LIMIT ?
+    `).all(prefix, limit) as any[]
+
+    // Get food pairings for each result
+    const pairingStmt = db.prepare(`
+      SELECT fc.display_name
+      FROM wine_food_pairings wfp
+      JOIN food_categories fc ON wfp.food_category_id = fc.id
+      WHERE wfp.wine_id = ?
+      LIMIT 3
+    `)
+
+    return results.map(r => ({
+      id: r.id,
+      wineName: r.wine_name,
+      producer: r.producer_name,
+      region: r.region_name,
+      country: r.country_name,
+      countryCode: r.country_code,
+      appellation: r.appellation_name,
+      color: r.color,
+      imageUrl: r.image_url,
+      thumbnailUrl: r.thumbnail_url,
+      score: r.best_score,
+      foodPairings: (pairingStmt.all(r.id) as { display_name: string }[]).map(p => p.display_name),
+    }))
+  } catch (e) {
+    console.warn('[knowledge] Rich search error:', (e as Error).message)
+    return []
+  }
+}
+
+/**
+ * Find best match for scanned label text and return full enrichment.
+ */
+export function matchAndEnrich(labelText: string): (WineEnrichment & { confidence: number }) | null {
+  const db = getDb()
+  if (!db) return null
+
+  const cleaned = cleanQuery(labelText)
+  const terms = cleaned.split(/\s+/).filter(t => t.length > 1)
+  if (terms.length === 0) return null
+
+  // Strip vintage
+  const nonVintageTerms = terms.filter(t => !t.match(/^(19|20)\d{2}$/))
+  if (nonVintageTerms.length === 0) return null
+
+  try {
+    const prefix = nonVintageTerms.map(t => `${t}*`).join(' ')
+    
+    const match = db.prepare(`
+      SELECT w.id, w.name, p.name as producer_name, fts.rank
+      FROM wines_fts fts
+      JOIN wines w ON w.id = CAST(fts.rowid AS INTEGER)
+      JOIN producers p ON w.producer_id = p.id
+      WHERE wines_fts MATCH ?
+      ORDER BY fts.rank
+      LIMIT 1
+    `).get(prefix) as { id: number; name: string; producer_name: string; rank: number } | undefined
+
+    if (!match) return null
+
+    // Calculate confidence based on term overlap
+    const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const inputNorm = normalize(labelText)
+    const producerNorm = normalize(match.producer_name)
+    const wineNorm = normalize(match.name)
+
+    const producerWords = producerNorm.split(/\s+/).filter(w => w.length > 2)
+    const wineWords = wineNorm.split(/\s+/).filter(w => w.length > 2)
+    
+    const matchedProducer = producerWords.filter(w => inputNorm.includes(w)).length
+    const matchedWine = wineWords.filter(w => inputNorm.includes(w)).length
+    const totalWords = producerWords.length + wineWords.length
+
+    const confidence = totalWords > 0 
+      ? Math.round(((matchedProducer + matchedWine) / totalWords) * 100)
+      : 0
+
+    if (confidence < 30) return null  // Too low confidence
+
+    const enrichment = getWineEnrichment(match.id)
+    if (!enrichment) return null
+
+    return { ...enrichment, confidence }
+  } catch (e) {
+    console.warn('[knowledge] Match error:', (e as Error).message)
+    return null
+  }
+}
