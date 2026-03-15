@@ -30,10 +30,39 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { message, conversationId: inputConversationId } = body
+  const { 
+    message, 
+    conversationId: inputConversationId,
+    type = 'text',
+    audioUrl,
+    duration,
+    imageUrl,
+    caption
+  } = body
 
-  if (!message || typeof message !== 'string') {
-    throw createError({ statusCode: 400, message: 'message is required' })
+  // Validate based on message type
+  if (type === 'voice') {
+    if (!audioUrl) {
+      throw createError({ statusCode: 400, message: 'audioUrl is required for voice type' })
+    }
+  } else if (type === 'photo' || type === 'label_scan') {
+    if (!imageUrl) {
+      throw createError({ statusCode: 400, message: 'imageUrl is required for photo/label_scan type' })
+    }
+  } else if (type === 'text' || !type) {
+    if (!message || typeof message !== 'string') {
+      throw createError({ statusCode: 400, message: 'message is required for text type' })
+    }
+  }
+
+  // Build user message content based on type
+  let userMessage = message || ''
+  if (type === 'voice') {
+    userMessage = `[Voice message: ${duration}s] ${message || '(transcription pending)'}`
+  } else if (type === 'photo') {
+    userMessage = caption ? `[Photo] ${caption}` : '[Photo attached]'
+  } else if (type === 'label_scan') {
+    userMessage = '[Wine label scan]'
   }
 
   // 1. Get or create conversation
@@ -45,7 +74,7 @@ export default defineEventHandler(async (event) => {
   `) as Array<{ id: number; name: string }>
 
   // 3. Detect cellar name in message (case-insensitive)
-  const messageLower = message.toLowerCase()
+  const messageLower = userMessage.toLowerCase()
   const detectedCellar = cellars.find(c => messageLower.includes(c.name.toLowerCase()))
 
   // 4. Load taste profile and personality
@@ -109,13 +138,13 @@ export default defineEventHandler(async (event) => {
   const systemPrompt = buildSystemPrompt(userName, tasteProfile, cellarWines, detectedCellar?.name, personality)
 
   // 6. Route to model
-  const tier = routeModel(message)
+  const tier = routeModel(userMessage)
 
   // 7. Save user message
-  await saveMessage(conversationId, { role: 'user', content: message })
+  await saveMessage(conversationId, { role: 'user', content: userMessage })
 
   // 8. Call Claude
-  const result = await chat(systemPrompt, history, message, tier)
+  const result = await chat(systemPrompt, history, userMessage, tier)
 
   // 9. Save assistant response
   await saveMessage(conversationId, {
@@ -127,7 +156,7 @@ export default defineEventHandler(async (event) => {
   })
 
   // 10. Async: extract preferences and update profile (fire-and-forget)
-  extractAndUpdatePreferences(userId, message, result.response).catch(() => {})
+  extractAndUpdatePreferences(userId, userMessage, result.response).catch(() => {})
 
   // 11. Extract wine suggestions from response (match against cellar)
   const suggestions = extractSuggestions(result.response, cellarWines)
@@ -137,6 +166,11 @@ export default defineEventHandler(async (event) => {
     conversationId,
     suggestions,
     model: tier,
+    messageType: type,
+    audioUrl,
+    imageUrl,
+    duration,
+    caption,
   }
 })
 
