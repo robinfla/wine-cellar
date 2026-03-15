@@ -81,13 +81,19 @@ export default defineEventHandler(async (event) => {
 
   let parsedResponse: unknown
   try {
-    // Strip markdown code fences if present
     let jsonText = contentBlock.text.trim()
+    // Strip markdown code fences if present
     if (jsonText.startsWith('```')) {
       jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
     }
+    // If still not valid JSON, try to extract the first JSON object from the text
+    if (!jsonText.startsWith('{')) {
+      const match = jsonText.match(/\{[\s\S]*\}/)
+      if (match) jsonText = match[0]
+    }
     parsedResponse = JSON.parse(jsonText)
   } catch {
+    console.error('[scan] Failed to parse Anthropic response:', contentBlock.text)
     throw createError({ statusCode: 502, message: 'Anthropic returned invalid JSON' })
   }
 

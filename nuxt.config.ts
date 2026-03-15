@@ -46,6 +46,17 @@ export default defineNuxtConfig({
     dirs: ['composables', 'stores'],
   },
 
+  routeRules: {
+    '/api/**': {
+      cors: true,
+      headers: {
+        'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || '*',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,PATCH,OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+      },
+    },
+  },
+
   nitro: {
     experimental: {
       tasks: true,

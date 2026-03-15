@@ -371,6 +371,67 @@ export const tastingNotes = pgTable('tasting_notes', {
   lotIdx: index('tasting_notes_lot_idx').on(table.lotId),
 }))
 
+// Comprehensive Tastings
+export const tastings = pgTable('tastings', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  wineId: integer('wine_id').references(() => wines.id, { onDelete: 'cascade' }).notNull(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  vintage: integer('vintage'),
+  
+  // Overall rating
+  rating: integer('rating'), // 0-100
+  
+  // Visual assessment
+  visualColor: text('visual_color'),
+  visualColorPosition: integer('visual_color_position'), // 0-100
+  visualIntensity: text('visual_intensity'),
+  visualIntensityValue: integer('visual_intensity_value'), // 0-100
+  visualClarity: text('visual_clarity'),
+  visualClarityValue: integer('visual_clarity_value'), // 0-100
+  visualViscosity: text('visual_viscosity'),
+  visualViscosityValue: integer('visual_viscosity_value'), // 0-100
+  
+  // Nose
+  noseIntensity: text('nose_intensity'),
+  noseIntensityValue: integer('nose_intensity_value'), // 0-100
+  noseDevelopment: text('nose_development'),
+  noseDevelopmentValue: integer('nose_development_value'), // 0-100
+  noseAromas: text('nose_aromas').array(), // Array of strings
+  
+  // Palate
+  palateSweetness: text('palate_sweetness'),
+  palateSweetnessValue: integer('palate_sweetness_value'), // 0-100
+  palateAcidity: text('palate_acidity'),
+  palateAcidityValue: integer('palate_acidity_value'), // 0-100
+  palateTannin: text('palate_tannin'),
+  palateTanninValue: integer('palate_tannin_value'), // 0-100
+  palateBody: text('palate_body'),
+  palateBodyValue: integer('palate_body_value'), // 0-100
+  palateAlcohol: integer('palate_alcohol'), // Actual ABV or percentage value
+  palateAlcoholValue: integer('palate_alcohol_value'), // 0-100 for slider position
+  palateFinish: text('palate_finish'),
+  palateFinishValue: integer('palate_finish_value'), // 0-100
+  palateFlavors: text('palate_flavors').array(), // Array of strings
+  
+  // Context
+  contextPeople: text('context_people').array(), // Array of strings
+  contextPlace: text('context_place'),
+  contextMeal: text('context_meal'),
+  contextTemperature: integer('context_temperature'), // Celsius
+  contextDecantedMinutes: integer('context_decanted_minutes'),
+  
+  // Notes & Photos
+  notes: text('notes'),
+  photos: text('photos').array(), // Array of URLs/paths
+  
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  wineIdx: index('tastings_wine_idx').on(table.wineId),
+  userIdx: index('tastings_user_idx').on(table.userId),
+  createdAtIdx: index('tastings_created_at_idx').on(table.createdAt),
+}))
+
 // FX rates
 export const fxRates = pgTable('fx_rates', {
   id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
@@ -546,6 +607,7 @@ export type InventoryLot = typeof inventoryLots.$inferSelect
 export type InventoryEvent = typeof inventoryEvents.$inferSelect
 export type MaturityOverride = typeof maturityOverrides.$inferSelect
 export type TastingNote = typeof tastingNotes.$inferSelect
+export type Tasting = typeof tastings.$inferSelect
 export type FxRate = typeof fxRates.$inferSelect
 export type User = typeof users.$inferSelect
 export type Session = typeof sessions.$inferSelect
